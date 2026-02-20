@@ -231,12 +231,16 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
   // Available models fetched from backend
   const [fetchedModels, setFetchedModels] = useState<{ name: string; is_active: boolean; is_preloaded: boolean }[]>([]);
+  const [activeBackendModel, setActiveBackendModel] = useState<string | null>(null);
+  const [isSwitching, setIsSwitching] = useState(false);
 
   // Fallback model list when backend is unavailable
   const availableModels = useMemo(() => {
     if (fetchedModels.length > 0) {
       return fetchedModels.map(m => ({ id: m.name, name: m.name }));
     }
+    // Fallback — only default ACE-Step models.
+    // Replaced by dynamic list from /v1/models once Python API starts.
     return [
       { id: 'acestep-v15-base', name: 'acestep-v15-base' },
       { id: 'acestep-v15-sft', name: 'acestep-v15-sft' },
@@ -256,6 +260,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       'acestep-v15-turbo-shift3': '1.5TS3',
       'acestep-v15-turbo-continuous': '1.5TC',
       'acestep-v15-turbo': '1.5T',
+      'acestep-v15-merge-sft-turbo-0.5': 'ST.5',
+      'acestep-v15-merge-sft-turbo-0.4': 'ST.4',
+      'acestep-v15-merge-sft-turbo-0.3': 'ST.3',
+      'acestep-v15-merge-base-turbo-0.5': 'BT.5',
+      'acestep-v15-merge-base-sft-0.5': 'BS.5',
     };
     return mapping[modelId] || modelId;
   };
@@ -291,8 +300,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
   // Get sub-genres for a main genre (styles that contain the main genre name)
   const getSubGenres = (mainGenre: string) => {
-    return ALL_STYLES.filter(style => 
-      style.toLowerCase().includes(mainGenre.toLowerCase()) && 
+    return ALL_STYLES.filter(style =>
+      style.toLowerCase().includes(mainGenre.toLowerCase()) &&
       style.toLowerCase() !== mainGenre.toLowerCase()
     );
   };
@@ -305,7 +314,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   // Other genres: ALL_STYLES 中既不是 MAIN_STYLES，也不是任何 MAIN_STYLE 的 sub-genre
   const OTHER_GENRES = useMemo(() => {
     const mainStylesLower = new Set(MAIN_STYLES.map(s => s.toLowerCase()));
-    
+
     // 检查一个风格是否是某个 main genre 的 sub-genre
     const isSubGenreOfAnyMain = (style: string): boolean => {
       const styleLower = style.toLowerCase();
@@ -315,7 +324,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         return styleLower !== mainLower && styleLower.includes(mainLower);
       });
     };
-    
+
     return ALL_STYLES.filter(style => {
       const styleLower = style.toLowerCase();
       // 不是 main style 本身
@@ -517,13 +526,13 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       setCustomMode(true);
       setStyle(initialData.song.style);
       setTitle(initialData.song.title);
-      
+
       // Check if song is instrumental (empty lyrics, [Instrumental], or Instrumental)
       const trimmedLyrics = initialData.song.lyrics?.trim() || '';
-      const isInstrumentalSong = trimmedLyrics.length === 0 || 
-        trimmedLyrics === '[Instrumental]' || 
+      const isInstrumentalSong = trimmedLyrics.length === 0 ||
+        trimmedLyrics === '[Instrumental]' ||
         trimmedLyrics === 'Instrumental';
-      
+
       setInstrumental(isInstrumentalSong);
       // Only set lyrics if not instrumental
       setLyrics(isInstrumentalSong ? '' : initialData.song.lyrics);
@@ -623,24 +632,26 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
   const refreshModels = useCallback(async (isInitial = false): Promise<boolean> => {
     try {
-      const modelsRes = await fetch('/api/generate/models');
-      if (modelsRes.ok) {
-        const data = await modelsRes.json();
-        const models = data.models || [];
-        if (models.length > 0) {
-          if (!isMountedRef.current) return false;
-          setFetchedModels(models);
-          // Only sync to backend's active model on initial load
-          // After that, respect user's selection
-          if (isInitial) {
-            const active = models.find((m: any) => m.is_active);
-            if (active) {
-              setSelectedModel(active.name);
-              localStorage.setItem('ace-model', active.name);
-            }
-          }
-          return true;
+      const res = await fetch('/api/generate/models');
+      if (!res.ok) return false;
+      const data = await res.json();
+      const models = data.models || [];
+      if (models.length > 0) {
+        if (!isMountedRef.current) return false;
+        setFetchedModels(models);
+        if (data.active_model) {
+          setActiveBackendModel(data.active_model);
         }
+        // Only sync to backend's active model on initial load
+        // After that, respect user's selection
+        if (isInitial) {
+          const active = models.find((m: any) => m.is_active);
+          if (active) {
+            setSelectedModel(active.name);
+            localStorage.setItem('ace-model', active.name);
+          }
+        }
+        return true;
       }
     } catch {
       // ignore - will use fallback model list
@@ -661,6 +672,22 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       // ignore - backend may be starting
     }
   }, [token]);
+
+  const handleSwitchModel = useCallback(async (targetModel: string) => {
+    if (!token || isSwitching) return;
+    setIsSwitching(true);
+    try {
+      const result = await generateApi.switchModel(targetModel, token);
+      if (result.switched) {
+        setActiveBackendModel(result.active_model);
+        void refreshModels(false);
+      }
+    } catch (err: any) {
+      console.error('Model switch failed:', err.message);
+    } finally {
+      setIsSwitching(false);
+    }
+  }, [token, isSwitching, refreshModels]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -895,7 +922,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         setReferenceTracks(data.tracks || []);
       }
     } catch (err) {
-        console.error(t('failedToFetchReferenceTracks'), err);
+      console.error(t('failedToFetchReferenceTracks'), err);
     } finally {
       setIsLoadingTracks(false);
     }
@@ -962,7 +989,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       }
     } catch (err) {
       if (controller.signal.aborted) return;
-        console.error(t('transcriptionFailed'), err);
+      console.error(t('transcriptionFailed'), err);
     } finally {
       if (transcribeAbortRef.current === controller) {
         transcribeAbortRef.current = null;
@@ -997,7 +1024,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         }
       }
     } catch (err) {
-        console.error(t('failedToDeleteTrack'), err);
+      console.error(t('failedToDeleteTrack'), err);
     }
   };
 
@@ -1304,9 +1331,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                           }
                           setShowModelMenu(false);
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 ${
-                          selectedModel === model.id ? 'bg-zinc-50 dark:bg-zinc-800/50' : ''
-                        }`}
+                        className={`w-full px-4 py-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 ${selectedModel === model.id ? 'bg-zinc-50 dark:bg-zinc-800/50' : ''
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
@@ -1336,6 +1362,26 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Model Mismatch Banner */}
+        {activeBackendModel && selectedModel !== activeBackendModel && (
+          <div className="mx-4 mt-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 flex items-center justify-between gap-2">
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              <span className="font-semibold">{getModelDisplayName(selectedModel)}</span> selected but <span className="font-semibold">{getModelDisplayName(activeBackendModel)}</span> is loaded
+            </p>
+            <button
+              onClick={() => handleSwitchModel(selectedModel)}
+              disabled={isSwitching || isGenerating}
+              className="shrink-0 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+              {isSwitching ? (
+                <><Loader2 size={10} className="animate-spin" /> Switching…</>
+              ) : (
+                <><RefreshCw size={10} /> Switch</>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* SIMPLE MODE */}
         {!customMode && (
@@ -1458,7 +1504,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 step={1}
                 onChange={setBatchSize}
               />
-              <div style={{display: 'none'}}>
+              <div style={{ display: 'none' }}>
                 <input
                   type="range"
                   min="1"
@@ -1491,22 +1537,20 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                     <button
                       type="button"
                       onClick={() => setAudioTab('reference')}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                        audioTab === 'reference'
-                          ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                      }`}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'reference'
+                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                        }`}
                     >
                       {t('reference')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setAudioTab('source')}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                        audioTab === 'source'
-                          ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                      }`}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'source'
+                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                        }`}
                     >
                       {t('cover')}
                     </button>
@@ -1525,9 +1569,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                       className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 hover:scale-105 transition-transform"
                     >
                       {referencePlaying ? (
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
                       ) : (
-                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                       )}
                       <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
                         {formatTime(referenceDuration)}
@@ -1564,7 +1608,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                       onClick={() => { setReferenceAudioUrl(''); setReferenceAudioTitle(''); setReferencePlaying(false); setReferenceTime(0); setReferenceDuration(0); }}
                       className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
                 )}
@@ -1578,9 +1622,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                       className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
                     >
                       {sourcePlaying ? (
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
                       ) : (
-                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                       )}
                       <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
                         {formatTime(sourceDuration)}
@@ -1617,7 +1661,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                       onClick={() => { setSourceAudioUrl(''); setSourceAudioTitle(''); setSourcePlaying(false); setSourceTime(0); setSourceDuration(0); }}
                       className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
                 )}
@@ -1630,7 +1674,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                     className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
                     {t('fromLibrary')}
                   </button>
@@ -1643,7 +1687,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                     className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     {t('upload')}
                   </button>
@@ -1665,11 +1709,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setInstrumental(!instrumental)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${
-                      instrumental
-                        ? 'bg-pink-600 text-white border-pink-500'
-                        : 'bg-white dark:bg-suno-card border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'
-                    }`}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${instrumental
+                      ? 'bg-pink-600 text-white border-pink-500'
+                      : 'bg-white dark:bg-suno-card border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'
+                      }`}
                   >
                     {instrumental ? t('instrumental') : t('vocal')}
                   </button>
@@ -1753,9 +1796,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                       className="w-full flex items-center justify-between bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:border-pink-300 dark:hover:border-pink-500/50 transition-all shadow-sm"
                     >
                       <span className={selectedMainGenre || selectedSubGenre ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-400'}>
-                        {selectedSubGenre 
+                        {selectedSubGenre
                           ? `${selectedMainGenre} › ${selectedSubGenre}`
-                          : selectedMainGenre 
+                          : selectedMainGenre
                             ? `${selectedMainGenre} ${getSubGenreCount(selectedMainGenre) > 0 ? `(${getSubGenreCount(selectedMainGenre)} ${t('subGenres')})` : ''}`
                             : t('selectGenre')}
                       </span>
@@ -1839,11 +1882,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                                         setGenreSearch('');
                                       }
                                     }}
-                                    className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${
-                                      isSelected 
-                                        ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300' 
-                                        : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
-                                    }`}
+                                    className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${isSelected
+                                      ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
+                                      : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
+                                      }`}
                                   >
                                     <span className="flex items-center gap-2">
                                       <span className={`w-1.5 h-1.5 rounded-full ${type === 'main' ? 'bg-pink-400' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
@@ -1908,11 +1950,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                                     setStyle(prev => prev ? `${prev}, ${genre}` : genre);
                                     setShowSubGenreDropdown(false);
                                   }}
-                                  className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${
-                                    selectedSubGenre === genre
-                                      ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
-                                      : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
-                                  }`}
+                                  className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${selectedSubGenre === genre
+                                    ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
+                                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
+                                    }`}
                                 >
                                   {genre}
                                 </button>
@@ -2049,23 +2090,20 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between py-2 border-t border-zinc-100 dark:border-white/5">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        loraLoaded ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                      }`}></div>
-                      <span className={`text-xs font-medium ${
-                        loraLoaded ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                      }`}>
+                      <div className={`w-2 h-2 rounded-full ${loraLoaded ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                        }`}></div>
+                      <span className={`text-xs font-medium ${loraLoaded ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
                         {loraLoaded ? t('loraLoaded') : t('loraUnloaded')}
                       </span>
                     </div>
                     <button
                       onClick={handleLoraToggle}
                       disabled={!loraPath.trim() || isLoraLoading}
-                      className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                        loraLoaded
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20 hover:from-green-600 hover:to-emerald-700'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${loraLoaded
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20 hover:from-green-600 hover:to-emerald-700'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                        }`}
                     >
                       {isLoraLoading ? '...' : (loraLoaded ? t('loraUnload') : t('loraLoad'))}
                     </button>
@@ -2198,11 +2236,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                   <button
                     key={count}
                     onClick={() => { setBulkCount(count); localStorage.setItem('ace-bulkCount', String(count)); }}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                      bulkCount === count
-                        ? 'bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-md'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                    }`}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${bulkCount === count
+                      ? 'bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-md'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                      }`}
                   >
                     {count}
                   </button>
@@ -2669,7 +2706,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                   className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
@@ -2733,22 +2770,20 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                   <button
                     type="button"
                     onClick={() => setLibraryTab('uploads')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                      libraryTab === 'uploads'
-                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                    }`}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${libraryTab === 'uploads'
+                      ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                      }`}
                   >
                     {t('uploaded')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setLibraryTab('created')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                      libraryTab === 'created'
-                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                    }`}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${libraryTab === 'created'
+                      ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                      }`}
                   >
                     {t('createdTab')}
                   </button>

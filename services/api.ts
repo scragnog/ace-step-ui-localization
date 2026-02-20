@@ -418,6 +418,23 @@ export const generateApi = {
     lora_scale: number;
     adapter_type: string | null;
   }> => api('/api/lora/status', { token }),
+
+  // Model Management
+  getModels: (token: string): Promise<{
+    models: Array<{
+      name: string;
+      is_active: boolean;
+      is_preloaded: boolean;
+      is_default: boolean;
+    }>;
+    active_model: string | null;
+  }> => api('/api/models', { token }),
+
+  switchModel: (model: string, token: string): Promise<{
+    message: string;
+    active_model: string;
+    switched: boolean;
+  }> => api('/api/models/switch', { method: 'POST', body: { model }, token }),
 };
 
 // Users API
