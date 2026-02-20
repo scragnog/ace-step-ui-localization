@@ -2357,6 +2357,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                     {adapterSlots.length > 0 && (
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Loaded Adapters ({adapterSlots.length}/4)</label>
+                        {(() => {
+                          const totalScale = adapterSlots.reduce((sum, s) => sum + s.scale, 0);
+                          return totalScale > 1.0 ? (
+                            <div className="flex items-start gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1.5 rounded">
+                              <span className="mt-0.5">⚠️</span>
+                              <span>Combined adapter strength is <strong>{totalScale.toFixed(2)}</strong> — values above 1.0 may produce unexpected or distorted output.</span>
+                            </div>
+                          ) : null;
+                        })()}
                         {adapterSlots.map((slot) => (
                           <div key={slot.slot} className="bg-zinc-50 dark:bg-black/20 rounded-lg p-3 space-y-2 border border-zinc-200 dark:border-white/5">
                             <div className="flex items-center justify-between">
