@@ -3,7 +3,7 @@ import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, Chevron
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { EditProfileModal } from './EditProfileModal';
-import { isPersistenceEnabled, setPersistenceEnabled } from '../hooks/usePersistedState';
+import { isPersistenceEnabled, setPersistenceEnabled, clearPersistedSettings } from '../hooks/usePersistedState';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -190,6 +190,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                         }`} />
                                 </button>
                             </div>
+                            {persistEnabled && (
+                                <button
+                                    onClick={() => {
+                                        clearPersistedSettings();
+                                        window.location.reload();
+                                    }}
+                                    className="w-full py-2 px-4 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+                                >
+                                    Reset to Defaults
+                                </button>
+                            )}
                         </div>
                     </div>
 
