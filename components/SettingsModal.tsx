@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github } from 'lucide-react';
+import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { EditProfileModal } from './EditProfileModal';
+import { isPersistenceEnabled, setPersistenceEnabled } from '../hooks/usePersistedState';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -16,6 +17,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
     const { user } = useAuth();
     const { t, language, setLanguage } = useI18n();
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+    const [persistEnabled, setPersistEnabled] = useState(isPersistenceEnabled);
 
     if (!isOpen || !user) {
         if (isEditProfileOpen && user) {
@@ -140,8 +142,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                 <button
                                     onClick={theme === 'dark' ? onToggleTheme : undefined}
                                     className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-colors ${theme === 'light'
-                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                                            : 'border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600'
+                                        ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                                        : 'border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600'
                                         }`}
                                 >
                                     {t('light')}
@@ -149,11 +151,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                 <button
                                     onClick={theme === 'light' ? onToggleTheme : undefined}
                                     className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-colors ${theme === 'dark'
-                                            ? 'border-indigo-500 bg-indigo-950 text-indigo-300'
-                                            : 'border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600'
+                                        ? 'border-indigo-500 bg-indigo-950 text-indigo-300'
+                                        : 'border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600'
                                         }`}
                                 >
                                     {t('dark')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Persistent Settings Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-zinc-900 dark:text-white">
+                            <Save size={20} />
+                            <h3 className="font-semibold">Persistent Settings</h3>
+                        </div>
+                        <div className="pl-7 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-zinc-900 dark:text-white font-medium">Remember my settings</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Save generation parameters across sessions</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const next = !persistEnabled;
+                                        setPersistenceEnabled(next);
+                                        setPersistEnabled(next);
+                                        if (!next) {
+                                            // Reload so all components re-init with defaults
+                                            window.location.reload();
+                                        }
+                                    }}
+                                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${persistEnabled ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-600'
+                                        }`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${persistEnabled ? 'translate-x-5' : 'translate-x-0'
+                                        }`} />
                                 </button>
                             </div>
                         </div>
@@ -221,7 +255,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                             className="inline-flex items-center gap-2 px-4 py-2 bg-[#00A1D6] text-white rounded-lg text-sm font-medium hover:bg-[#0090C0] transition-colors"
                                         >
                                             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                                                <path d="M17.813 4.653h.854c1.51.054 2.769.578 3.773 1.574 1.004.995 1.524 2.249 1.56 3.76v7.36c-.036 1.51-.556 2.769-1.56 3.773s-2.262 1.524-3.773 1.56H5.333c-1.51-.036-2.769-.556-3.773-1.56S.036 18.858 0 17.347v-7.36c.036-1.511.556-2.765 1.56-3.76 1.004-.996 2.262-1.52 3.773-1.574h.774l-1.174-1.12a1.234 1.234 0 0 1-.373-.906c0-.356.124-.658.373-.907l.027-.027c.267-.249.573-.373.92-.373.347 0 .653.124.92.373L9.653 4.44c.071.071.134.142.187.213h4.267a.836.836 0 0 1 .16-.213l2.853-2.747c.267-.249.573-.373.92-.373.347 0 .662.151.929.4.267.249.391.551.391.907 0 .355-.124.657-.373.906zM5.333 7.24c-.746.018-1.373.276-1.88.773-.506.498-.769 1.13-.786 1.894v7.52c.017.764.28 1.395.786 1.893.507.498 1.134.756 1.88.773h13.334c.746-.017 1.373-.275 1.88-.773.506-.498.769-1.129.786-1.893v-7.52c-.017-.765-.28-1.396-.786-1.894-.507-.497-1.134-.755-1.88-.773zM8 11.107c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c0-.373.129-.689.386-.947.258-.257.574-.386.947-.386zm8 0c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c.017-.391.15-.711.4-.96.249-.249.56-.373.933-.373Z"/>
+                                                <path d="M17.813 4.653h.854c1.51.054 2.769.578 3.773 1.574 1.004.995 1.524 2.249 1.56 3.76v7.36c-.036 1.51-.556 2.769-1.56 3.773s-2.262 1.524-3.773 1.56H5.333c-1.51-.036-2.769-.556-3.773-1.56S.036 18.858 0 17.347v-7.36c.036-1.511.556-2.765 1.56-3.76 1.004-.996 2.262-1.52 3.773-1.574h.774l-1.174-1.12a1.234 1.234 0 0 1-.373-.906c0-.356.124-.658.373-.907l.027-.027c.267-.249.573-.373.92-.373.347 0 .653.124.92.373L9.653 4.44c.071.071.134.142.187.213h4.267a.836.836 0 0 1 .16-.213l2.853-2.747c.267-.249.573-.373.92-.373.347 0 .662.151.929.4.267.249.391.551.391.907 0 .355-.124.657-.373.906zM5.333 7.24c-.746.018-1.373.276-1.88.773-.506.498-.769 1.13-.786 1.894v7.52c.017.764.28 1.395.786 1.893.507.498 1.134.756 1.88.773h13.334c.746-.017 1.373-.275 1.88-.773.506-.498.769-1.129.786-1.893v-7.52c-.017-.765-.28-1.396-.786-1.894-.507-.497-1.134-.755-1.88-.773zM8 11.107c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c0-.373.129-.689.386-.947.258-.257.574-.386.947-.386zm8 0c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c.017-.391.15-.711.4-.96.249-.249.56-.373.933-.373Z" />
                                             </svg>
                                             {t('follow')} 青龙圣者
                                         </a>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { usePersistedState } from '../hooks/usePersistedState';
 import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2 } from 'lucide-react';
 import { GenerationParams, Song } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -128,59 +129,51 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   }, []);
 
   // Mode
-  const [customMode, setCustomMode] = useState(true);
+  const [customMode, setCustomMode] = usePersistedState('ace-customMode', true);
 
   // Simple Mode
-  const [songDescription, setSongDescription] = useState('');
+  const [songDescription, setSongDescription] = usePersistedState('ace-songDescription', '');
 
   // Custom Mode
-  const [lyrics, setLyrics] = useState('');
-  const [style, setStyle] = useState('');
-  const [title, setTitle] = useState('');
+  const [lyrics, setLyrics] = usePersistedState('ace-lyrics', '');
+  const [style, setStyle] = usePersistedState('ace-style', '');
+  const [title, setTitle] = usePersistedState('ace-title', '');
 
   // Common
-  const [instrumental, setInstrumental] = useState(false);
-  const [vocalLanguage, setVocalLanguage] = useState('en');
-  const [vocalGender, setVocalGender] = useState<'male' | 'female' | ''>('');
+  const [instrumental, setInstrumental] = usePersistedState('ace-instrumental', false);
+  const [vocalLanguage, setVocalLanguage] = usePersistedState('ace-vocalLanguage', 'en');
+  const [vocalGender, setVocalGender] = usePersistedState<'male' | 'female' | ''>('ace-vocalGender', '');
 
   // Music Parameters
-  const [bpm, setBpm] = useState(0);
-  const [keyScale, setKeyScale] = useState('');
-  const [timeSignature, setTimeSignature] = useState('');
+  const [bpm, setBpm] = usePersistedState('ace-bpm', 0);
+  const [keyScale, setKeyScale] = usePersistedState('ace-keyScale', '');
+  const [timeSignature, setTimeSignature] = usePersistedState('ace-timeSignature', '');
 
   // Advanced Settings
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [duration, setDuration] = useState(-1);
-  const [batchSize, setBatchSize] = useState(() => {
-    const stored = localStorage.getItem('ace-batchSize');
-    return stored ? Number(stored) : 1;
-  });
-  const [bulkCount, setBulkCount] = useState(() => {
-    const stored = localStorage.getItem('ace-bulkCount');
-    return stored ? Number(stored) : 1;
-  });
-  const [guidanceScale, setGuidanceScale] = useState(9.0);
-  const [randomSeed, setRandomSeed] = useState(true);
-  const [seed, setSeed] = useState(-1);
-  const [thinking, setThinking] = useState(false); // Default false for GPU compatibility
-  const [audioFormat, setAudioFormat] = useState<'mp3' | 'flac'>('mp3');
-  const [inferenceSteps, setInferenceSteps] = useState(12);
-  const [inferMethod, setInferMethod] = useState<'ode' | 'sde'>('ode');
-  const [lmBackend, setLmBackend] = useState<'pt' | 'vllm'>('pt');
-  const [lmModel, setLmModel] = useState(() => {
-    return localStorage.getItem('ace-lmModel') || 'acestep-5Hz-lm-0.6B';
-  });
-  const [shift, setShift] = useState(3.0);
+  const [showAdvanced, setShowAdvanced] = usePersistedState('ace-showAdvanced', false);
+  const [duration, setDuration] = usePersistedState('ace-duration', -1);
+  const [batchSize, setBatchSize] = usePersistedState('ace-batchSize', 1);
+  const [bulkCount, setBulkCount] = usePersistedState('ace-bulkCount', 1);
+  const [guidanceScale, setGuidanceScale] = usePersistedState('ace-guidanceScale', 9.0);
+  const [randomSeed, setRandomSeed] = usePersistedState('ace-randomSeed', true);
+  const [seed, setSeed] = usePersistedState('ace-seed', -1);
+  const [thinking, setThinking] = usePersistedState('ace-thinking', false); // Default false for GPU compatibility
+  const [audioFormat, setAudioFormat] = usePersistedState<'mp3' | 'flac'>('ace-audioFormat', 'mp3');
+  const [inferenceSteps, setInferenceSteps] = usePersistedState('ace-inferenceSteps', 12);
+  const [inferMethod, setInferMethod] = usePersistedState<'ode' | 'sde'>('ace-inferMethod', 'ode');
+  const [lmBackend, setLmBackend] = usePersistedState<'pt' | 'vllm'>('ace-lmBackend', 'pt');
+  const [lmModel, setLmModel] = usePersistedState('ace-lmModel', 'acestep-5Hz-lm-0.6B');
+  const [shift, setShift] = usePersistedState('ace-shift', 3.0);
 
   // LM Parameters (under Expert)
-  const [showLmParams, setShowLmParams] = useState(false);
-  const [lmTemperature, setLmTemperature] = useState(0.8);
-  const [lmCfgScale, setLmCfgScale] = useState(2.2);
-  const [lmTopK, setLmTopK] = useState(0);
-  const [lmTopP, setLmTopP] = useState(0.92);
-  const [lmNegativePrompt, setLmNegativePrompt] = useState('NO USER INPUT');
+  const [showLmParams, setShowLmParams] = usePersistedState('ace-showLmParams', false);
+  const [lmTemperature, setLmTemperature] = usePersistedState('ace-lmTemperature', 0.8);
+  const [lmCfgScale, setLmCfgScale] = usePersistedState('ace-lmCfgScale', 2.2);
+  const [lmTopK, setLmTopK] = usePersistedState('ace-lmTopK', 0);
+  const [lmTopP, setLmTopP] = usePersistedState('ace-lmTopP', 0.92);
+  const [lmNegativePrompt, setLmNegativePrompt] = usePersistedState('ace-lmNegativePrompt', 'NO USER INPUT');
 
-  // Expert Parameters (now in Advanced section)
+  // Expert Parameters — session-specific audio state (NOT persisted)
   const [referenceAudioUrl, setReferenceAudioUrl] = useState('');
   const [sourceAudioUrl, setSourceAudioUrl] = useState('');
   const [referenceAudioTitle, setReferenceAudioTitle] = useState('');
@@ -189,40 +182,38 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [repaintingStart, setRepaintingStart] = useState(0);
   const [repaintingEnd, setRepaintingEnd] = useState(-1);
   const [instruction, setInstruction] = useState(t('instructionDefault'));
-  const [audioCoverStrength, setAudioCoverStrength] = useState(1.0);
+  const [audioCoverStrength, setAudioCoverStrength] = usePersistedState('ace-audioCoverStrength', 1.0);
   const [taskType, setTaskType] = useState('text2music');
-  const [useAdg, setUseAdg] = useState(false);
-  const [cfgIntervalStart, setCfgIntervalStart] = useState(0.0);
-  const [cfgIntervalEnd, setCfgIntervalEnd] = useState(1.0);
+  const [useAdg, setUseAdg] = usePersistedState('ace-useAdg', false);
+  const [cfgIntervalStart, setCfgIntervalStart] = usePersistedState('ace-cfgIntervalStart', 0.0);
+  const [cfgIntervalEnd, setCfgIntervalEnd] = usePersistedState('ace-cfgIntervalEnd', 1.0);
   const [customTimesteps, setCustomTimesteps] = useState('');
-  const [useCotMetas, setUseCotMetas] = useState(true);
-  const [useCotCaption, setUseCotCaption] = useState(true);
-  const [useCotLanguage, setUseCotLanguage] = useState(true);
+  const [useCotMetas, setUseCotMetas] = usePersistedState('ace-useCotMetas', true);
+  const [useCotCaption, setUseCotCaption] = usePersistedState('ace-useCotCaption', true);
+  const [useCotLanguage, setUseCotLanguage] = usePersistedState('ace-useCotLanguage', true);
   const [autogen, setAutogen] = useState(false);
   const [constrainedDecodingDebug, setConstrainedDecodingDebug] = useState(false);
-  const [allowLmBatch, setAllowLmBatch] = useState(true);
+  const [allowLmBatch, setAllowLmBatch] = usePersistedState('ace-allowLmBatch', true);
   const [getScores, setGetScores] = useState(false);
   const [getLrc, setGetLrc] = useState(false);
-  const [scoreScale, setScoreScale] = useState(0.5);
-  const [lmBatchChunkSize, setLmBatchChunkSize] = useState(8);
+  const [scoreScale, setScoreScale] = usePersistedState('ace-scoreScale', 0.5);
+  const [lmBatchChunkSize, setLmBatchChunkSize] = usePersistedState('ace-lmBatchChunkSize', 8);
   const [trackName, setTrackName] = useState('');
   const [completeTrackClasses, setCompleteTrackClasses] = useState('');
-  const [isFormatCaption, setIsFormatCaption] = useState(false);
-  const [maxDurationWithLm, setMaxDurationWithLm] = useState(240);
-  const [maxDurationWithoutLm, setMaxDurationWithoutLm] = useState(240);
+  const [isFormatCaption, setIsFormatCaption] = usePersistedState('ace-isFormatCaption', false);
+  const [maxDurationWithLm, setMaxDurationWithLm] = usePersistedState('ace-maxDurationWithLm', 240);
+  const [maxDurationWithoutLm, setMaxDurationWithoutLm] = usePersistedState('ace-maxDurationWithoutLm', 240);
 
   // LoRA Parameters
-  const [showLoraPanel, setShowLoraPanel] = useState(false);
-  const [loraPath, setLoraPath] = useState('./lokr_output/final/lokr_weights.safetensors');
+  const [showLoraPanel, setShowLoraPanel] = usePersistedState('ace-showLoraPanel', false);
+  const [loraPath, setLoraPath] = usePersistedState('ace-loraPath', './lokr_output/final/lokr_weights.safetensors');
   const [loraLoaded, setLoraLoaded] = useState(false);
-  const [loraScale, setLoraScale] = useState(1.0);
+  const [loraScale, setLoraScale] = usePersistedState('ace-loraScale', 1.0);
   const [loraError, setLoraError] = useState<string | null>(null);
   const [isLoraLoading, setIsLoraLoading] = useState(false);
 
   // Model selection
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    return localStorage.getItem('ace-model') || 'acestep-v15-turbo-shift3';
-  });
+  const [selectedModel, setSelectedModel] = usePersistedState('ace-model', 'acestep-v15-turbo-shift3');
   const [showModelMenu, setShowModelMenu] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
   const previousModelRef = useRef<string>(selectedModel);
@@ -648,7 +639,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           const active = models.find((m: any) => m.is_active);
           if (active) {
             setSelectedModel(active.name);
-            localStorage.setItem('ace-model', active.name);
           }
         }
         return true;
@@ -1323,7 +1313,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                         key={model.id}
                         onClick={() => {
                           setSelectedModel(model.id);
-                          localStorage.setItem('ace-model', model.id);
                           // Auto-adjust parameters for non-turbo models
                           if (!isTurboModel(model.id)) {
                             setInferenceSteps(20);
@@ -2235,7 +2224,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 {[1, 2, 3, 5, 10].map((count) => (
                   <button
                     key={count}
-                    onClick={() => { setBulkCount(count); localStorage.setItem('ace-bulkCount', String(count)); }}
+                    onClick={() => { setBulkCount(count); }}
                     className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${bulkCount === count
                       ? 'bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-md'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -2318,7 +2307,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('lmModelLabel')}</label>
               <select
                 value={lmModel}
-                onChange={(e) => { const v = e.target.value; setLmModel(v); localStorage.setItem('ace-lmModel', v); }}
+                onChange={(e) => { const v = e.target.value; setLmModel(v); }}
                 className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
               >
                 <option value="acestep-5Hz-lm-0.6B">{t('lmModel06B')}</option>
