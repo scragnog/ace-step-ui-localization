@@ -1,5 +1,7 @@
 import { Router, Response } from 'express';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const router = Router();
 
@@ -55,6 +57,66 @@ async function proxyToAceStep(endpoint: string, method: string, data?: any) {
   }
 }
 
+// List .safetensors files in a folder
+router.get('/list-files', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const folder = req.query.folder as string;
+    if (!folder) {
+      return res.status(400).json({ error: 'folder query parameter is required' });
+    }
+
+    if (!fs.existsSync(folder)) {
+      return res.status(404).json({ error: `Folder not found: ${folder}` });
+    }
+
+    const stat = fs.statSync(folder);
+    if (!stat.isDirectory()) {
+      return res.status(400).json({ error: `Not a directory: ${folder}` });
+    }
+
+    const files: Array<{ name: string; path: string; size: number; type: string }> = [];
+    const entries = fs.readdirSync(folder);
+
+    for (const entry of entries) {
+      const fullPath = path.join(folder, entry);
+      try {
+        const entryStat = fs.statSync(fullPath);
+
+        if (entry.endsWith('.safetensors') && entryStat.isFile()) {
+          // Standalone safetensors file (LoKr)
+          files.push({
+            name: path.basename(entry, '.safetensors'),
+            path: fullPath,
+            size: entryStat.size,
+            type: 'lokr',
+          });
+        } else if (entryStat.isDirectory()) {
+          // Check for PEFT adapter directory
+          const configPath = path.join(fullPath, 'adapter_config.json');
+          const stFiles = fs.readdirSync(fullPath).filter(f => f.endsWith('.safetensors'));
+          if (fs.existsSync(configPath) || stFiles.length > 0) {
+            const dirSize = stFiles.reduce((sum, f) => {
+              try { return sum + fs.statSync(path.join(fullPath, f)).size; } catch { return sum; }
+            }, 0);
+            files.push({
+              name: entry,
+              path: fullPath,
+              size: dirSize,
+              type: fs.existsSync(configPath) ? 'lora' : 'lokr',
+            });
+          }
+        }
+      } catch {
+        // Skip files we can't stat
+      }
+    }
+
+    res.json({ files, folder });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/load', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await proxyToAceStep('/v1/lora/load', 'POST', req.body);
@@ -66,7 +128,7 @@ router.post('/load', authMiddleware, async (req: AuthenticatedRequest, res: Resp
 
 router.post('/unload', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await proxyToAceStep('/v1/lora/unload', 'POST');
+    const result = await proxyToAceStep('/v1/lora/unload', 'POST', req.body);
     res.json(result || { message: 'LoRA unloaded' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -91,6 +153,26 @@ router.post('/scale', authMiddleware, async (req: AuthenticatedRequest, res: Res
   }
 });
 
+// Group scales (all slots)
+router.post('/group-scales', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/group-scales', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Per-slot group scales
+router.post('/slot-group-scales', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/slot-group-scales', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/status', authMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await proxyToAceStep('/v1/lora/status', 'GET');
@@ -101,3 +183,4 @@ router.get('/status', authMiddleware, async (_req: AuthenticatedRequest, res: Re
 });
 
 export default router;
+

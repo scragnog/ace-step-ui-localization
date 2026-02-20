@@ -399,17 +399,20 @@ export const generateApi = {
   // LoRA Inference
   loadLora: (params: {
     lora_path: string;
+    slot?: number;
   }, token: string): Promise<{
     message: string;
     lora_path: string;
+    slot?: number;
   }> => api('/api/lora/load', { method: 'POST', body: params, token }),
 
-  unloadLora: (token: string): Promise<{
+  unloadLora: (token: string, slot?: number): Promise<{
     message: string;
-  }> => api('/api/lora/unload', { method: 'POST', token }),
+  }> => api('/api/lora/unload', { method: 'POST', body: slot != null ? { slot } : {}, token }),
 
   setLoraScale: (params: {
     scale: number;
+    slot?: number;
   }, token: string): Promise<{
     message: string;
     scale: number;
@@ -420,7 +423,54 @@ export const generateApi = {
     use_lora: boolean;
     lora_scale: number;
     adapter_type: string | null;
+    advanced?: {
+      loaded: boolean;
+      active: boolean;
+      slots: Array<{
+        slot: number;
+        name: string;
+        path: string;
+        type: string;
+        scale: number;
+        delta_keys: number;
+        group_scales: { self_attn: number; cross_attn: number; mlp: number };
+      }>;
+      group_scales: { self_attn: number; cross_attn: number; mlp: number };
+    };
   }> => api('/api/lora/status', { token }),
+
+  // Advanced adapter: file browser
+  listLoraFiles: (folder: string, token: string): Promise<{
+    files: Array<{
+      name: string;
+      path: string;
+      size: number;
+      type: string;
+    }>;
+    folder: string;
+  }> => api(`/api/lora/list-files?folder=${encodeURIComponent(folder)}`, { token }),
+
+  // Advanced adapter: group scales
+  setGroupScales: (params: {
+    self_attn: number;
+    cross_attn: number;
+    mlp: number;
+  }, token: string): Promise<{
+    message: string;
+    group_scales: { self_attn: number; cross_attn: number; mlp: number };
+  }> => api('/api/lora/group-scales', { method: 'POST', body: params, token }),
+
+  // Advanced adapter: per-slot group scales
+  setSlotGroupScales: (params: {
+    slot: number;
+    self_attn: number;
+    cross_attn: number;
+    mlp: number;
+  }, token: string): Promise<{
+    message: string;
+    slot: number;
+    group_scales: { self_attn: number; cross_attn: number; mlp: number };
+  }> => api('/api/lora/slot-group-scales', { method: 'POST', body: params, token }),
 
   // Model Management
   getModels: (token: string): Promise<{

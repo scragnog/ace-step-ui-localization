@@ -214,6 +214,18 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [loraError, setLoraError] = useState<string | null>(null);
   const [isLoraLoading, setIsLoraLoading] = useState(false);
 
+  // Advanced adapter state
+  const [advancedAdapters, setAdvancedAdapters] = usePersistedState('ace-advancedAdapters', false);
+  const [adapterFolder, setAdapterFolder] = usePersistedState('ace-adapterFolder', './lokr_output');
+  const [adapterFiles, setAdapterFiles] = useState<Array<{ name: string; path: string; size: number; type: string }>>([]);
+  const [adapterSlots, setAdapterSlots] = useState<Array<{
+    slot: number; name: string; path: string; type: string; scale: number;
+    delta_keys: number; group_scales: { self_attn: number; cross_attn: number; mlp: number };
+  }>>([]);
+  const [expandedSlot, setExpandedSlot] = useState<number | null>(null);
+  // Per-adapter persisted group scales (keyed by adapter filename)
+  const [savedGroupScales, setSavedGroupScales] = usePersistedState<Record<string, { self_attn: number; cross_attn: number; mlp: number }>>('ace-adapterGroupScales', {});
+
   // Model selection
   const [selectedModel, setSelectedModel] = usePersistedState('ace-model', 'acestep-v15-turbo-shift3');
   const [showModelMenu, setShowModelMenu] = useState(false);
@@ -513,6 +525,88 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
+  // Advanced adapter handlers
+  const handleScanFolder = async () => {
+    if (!token || !adapterFolder.trim()) return;
+    setLoraError(null);
+    try {
+      const result = await generateApi.listLoraFiles(adapterFolder, token);
+      setAdapterFiles(result.files || []);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to scan folder';
+      setLoraError(msg);
+    }
+  };
+
+  const handleLoadSlot = async (filePath: string) => {
+    if (!token) return;
+    setIsLoraLoading(true);
+    setLoraError(null);
+    try {
+      const nextSlot = adapterSlots.length > 0
+        ? Math.max(...adapterSlots.map(s => s.slot)) + 1
+        : 0;
+      await generateApi.loadLora({ lora_path: filePath, slot: nextSlot }, token);
+      // Refresh status to get actual slot info
+      const status = await generateApi.getLoraStatus(token);
+      if (status?.advanced?.slots) {
+        setAdapterSlots(status.advanced.slots);
+        setLoraLoaded(true);
+      }
+    } catch (err) {
+      setLoraError(err instanceof Error ? err.message : 'Failed to load adapter');
+    } finally {
+      setIsLoraLoading(false);
+    }
+  };
+
+  const handleUnloadSlot = async (slot: number) => {
+    if (!token) return;
+    setIsLoraLoading(true);
+    setLoraError(null);
+    try {
+      await generateApi.unloadLora(token, slot);
+      const status = await generateApi.getLoraStatus(token);
+      if (status?.advanced) {
+        setAdapterSlots(status.advanced.slots || []);
+        setLoraLoaded(status.advanced.loaded);
+      } else {
+        setAdapterSlots([]);
+        setLoraLoaded(false);
+      }
+    } catch (err) {
+      setLoraError(err instanceof Error ? err.message : 'Failed to unload');
+    } finally {
+      setIsLoraLoading(false);
+    }
+  };
+
+  const handleSlotScaleChange = async (slot: number, scale: number) => {
+    if (!token) return;
+    setAdapterSlots(prev => prev.map(s => s.slot === slot ? { ...s, scale } : s));
+    try {
+      await generateApi.setLoraScale({ scale, slot }, token);
+    } catch (err) {
+      console.error('Failed to set slot scale:', err);
+    }
+  };
+
+  const handleSlotGroupScaleChange = async (slot: number, group: 'self_attn' | 'cross_attn' | 'mlp', value: number) => {
+    if (!token) return;
+    const slotData = adapterSlots.find(s => s.slot === slot);
+    if (!slotData) return;
+    const newScales = { ...slotData.group_scales, [group]: value };
+    setAdapterSlots(prev => prev.map(s => s.slot === slot ? { ...s, group_scales: newScales } : s));
+    // Save per-adapter
+    const key = slotData.name;
+    setSavedGroupScales(prev => ({ ...prev, [key]: newScales }));
+    try {
+      await generateApi.setSlotGroupScales({ slot, ...newScales }, token);
+    } catch (err) {
+      console.error('Failed to set slot group scales:', err);
+    }
+  };
+
   // Reuse Effect - must be after all state declarations
   useEffect(() => {
     if (initialData) {
@@ -659,6 +753,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       setLoraLoaded(Boolean(status?.lora_loaded));
       if (typeof status?.lora_scale === 'number' && Number.isFinite(status.lora_scale)) {
         setLoraScale(status.lora_scale);
+      }
+      // Sync advanced adapter slots
+      if (status?.advanced?.slots && status.advanced.slots.length > 0) {
+        setAdapterSlots(status.advanced.slots);
       }
     } catch {
       // ignore - backend may be starting
@@ -2065,60 +2163,206 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
             {showLoraPanel && (
               <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
-                {/* LoRA Path Input */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('loraPath')}</label>
-                  <input
-                    type="text"
-                    value={loraPath}
-                    onChange={(e) => setLoraPath(e.target.value)}
-                    placeholder={t('loraPathPlaceholder')}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors"
-                  />
+                {/* Advanced Toggle */}
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={advancedAdapters}
+                      onChange={(e) => setAdvancedAdapters(e.target.checked)}
+                      className="rounded border-zinc-300 dark:border-zinc-600 text-pink-500 focus:ring-pink-500"
+                    />
+                    Advanced (Multi-Adapter)
+                  </label>
                 </div>
 
-                {/* LoRA Load/Unload Toggle */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between py-2 border-t border-zinc-100 dark:border-white/5">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${loraLoaded ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                        }`}></div>
-                      <span className={`text-xs font-medium ${loraLoaded ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                        }`}>
-                        {loraLoaded ? t('loraLoaded') : t('loraUnloaded')}
-                      </span>
+                {!advancedAdapters ? (
+                  /* BASIC MODE — existing UI untouched */
+                  <>
+                    {/* LoRA Path Input */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('loraPath')}</label>
+                      <input
+                        type="text"
+                        value={loraPath}
+                        onChange={(e) => setLoraPath(e.target.value)}
+                        placeholder={t('loraPathPlaceholder')}
+                        className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors"
+                      />
                     </div>
-                    <button
-                      onClick={handleLoraToggle}
-                      disabled={!loraPath.trim() || isLoraLoading}
-                      className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${loraLoaded
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20 hover:from-green-600 hover:to-emerald-700'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                        }`}
-                    >
-                      {isLoraLoading ? '...' : (loraLoaded ? t('loraUnload') : t('loraLoad'))}
-                    </button>
-                  </div>
-                  {loraError && (
-                    <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
-                      {loraError}
-                    </div>
-                  )}
-                </div>
 
-                {/* LoRA Scale Slider */}
-                <div className={!loraLoaded ? 'opacity-40 pointer-events-none' : ''}>
-                  <EditableSlider
-                    label={t('loraScale')}
-                    value={loraScale}
-                    min={0}
-                    max={2}
-                    step={0.05}
-                    onChange={handleLoraScaleChange}
-                    formatDisplay={(val) => val.toFixed(2)}
-                    helpText={t('loraScaleDescription')}
-                  />
-                </div>
+                    {/* LoRA Load/Unload Toggle */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between py-2 border-t border-zinc-100 dark:border-white/5">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${loraLoaded ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                            }`}></div>
+                          <span className={`text-xs font-medium ${loraLoaded ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                            }`}>
+                            {loraLoaded ? t('loraLoaded') : t('loraUnloaded')}
+                          </span>
+                        </div>
+                        <button
+                          onClick={handleLoraToggle}
+                          disabled={!loraPath.trim() || isLoraLoading}
+                          className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${loraLoaded
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20 hover:from-green-600 hover:to-emerald-700'
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                            }`}
+                        >
+                          {isLoraLoading ? '...' : (loraLoaded ? t('loraUnload') : t('loraLoad'))}
+                        </button>
+                      </div>
+                      {loraError && (
+                        <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                          {loraError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* LoRA Scale Slider */}
+                    <div className={!loraLoaded ? 'opacity-40 pointer-events-none' : ''}>
+                      <EditableSlider
+                        label={t('loraScale')}
+                        value={loraScale}
+                        min={0}
+                        max={2}
+                        step={0.05}
+                        onChange={handleLoraScaleChange}
+                        formatDisplay={(val) => val.toFixed(2)}
+                        helpText={t('loraScaleDescription')}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* ADVANCED MODE — multi-slot adapter UI */
+                  <>
+                    {/* Adapter folder browser */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Adapter Folder</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={adapterFolder}
+                          onChange={(e) => setAdapterFolder(e.target.value)}
+                          placeholder="./lokr_output"
+                          className="flex-1 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-pink-500"
+                        />
+                        <button
+                          onClick={handleScanFolder}
+                          disabled={!adapterFolder.trim()}
+                          className="px-3 py-2 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40 transition-colors"
+                        >
+                          Scan
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* File list */}
+                    {adapterFiles.length > 0 && (
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Available Adapters ({adapterFiles.length})</label>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {adapterFiles.map((file) => (
+                            <div key={file.path} className="flex items-center justify-between bg-zinc-50 dark:bg-black/20 rounded-lg px-3 py-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${file.type === 'lora' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}`}>
+                                  {file.type.toUpperCase()}
+                                </span>
+                                <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate">{file.name}</span>
+                                <span className="text-[10px] text-zinc-400">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                              </div>
+                              <button
+                                onClick={() => handleLoadSlot(file.path)}
+                                disabled={isLoraLoading || adapterSlots.length >= 4}
+                                className="px-2 py-1 rounded text-[10px] font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-400 hover:bg-pink-500/20 disabled:opacity-40 transition-colors"
+                              >
+                                Load
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Error display */}
+                    {loraError && (
+                      <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                        {loraError}
+                      </div>
+                    )}
+
+                    {/* Loaded adapter slots */}
+                    {adapterSlots.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Loaded Adapters ({adapterSlots.length}/4)</label>
+                        {adapterSlots.map((slot) => (
+                          <div key={slot.slot} className="bg-zinc-50 dark:bg-black/20 rounded-lg p-3 space-y-2 border border-zinc-200 dark:border-white/5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">{slot.name}</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${slot.type === 'peft_lora' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}`}>
+                                  {slot.type === 'peft_lora' ? 'LoRA' : 'LoKr'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setExpandedSlot(expandedSlot === slot.slot ? null : slot.slot)}
+                                  className="text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                >
+                                  {expandedSlot === slot.slot ? '▼' : '▶'} Groups
+                                </button>
+                                <button
+                                  onClick={() => handleUnloadSlot(slot.slot)}
+                                  disabled={isLoraLoading}
+                                  className="px-2 py-1 rounded text-[10px] font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 transition-colors"
+                                >
+                                  Unload
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Overall scale slider */}
+                            <EditableSlider
+                              label={`Scale`}
+                              value={slot.scale}
+                              min={0}
+                              max={2}
+                              step={0.05}
+                              onChange={(v) => handleSlotScaleChange(slot.slot, v)}
+                              formatDisplay={(v) => v.toFixed(2)}
+                            />
+
+                            {/* Per-group sliders (expandable) */}
+                            {expandedSlot === slot.slot && (
+                              <div className="space-y-1 pl-2 border-l-2 border-pink-500/20">
+                                {(['self_attn', 'cross_attn', 'mlp'] as const).map((group) => (
+                                  <EditableSlider
+                                    key={group}
+                                    label={group === 'self_attn' ? 'Self-Attn' : group === 'cross_attn' ? 'Cross-Attn' : 'MLP'}
+                                    value={slot.group_scales[group]}
+                                    min={0}
+                                    max={2}
+                                    step={0.05}
+                                    onChange={(v) => handleSlotGroupScaleChange(slot.slot, group, v)}
+                                    formatDisplay={(v) => v.toFixed(2)}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {adapterSlots.length === 0 && adapterFiles.length === 0 && (
+                      <div className="text-xs text-zinc-400 dark:text-zinc-600 text-center py-2">
+                        Enter an adapter folder path and click Scan to browse available adapters
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </>
