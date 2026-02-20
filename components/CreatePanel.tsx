@@ -224,8 +224,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     delta_keys: number; group_scales: { self_attn: number; cross_attn: number; mlp: number };
   }>>([]);
   const [expandedSlot, setExpandedSlot] = useState<number | null>(null);
-  // Per-adapter persisted group scales (keyed by adapter filename)
+  // Per-adapter persisted scales (keyed by adapter filename)
   const [savedGroupScales, setSavedGroupScales] = usePersistedState<Record<string, { self_attn: number; cross_attn: number; mlp: number }>>('ace-adapterGroupScales', {});
+  const [savedOverallScales, setSavedOverallScales] = usePersistedState<Record<string, number>>('ace-adapterOverallScales', {});
+  const [adapterLoadingMessage, setAdapterLoadingMessage] = useState<string | null>(null);
 
   // Model selection
   const [selectedModel, setSelectedModel] = usePersistedState('ace-model', 'acestep-v15-turbo-shift3');
@@ -543,6 +545,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     if (!token) return;
     setIsLoraLoading(true);
     setLoadingAdapterPath(filePath);
+    setAdapterLoadingMessage('Loading adapter weights...');
     setLoraError(null);
     try {
       const nextSlot = adapterSlots.length > 0
@@ -554,12 +557,43 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       if (status?.advanced?.slots) {
         setAdapterSlots(status.advanced.slots);
         setLoraLoaded(true);
+
+        // Restore saved per-adapter scales for newly loaded slot
+        for (const slot of status.advanced.slots) {
+          const adapterKey = slot.name;
+          const savedScale = savedOverallScales[adapterKey];
+          const savedGroups = savedGroupScales[adapterKey];
+          const needsScaleRestore = savedScale !== undefined && savedScale !== 1.0;
+          const needsGroupRestore = savedGroups !== undefined;
+
+          if (needsScaleRestore || needsGroupRestore) {
+            setAdapterLoadingMessage(`Restoring saved scales for ${adapterKey}...`);
+          }
+
+          if (needsScaleRestore) {
+            try {
+              await generateApi.setLoraScale({ scale: savedScale, slot: slot.slot }, token);
+              setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, scale: savedScale } : s));
+            } catch (err) {
+              console.error(`Failed to restore scale for ${adapterKey}:`, err);
+            }
+          }
+          if (needsGroupRestore) {
+            try {
+              await generateApi.setSlotGroupScales({ slot: slot.slot, ...savedGroups }, token);
+              setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, group_scales: savedGroups } : s));
+            } catch (err) {
+              console.error(`Failed to restore group scales for ${adapterKey}:`, err);
+            }
+          }
+        }
       }
     } catch (err) {
       setLoraError(err instanceof Error ? err.message : 'Failed to load adapter');
     } finally {
       setIsLoraLoading(false);
       setLoadingAdapterPath(null);
+      setAdapterLoadingMessage(null);
     }
   };
 
@@ -587,6 +621,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const handleSlotScaleChange = async (slot: number, scale: number) => {
     if (!token) return;
     setAdapterSlots(prev => prev.map(s => s.slot === slot ? { ...s, scale } : s));
+    // Persist per-adapter overall scale
+    const slotData = adapterSlots.find(s => s.slot === slot);
+    if (slotData) {
+      setSavedOverallScales(prev => ({ ...prev, [slotData.name]: scale }));
+    }
     try {
       await generateApi.setLoraScale({ scale, slot }, token);
     } catch (err) {
@@ -2296,6 +2335,14 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                             );
                           })}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Adapter loading status */}
+                    {adapterLoadingMessage && (
+                      <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1.5 rounded">
+                        <span className="inline-block w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                        {adapterLoadingMessage}
                       </div>
                     )}
 
