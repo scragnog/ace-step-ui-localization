@@ -400,8 +400,9 @@ app.post('/api/shutdown', async (_req, res) => {
         collectAncestors(pid).forEach(a => { console.log(`[Shutdown]   ancestor ${a}`); pidsToKill.add(a); });
       }
 
-      for (const pid of findPidsOnPort(3000)) {
-        console.log(`[Shutdown] Vite PID ${pid}`);
+      const vitePort = parseInt(process.env.VITE_PORT || '3000', 10);
+      for (const pid of findPidsOnPort(vitePort)) {
+        console.log(`[Shutdown] Vite PID ${pid} (port ${vitePort})`);
         pidsToKill.add(pid);
         collectAncestors(pid).forEach(a => { console.log(`[Shutdown]   ancestor ${a}`); pidsToKill.add(a); });
       }

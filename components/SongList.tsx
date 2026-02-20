@@ -210,7 +210,12 @@ export const SongList: React.FC<SongListProps> = ({
             createdAt: new Date(track.created_at || Date.now()),
             track
         }));
-        return [...songItems, ...uploadItems];
+        // Always sort newest first by creation date
+        return [...songItems, ...uploadItems].sort((a, b) => {
+            const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+            const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+            return dateB - dateA;
+        });
     }, [filteredSongs, filteredUploads]);
 
     // Reset to page 1 when list changes
@@ -854,13 +859,31 @@ const SongItem: React.FC<SongItemProps> = ({
                     )}
                 </div>
 
-                {/* Timestamp */}
-                <div className="text-xs font-mono text-zinc-500 dark:text-zinc-600 self-start pt-1">
-                    {song.isGenerating ? (
-                        <span className={song.queuePosition ? 'text-amber-500' : 'text-pink-500'}>
-                            {song.queuePosition ? `#${song.queuePosition}` : 'Creating...'}
-                        </span>
-                    ) : song.duration}
+                {/* Duration & Date */}
+                <div className="text-right self-start pt-1 flex-shrink-0">
+                    <div className="text-xs font-mono text-zinc-500 dark:text-zinc-600">
+                        {song.isGenerating ? (
+                            <span className={song.queuePosition ? 'text-amber-500' : 'text-pink-500'}>
+                                {song.queuePosition ? `#${song.queuePosition}` : 'Creating...'}
+                            </span>
+                        ) : song.duration}
+                    </div>
+                    {!song.isGenerating && song.createdAt && (
+                        <div className="text-[10px] text-zinc-400 dark:text-zinc-600 mt-0.5">
+                            {(() => {
+                                const d = song.createdAt instanceof Date ? song.createdAt : new Date(song.createdAt);
+                                if (isNaN(d.getTime())) return null;
+                                const now = new Date();
+                                const isToday = d.toDateString() === now.toDateString();
+                                const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+                                const isYesterday = d.toDateString() === yesterday.toDateString();
+                                const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                if (isToday) return time;
+                                if (isYesterday) return `Yesterday ${time}`;
+                                return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${time}`;
+                            })()}
+                        </div>
+                    )}
                 </div>
             </div>
 

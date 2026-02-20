@@ -476,12 +476,13 @@ function AppContent() {
         const songsMap = new Map<string, Song>();
         [...mySongs, ...likedSongs].forEach(s => songsMap.set(s.id, s));
 
-        // Preserve any generating songs that still exist in the database
-        // If a generating song is not in the loaded songs, it may have been deleted
+        // Merge: keep generating songs + loaded songs (SongList sorts by date)
         setSongs(prev => {
           const generatingSongs = prev.filter(s => s.isGenerating);
           const loadedSongs = Array.from(songsMap.values());
-          return [...generatingSongs, ...loadedSongs];
+          const loadedById = new Map(loadedSongs.map(s => [s.id, s]));
+          generatingSongs.forEach(g => loadedById.delete(g.id));
+          return [...generatingSongs, ...loadedById.values()];
         });
 
         const likedIds = new Set(likedSongs.map(s => s.id));
@@ -747,17 +748,13 @@ function AppContent() {
 
       // Preserve only generating songs that still exist in the database
       // Preserve any generating songs (they have temp IDs that won't be in the database)
+      // Merge: keep generating songs + loaded songs (SongList sorts by date)
       setSongs(prev => {
         const generatingSongs = prev.filter(s => s.isGenerating);
-        const mergedSongs = [...generatingSongs];
-        for (const song of loadedSongs) {
-          if (!mergedSongs.some(s => s.id === song.id)) {
-            mergedSongs.push(song);
-          }
-        }
-        // Don't re-sort: generating songs stay at front in insertion order,
-        // DB songs follow in their natural created_at DESC order from the API.
-        return mergedSongs;
+        const loadedById = new Map(loadedSongs.map(s => [s.id, s]));
+        // Don't duplicate: drop loaded songs that share an ID with generating ones
+        generatingSongs.forEach(g => loadedById.delete(g.id));
+        return [...generatingSongs, ...loadedById.values()];
       });
       // If the current selection was a temp/generating song, replace it with newest real song
       if (selectedSong?.isGenerating || (selectedSong && !loadedSongs.some(s => s.id === selectedSong.id))) {
@@ -823,36 +820,10 @@ function AppContent() {
             }));
 
             setSongs(prev => {
-              // Build set of loaded song IDs for merging
+              const generatingSongs = prev.filter(s => s.isGenerating);
               const loadedById = new Map(loadedSongs.map(s => [s.id, s]));
-
-              // Replace temp songs whose jobs have completed with DB data (in-place)
-              // For songs already in list (by DB id), update them in-place
-              const result: Song[] = [];
-              const addedIds = new Set<string>();
-
-              for (const s of prev) {
-                if (s.isGenerating) {
-                  // Keep generating songs as-is
-                  result.push(s);
-                  addedIds.add(s.id);
-                } else if (loadedById.has(s.id)) {
-                  // Update existing song with fresh DB data
-                  result.push(loadedById.get(s.id)!);
-                  addedIds.add(s.id);
-                }
-                // Songs that are no longer in DB are dropped
-              }
-
-              // Append any new songs from DB that weren't already in list
-              // (these are the just-completed songs replacing temp entries)
-              for (const s of loadedSongs) {
-                if (!addedIds.has(s.id)) {
-                  result.push(s);
-                }
-              }
-
-              return result;
+              generatingSongs.forEach(g => loadedById.delete(g.id));
+              return [...generatingSongs, ...loadedById.values()];
             });
           } catch (refreshErr) {
             console.error('Failed to refresh after completion:', refreshErr);

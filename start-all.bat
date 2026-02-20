@@ -3,6 +3,12 @@ REM ACE-Step UI Complete Startup Script for Windows
 REM Starts ACE-Step API + Backend + Frontend
 setlocal
 
+REM Read frontend port from .env
+set "VITE_PORT=3000"
+if exist ".env" (
+    for /f "tokens=2 delims==" %%a in ('findstr /b "VITE_PORT" ".env"') do set "VITE_PORT=%%a"
+)
+
 echo ==================================
 echo   ACE-Step Complete Startup
 echo ==================================
@@ -93,10 +99,10 @@ echo ==================================
 echo.
 echo   ACE-Step API: http://localhost:8001
 echo   Backend:      http://localhost:3001
-echo   Frontend:     http://localhost:3000
+echo   Frontend:     http://localhost:%VITE_PORT%
 echo.
 if defined LOCAL_IP (
-    echo   LAN Access:   http://%LOCAL_IP%:3000
+    echo   LAN Access:   http://%LOCAL_IP%:%VITE_PORT%
     echo.
 )
 echo   Close the terminal windows to stop all services.
@@ -105,7 +111,7 @@ echo ==================================
 echo.
 echo Opening browser...
 timeout /t 3 /nobreak >nul
-start http://localhost:3000
+start http://localhost:%VITE_PORT%
 
 echo.
 echo Press any key to close this window (services will keep running)

@@ -218,6 +218,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [advancedAdapters, setAdvancedAdapters] = usePersistedState('ace-advancedAdapters', false);
   const [adapterFolder, setAdapterFolder] = usePersistedState('ace-adapterFolder', './lokr_output');
   const [adapterFiles, setAdapterFiles] = useState<Array<{ name: string; path: string; size: number; type: string }>>([]);
+  const [loadingAdapterPath, setLoadingAdapterPath] = useState<string | null>(null);;
   const [adapterSlots, setAdapterSlots] = useState<Array<{
     slot: number; name: string; path: string; type: string; scale: number;
     delta_keys: number; group_scales: { self_attn: number; cross_attn: number; mlp: number };
@@ -541,6 +542,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const handleLoadSlot = async (filePath: string) => {
     if (!token) return;
     setIsLoraLoading(true);
+    setLoadingAdapterPath(filePath);
     setLoraError(null);
     try {
       const nextSlot = adapterSlots.length > 0
@@ -557,6 +559,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       setLoraError(err instanceof Error ? err.message : 'Failed to load adapter');
     } finally {
       setIsLoraLoading(false);
+      setLoadingAdapterPath(null);
     }
   };
 
@@ -2263,24 +2266,35 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Available Adapters ({adapterFiles.length})</label>
                         <div className="max-h-32 overflow-y-auto space-y-1">
-                          {adapterFiles.map((file) => (
-                            <div key={file.path} className="flex items-center justify-between bg-zinc-50 dark:bg-black/20 rounded-lg px-3 py-2">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${file.type === 'lora' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}`}>
-                                  {file.type.toUpperCase()}
-                                </span>
-                                <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate">{file.name}</span>
-                                <span className="text-[10px] text-zinc-400">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                          {adapterFiles.map((file) => {
+                            const isAlreadyLoaded = adapterSlots.some(s => s.path === file.path);
+                            return (
+                              <div key={file.path} className="flex items-center justify-between bg-zinc-50 dark:bg-black/20 rounded-lg px-3 py-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${file.type === 'lora' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}`}>
+                                    {file.type.toUpperCase()}
+                                  </span>
+                                  <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate">{file.name}</span>
+                                  <span className="text-[10px] text-zinc-400">{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                                </div>
+                                {isAlreadyLoaded ? (
+                                  <span className="px-2 py-1 rounded text-[10px] font-semibold text-emerald-500 dark:text-emerald-400 bg-emerald-500/10">
+                                    ✓ Loaded
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleLoadSlot(file.path)}
+                                    disabled={isLoraLoading || adapterSlots.length >= 4}
+                                    className="px-2 py-1 rounded text-[10px] font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-400 hover:bg-pink-500/20 disabled:opacity-40 transition-colors flex items-center gap-1"
+                                  >
+                                    {loadingAdapterPath === file.path ? (
+                                      <><span className="inline-block w-3 h-3 border-2 border-pink-400 border-t-transparent rounded-full animate-spin" /> Loading…</>
+                                    ) : isLoraLoading ? 'Wait…' : 'Load'}
+                                  </button>
+                                )}
                               </div>
-                              <button
-                                onClick={() => handleLoadSlot(file.path)}
-                                disabled={isLoraLoading || adapterSlots.length >= 4}
-                                className="px-2 py-1 rounded text-[10px] font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-400 hover:bg-pink-500/20 disabled:opacity-40 transition-colors"
-                              >
-                                Load
-                              </button>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
