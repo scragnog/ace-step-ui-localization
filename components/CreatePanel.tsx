@@ -223,7 +223,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     slot: number; name: string; path: string; type: string; scale: number;
     delta_keys: number; group_scales: { self_attn: number; cross_attn: number; mlp: number };
   }>>([]);
-  const [expandedSlot, setExpandedSlot] = useState<number | null>(null);
+  const [expandedSlots, setExpandedSlots] = useState<Set<number>>(new Set());
   // Per-adapter persisted scales (keyed by adapter filename)
   const [savedGroupScales, setSavedGroupScales] = usePersistedState<Record<string, { self_attn: number; cross_attn: number; mlp: number }>>('ace-adapterGroupScales', {});
   const [savedOverallScales, setSavedOverallScales] = usePersistedState<Record<string, number>>('ace-adapterOverallScales', {});
@@ -2369,10 +2369,14 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                               </div>
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => setExpandedSlot(expandedSlot === slot.slot ? null : slot.slot)}
+                                  onClick={() => setExpandedSlots(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(slot.slot)) next.delete(slot.slot); else next.add(slot.slot);
+                                    return next;
+                                  })}
                                   className="text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                                 >
-                                  {expandedSlot === slot.slot ? '▼' : '▶'} Groups
+                                  {expandedSlots.has(slot.slot) ? '▼' : '▶'} Groups
                                 </button>
                                 <button
                                   onClick={() => handleUnloadSlot(slot.slot)}
@@ -2396,7 +2400,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                             />
 
                             {/* Per-group sliders (expandable) */}
-                            {expandedSlot === slot.slot && (
+                            {expandedSlots.has(slot.slot) && (
                               <div className="space-y-1 pl-2 border-l-2 border-pink-500/20">
                                 {(['self_attn', 'cross_attn', 'mlp'] as const).map((group) => (
                                   <EditableSlider
