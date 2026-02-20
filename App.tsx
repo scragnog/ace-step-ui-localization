@@ -755,8 +755,9 @@ function AppContent() {
             mergedSongs.push(song);
           }
         }
-        // Sort by creation date, newest first
-        return mergedSongs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        // Don't re-sort: generating songs stay at front in insertion order,
+        // DB songs follow in their natural created_at DESC order from the API.
+        return mergedSongs;
       });
       // If the current selection was a temp/generating song, replace it with newest real song
       if (selectedSong?.isGenerating || (selectedSong && !loadedSongs.some(s => s.id === selectedSong.id))) {
@@ -774,17 +775,22 @@ function AppContent() {
     const pollInterval = setInterval(async () => {
       try {
         const status = await generateApi.getStatus(jobId, token);
-        const normalizedProgress = Number.isFinite(Number(status.progress))
-          ? (Number(status.progress) > 1 ? Number(status.progress) / 100 : Number(status.progress))
-          : undefined;
+
+        // When job is queued/pending, don't show progress from another running job
+        const isQueued = status.status === 'queued' || status.status === 'pending';
+        const normalizedProgress = isQueued
+          ? 0
+          : (Number.isFinite(Number(status.progress))
+            ? (Number(status.progress) > 1 ? Number(status.progress) / 100 : Number(status.progress))
+            : undefined);
 
         setSongs(prev => prev.map(s => {
           if (s.id === tempId) {
             return {
               ...s,
-              queuePosition: status.status === 'queued' ? status.queuePosition : undefined,
+              queuePosition: isQueued ? status.queuePosition : undefined,
               progress: normalizedProgress ?? s.progress,
-              stage: status.stage ?? s.stage,
+              stage: isQueued ? (status.queuePosition ? `Queued #${status.queuePosition}` : 'Queued') : (status.stage ?? s.stage),
             };
           }
           return s;
@@ -792,7 +798,67 @@ function AppContent() {
 
         if (status.status === 'succeeded' && status.result) {
           cleanupJob(jobId, tempId);
-          await refreshSongsList();
+
+          // Replace temp song in-place with real song data from DB
+          // This preserves position instead of reloading the full list
+          try {
+            const response = await songsApi.getMySongs(token);
+            const loadedSongs: Song[] = response.songs.map((s: any) => ({
+              id: s.id,
+              title: s.title,
+              lyrics: s.lyrics,
+              style: s.style,
+              coverUrl: `https://picsum.photos/seed/${s.id}/400/400`,
+              duration: s.duration && s.duration > 0 ? `${Math.floor(s.duration / 60)}:${String(Math.floor(s.duration % 60)).padStart(2, '0')}` : '0:00',
+              createdAt: new Date(s.created_at),
+              tags: s.tags || [],
+              audioUrl: getAudioUrl(s.audio_url, s.id),
+              isPublic: s.is_public,
+              likeCount: s.like_count || 0,
+              viewCount: s.view_count || 0,
+              userId: s.user_id,
+              creator: s.creator,
+              ditModel: s.ditModel,
+              generationParams: normalizeGenerationParams(s),
+            }));
+
+            setSongs(prev => {
+              // Build set of loaded song IDs for merging
+              const loadedById = new Map(loadedSongs.map(s => [s.id, s]));
+
+              // Replace temp songs whose jobs have completed with DB data (in-place)
+              // For songs already in list (by DB id), update them in-place
+              const result: Song[] = [];
+              const addedIds = new Set<string>();
+
+              for (const s of prev) {
+                if (s.isGenerating) {
+                  // Keep generating songs as-is
+                  result.push(s);
+                  addedIds.add(s.id);
+                } else if (loadedById.has(s.id)) {
+                  // Update existing song with fresh DB data
+                  result.push(loadedById.get(s.id)!);
+                  addedIds.add(s.id);
+                }
+                // Songs that are no longer in DB are dropped
+              }
+
+              // Append any new songs from DB that weren't already in list
+              // (these are the just-completed songs replacing temp entries)
+              for (const s of loadedSongs) {
+                if (!addedIds.has(s.id)) {
+                  result.push(s);
+                }
+              }
+
+              return result;
+            });
+          } catch (refreshErr) {
+            console.error('Failed to refresh after completion:', refreshErr);
+            // Fallback: just do a full refresh
+            await refreshSongsList();
+          }
 
           if (window.innerWidth < 768) {
             setMobileShowList(true);
@@ -1219,6 +1285,42 @@ function AppContent() {
     });
   };
 
+  const handleDeleteAll = () => {
+    if (!token) return;
+    const songCount = songs.filter(s => !s.isGenerating).length;
+    if (songCount === 0) return;
+
+    setConfirmDialog({
+      title: t('deleteAllTracks'),
+      message: t('deleteAllTracksConfirm').replace('{count}', String(songCount)),
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await songsApi.deleteAllSongs(token!);
+
+          // Stop playback
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.src = '';
+          }
+          setCurrentSong(null);
+          setIsPlaying(false);
+          setSelectedSong(null);
+          setPlayQueue([]);
+          setLikedSongIds(new Set());
+
+          // Keep only generating songs (temp/job IDs)
+          setSongs(prev => prev.filter(s => s.isGenerating));
+
+          showToast(t('allTracksDeleted'));
+        } catch (error) {
+          console.error('Failed to delete all songs:', error);
+          showToast(t('deleteAllFailed'), 'error');
+        }
+      },
+    });
+  };
+
   const handleDeleteReferenceTrack = (trackId: string) => {
     if (!token) return;
 
@@ -1556,6 +1658,7 @@ function AppContent() {
                 onReusePrompt={handleReuse}
                 onDelete={handleDeleteSong}
                 onDeleteMany={handleDeleteSongs}
+                onDeleteAll={handleDeleteAll}
                 onUseAsReference={handleUseAsReference}
                 onCoverSong={handleCoverSong}
                 onUseUploadAsReference={handleUseUploadAsReference}

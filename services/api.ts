@@ -212,6 +212,9 @@ export const songsApi = {
   deleteSong: (id: string, token: string): Promise<{ success: boolean }> =>
     api(`/api/songs/${id}`, { method: 'DELETE', token }),
 
+  deleteAllSongs: (token: string): Promise<{ success: boolean; deletedCount: number }> =>
+    api('/api/songs/all', { method: 'DELETE', token }),
+
   toggleLike: (id: string, token: string): Promise<{ liked: boolean }> =>
     api(`/api/songs/${id}/like`, { method: 'POST', token }),
 

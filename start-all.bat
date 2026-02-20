@@ -65,7 +65,7 @@ echo.
 
 REM Start ACE-Step API in new window
 echo [1/3] Starting ACE-Step API server...
-start "ACE-Step API Server" cmd /k "cd /d "%ACESTEP_PATH%" && %API_COMMAND%"
+start /min "ACE-Step API Server" cmd /k "cd /d "%ACESTEP_PATH%" && %API_COMMAND%"
 
 REM Wait for API to start
 echo Waiting for API to initialize...
@@ -73,7 +73,7 @@ timeout /t 5 /nobreak >nul
 
 REM Start backend in new window
 echo [2/3] Starting backend server...
-start "ACE-Step UI Backend" cmd /k "cd /d "%~dp0server" && npm run dev"
+start /min "ACE-Step UI Backend" cmd /k "cd /d "%~dp0server" && npm run dev"
 
 REM Wait for backend to start
 echo Waiting for backend to start...
@@ -81,7 +81,7 @@ timeout /t 3 /nobreak >nul
 
 REM Start frontend in new window
 echo [3/3] Starting frontend...
-start "ACE-Step UI Frontend" cmd /k "cd /d "%~dp0" && npm run dev"
+start /min "ACE-Step UI Frontend" cmd /k "cd /d "%~dp0" && npm run dev"
 
 REM Wait a moment
 timeout /t 2 /nobreak >nul

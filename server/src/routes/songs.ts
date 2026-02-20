@@ -425,6 +425,54 @@ router.patch('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
+// Delete ALL songs for the authenticated user
+router.delete('/all', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Get all songs for this user (to delete files)
+    const result = await pool.query(
+      'SELECT id, audio_url, cover_url FROM songs WHERE user_id = $1',
+      [req.user!.id]
+    );
+
+    if (result.rows.length === 0) {
+      res.json({ success: true, deletedCount: 0 });
+      return;
+    }
+
+    const storage = getStorageProvider();
+
+    // Delete all associated files
+    for (const song of result.rows) {
+      if (song.audio_url) {
+        try {
+          const storageKey = song.audio_url.startsWith('/audio/')
+            ? song.audio_url.replace('/audio/', '')
+            : song.audio_url.replace('s3://', '');
+          await storage.delete(storageKey);
+        } catch (err) {
+          console.error(`Failed to delete audio file ${song.audio_url}:`, err);
+        }
+      }
+      if (song.cover_url && song.cover_url.startsWith('/audio/')) {
+        try {
+          const coverKey = song.cover_url.replace('/audio/', '');
+          await storage.delete(coverKey);
+        } catch (err) {
+          console.error(`Failed to delete cover ${song.cover_url}:`, err);
+        }
+      }
+    }
+
+    // Bulk delete all songs from DB
+    await pool.query('DELETE FROM songs WHERE user_id = $1', [req.user!.id]);
+
+    res.json({ success: true, deletedCount: result.rows.length });
+  } catch (error) {
+    console.error('Delete all songs error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Delete song
 router.delete('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {

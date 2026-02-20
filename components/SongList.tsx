@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Song } from '../types';
-import { Play, MoreHorizontal, Heart, ThumbsDown, ListPlus, Pause, Search, Filter, Check, Globe, Lock, Loader2, ThumbsUp, Share2, Video, Info, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, MoreHorizontal, Heart, ThumbsDown, ListPlus, Pause, Search, Filter, Check, Globe, Lock, Loader2, ThumbsUp, Share2, Video, Info, Clock, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
@@ -26,6 +26,7 @@ interface SongListProps {
     onDelete?: (song: Song) => void;
     onSongUpdate?: (updatedSong: Song) => void;
     onDeleteMany?: (songs: Song[], onSuccess?: () => void) => void;
+    onDeleteAll?: () => void;
     onUseAsReference?: (song: Song) => void;
     onCoverSong?: (song: Song) => void;
     onUseUploadAsReference?: (track: { audio_url: string; filename: string }) => void;
@@ -105,6 +106,7 @@ export const SongList: React.FC<SongListProps> = ({
     onDelete,
     onSongUpdate,
     onDeleteMany,
+    onDeleteAll,
     onUseAsReference,
     onCoverSong,
     onUseUploadAsReference,
@@ -208,7 +210,7 @@ export const SongList: React.FC<SongListProps> = ({
             createdAt: new Date(track.created_at || Date.now()),
             track
         }));
-        return [...songItems, ...uploadItems].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        return [...songItems, ...uploadItems];
     }, [filteredSongs, filteredUploads]);
 
     // Reset to page 1 when list changes
@@ -319,6 +321,16 @@ export const SongList: React.FC<SongListProps> = ({
                         >
                             {t('select')}
                         </button>
+
+                        {onDeleteAll && songs.length > 0 && (
+                            <button
+                                onClick={onDeleteAll}
+                                title={t('deleteAllTracks')}
+                                className="border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-[#121214] hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-red-300 dark:hover:border-red-500/30 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 p-2.5 rounded-lg transition-all"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        )}
                     </div>
 
                     {isSelecting && (

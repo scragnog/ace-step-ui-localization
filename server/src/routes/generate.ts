@@ -11,6 +11,7 @@ import {
   checkSpaceHealth,
   downloadAudioToBuffer,
   getJobRawResponse,
+  getJobStatus,
   resolvePythonPath,
 } from '../services/acestep.js';
 import { config } from '../config/index.js';
@@ -562,14 +563,81 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
           };
         }
 
+        // Parse progress from tqdm-style progress_text
+        // Format example: " 14%|##########5| 27/200 [00:06<00:42, 4.10steps/s]"
+        let parsedProgress: number | undefined;
+        let parsedEta: number | undefined;
+        let parsedStage: string | undefined;
+        const progressText: string | undefined = taskData.progress_text;
+
+        if (progressText && typeof progressText === 'string') {
+          // Extract percentage
+          const pctMatch = progressText.match(/(\d+)%/);
+          if (pctMatch) {
+            parsedProgress = parseInt(pctMatch[1], 10) / 100; // 0–1
+          }
+
+          // Extract ETA in seconds from "[elapsed<remaining, ...]"
+          const etaMatch = progressText.match(/<(\d+):(\d+)/);
+          if (etaMatch) {
+            parsedEta = parseInt(etaMatch[1], 10) * 60 + parseInt(etaMatch[2], 10);
+          }
+
+          // Extract step info for stage display e.g. "27/200"
+          const stepMatch = progressText.match(/(\d+)\/(\d+)/);
+          if (stepMatch) {
+            parsedStage = `Step ${stepMatch[1]}/${stepMatch[2]}`;
+            // Also extract speed if available
+            const speedMatch = progressText.match(/([\d.]+)\s*steps?\/s/i);
+            if (speedMatch) {
+              parsedStage += ` (${speedMatch[1]} steps/s)`;
+            }
+          }
+        }
+
+        // Also check for progress/stage in the result data itself
+        if (taskData.result) {
+          try {
+            const resultItems = JSON.parse(taskData.result);
+            const firstItem = Array.isArray(resultItems) ? resultItems[0] : resultItems;
+            if (firstItem && typeof firstItem === 'object') {
+              // Check per-job stage — Python API maps both 'queued' and 'running' to status 0,
+              // and shares log_buffer.last_message as progress_text for ALL status-0 jobs.
+              // Use the per-job stage field to detect actually-queued jobs.
+              const perJobStage = (firstItem as any).stage;
+              const perJobProgress = (firstItem as any).progress;
+
+              if (perJobStage === 'queued' && taskData.status === 0) {
+                // This job is queued, not running — ignore shared progress_text
+                parsedProgress = 0;
+                parsedStage = 'Queued';
+                parsedEta = undefined;
+              } else {
+                if (parsedProgress === undefined) {
+                  const rawProgress = perJobProgress;
+                  if (Number.isFinite(Number(rawProgress)) && Number(rawProgress) > 0) {
+                    parsedProgress = Number(rawProgress) > 1 ? Number(rawProgress) / 100 : Number(rawProgress);
+                  }
+                }
+                if (typeof perJobStage === 'string' && !parsedStage) {
+                  parsedStage = perJobStage;
+                }
+              }
+            }
+          } catch { /* ignore parse errors */ }
+        }
+
+        // Determine actual status — override 'running' to 'queued' when per-job stage says queued
+        const resolvedStatus = (parsedStage === 'Queued' && taskData.status === 0) ? 'queued' : (statusMap[taskData.status] || 'running');
+
         const aceStatus = {
-          status: statusMap[taskData.status] || 'running',
+          status: resolvedStatus,
           result: resultData,
           error: taskData.status === 2 ? 'Generation failed' : undefined,
           queuePosition: undefined,
-          etaSeconds: undefined,
-          progress: undefined,
-          stage: undefined,
+          etaSeconds: parsedEta,
+          progress: parsedProgress,
+          stage: parsedStage,
         };
 
         if (aceStatus.status !== job.status) {
@@ -774,7 +842,26 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
       }
     }
 
-    // Return stored status
+    // Return stored status — for Python-spawned jobs, check in-memory progress
+    if (['pending', 'queued', 'running'].includes(job.status)) {
+      try {
+        const liveStatus = await getJobStatus(req.params.jobId);
+        if (liveStatus) {
+          res.json({
+            jobId: req.params.jobId,
+            status: liveStatus.status,
+            progress: liveStatus.progress,
+            stage: liveStatus.stage,
+            etaSeconds: liveStatus.etaSeconds,
+            queuePosition: liveStatus.queuePosition,
+            result: null,
+            error: undefined,
+          });
+          return;
+        }
+      } catch { /* fall through to DB status */ }
+    }
+
     res.json({
       jobId: req.params.jobId,
       status: job.status,

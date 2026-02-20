@@ -50,7 +50,7 @@ echo.
 
 REM Start backend in new window
 echo Starting backend server...
-start "ACE-Step UI Backend" cmd /k "cd server && npm run dev"
+start /min "ACE-Step UI Backend" cmd /k "cd server && npm run dev"
 
 REM Wait for backend to start
 echo Waiting for backend to start...
@@ -58,7 +58,7 @@ timeout /t 3 /nobreak >nul
 
 REM Start frontend in new window
 echo Starting frontend...
-start "ACE-Step UI Frontend" cmd /k "npm run dev"
+start /min "ACE-Step UI Frontend" cmd /k "npm run dev"
 
 REM Wait a moment
 timeout /t 2 /nobreak >nul

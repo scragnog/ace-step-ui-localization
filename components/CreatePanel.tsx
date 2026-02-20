@@ -3009,7 +3009,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           <Sparkles size={18} />
           <span>
             {activeJobCount > 0
-              ? `${t('queueGeneration') || 'Queue Generation'}${activeJobCount > 0 ? ` (${activeJobCount} active)` : ''}`
+              ? t('queueNext')
               : bulkCount > 1
                 ? `${t('createButton')} ${bulkCount} ${t('jobs')} (${bulkCount * batchSize} ${t('variations')})`
                 : `${t('createButton')}${batchSize > 1 ? ` (${batchSize} ${t('variations')})` : ''}`
