@@ -690,7 +690,7 @@ async function processGeneration(
     if (params.cfgIntervalStart !== undefined && params.cfgIntervalStart > 0) args.push('--cfg-interval-start', String(params.cfgIntervalStart));
     if (params.cfgIntervalEnd !== undefined && params.cfgIntervalEnd < 1.0) args.push('--cfg-interval-end', String(params.cfgIntervalEnd));
 
-    const result = await runPythonGeneration(args);
+    const result = await runPythonGeneration(args, job);
 
     if (!result.success) {
       throw new Error(result.error || 'Generation failed');
@@ -756,7 +756,7 @@ interface PythonResult {
   error?: string;
 }
 
-function runPythonGeneration(scriptArgs: string[]): Promise<PythonResult> {
+function runPythonGeneration(scriptArgs: string[], job?: ActiveJob): Promise<PythonResult> {
   return new Promise((resolve) => {
     const pythonPath = resolvePythonPath(ACESTEP_DIR);
     const args = [PYTHON_SCRIPT, ...scriptArgs];
@@ -778,11 +778,28 @@ function runPythonGeneration(scriptArgs: string[]): Promise<PythonResult> {
 
     proc.stderr.on('data', (data) => {
       stderr += data.toString();
-      // Log progress to console
+      // Log progress to console and update job progress
       const lines = data.toString().split('\n');
       for (const line of lines) {
         if (line.trim()) {
           console.log(`[ACE-Step] ${line}`);
+          // Parse tqdm-style progress (e.g. " 50%|" or "100%|")
+          if (job) {
+            const tqdmMatch = line.match(/(\d+)%\|/);
+            if (tqdmMatch) {
+              job.progress = parseInt(tqdmMatch[1], 10) / 100;
+            }
+            // Parse step-based progress (e.g. "step 5/10", "Step: 5/10")
+            const stepMatch = line.match(/[Ss]tep[:\s]+(\d+)\/(\d+)/);
+            if (stepMatch) {
+              job.progress = parseInt(stepMatch[1], 10) / parseInt(stepMatch[2], 10);
+            }
+            // Parse stage info (e.g. "Phase 1", "Generating audio")
+            const phaseMatch = line.match(/^(?:Phase|Stage)\s+(.+)/i);
+            if (phaseMatch) {
+              job.stage = phaseMatch[1].trim();
+            }
+          }
         }
       }
     });

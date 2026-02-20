@@ -22,6 +22,7 @@ interface ReferenceTrack {
 interface CreatePanelProps {
   onGenerate: (params: GenerationParams) => void;
   isGenerating: boolean;
+  activeJobCount?: number;
   initialData?: { song: Song, timestamp: number } | null;
   createdSongs?: Song[];
   pendingAudioSelection?: { target: 'reference' | 'source'; url: string; title?: string } | null;
@@ -108,6 +109,7 @@ const VOCAL_LANGUAGE_KEYS = [
 export const CreatePanel: React.FC<CreatePanelProps> = ({
   onGenerate,
   isGenerating,
+  activeJobCount = 0,
   initialData,
   createdSongs = [],
   pendingAudioSelection,
@@ -3002,12 +3004,12 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         <button
           onClick={handleGenerate}
           className="w-full h-12 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-lg hover:brightness-110"
-          disabled={isGenerating || !isAuthenticated}
+          disabled={!isAuthenticated}
         >
           <Sparkles size={18} />
           <span>
-            {isGenerating
-              ? t('generating')
+            {activeJobCount > 0
+              ? `${t('queueGeneration') || 'Queue Generation'}${activeJobCount > 0 ? ` (${activeJobCount} active)` : ''}`
               : bulkCount > 1
                 ? `${t('createButton')} ${bulkCount} ${t('jobs')} (${bulkCount * batchSize} ${t('variations')})`
                 : `${t('createButton')}${batchSize > 1 ? ` (${batchSize} ${t('variations')})` : ''}`

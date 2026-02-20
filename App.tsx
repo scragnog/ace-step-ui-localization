@@ -1526,6 +1526,7 @@ function AppContent() {
               <CreatePanel
                 onGenerate={handleGenerate}
                 isGenerating={isGenerating}
+                activeJobCount={activeJobCount}
                 initialData={reuseData}
                 createdSongs={songs}
                 pendingAudioSelection={pendingAudioSelection}
@@ -1560,6 +1561,7 @@ function AppContent() {
                 onUseUploadAsReference={handleUseUploadAsReference}
                 onCoverUpload={handleCoverUpload}
                 onSongUpdate={handleSongUpdate}
+                onDeleteUpload={handleDeleteReferenceTrack}
               />
             </div>
 
