@@ -328,6 +328,104 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'ACE-Step UI API' });
 });
 
+// Shutdown endpoint - kills all ACE-Step processes
+app.post('/api/shutdown', async (_req, res) => {
+  console.log('[Shutdown] Shutdown requested — terminating ACE-Step processes...');
+  res.json({ success: true, message: 'Shutting down...' });
+
+  // Give the response a moment to flush
+  setTimeout(async () => {
+    try {
+      const { execSync } = await import('child_process');
+
+      // Helper: run a command and return stdout, or empty string on failure
+      const run = (cmd: string): string => {
+        try {
+          return execSync(cmd, { encoding: 'utf-8', timeout: 5000 }).trim();
+        } catch {
+          return '';
+        }
+      };
+
+      // ── 1. Snapshot the entire process table in ONE call (~200ms) ──
+      const psCmd = `powershell -NoProfile -Command "Get-CimInstance Win32_Process | ForEach-Object { $_.ProcessId.ToString() + '|' + $_.ParentProcessId.ToString() + '|' + $_.Name } "`;
+      const psOut = run(psCmd);
+      const procMap = new Map<string, { parentPid: string; name: string }>();
+      for (const line of psOut.split('\n')) {
+        const parts = line.trim().split('|');
+        if (parts.length >= 3) {
+          procMap.set(parts[0], { parentPid: parts[1], name: parts[2].toLowerCase() });
+        }
+      }
+      console.log(`[Shutdown] Loaded ${procMap.size} processes from snapshot`);
+
+      // ── 2. Walk UP the tree from a PID, collecting shell ancestors ──
+      const shellNames = new Set(['cmd.exe', 'powershell.exe', 'pwsh.exe', 'conhost.exe', 'windowsterminal.exe']);
+      const collectAncestors = (startPid: string): string[] => {
+        const ancestors: string[] = [];
+        let current = startPid;
+        const visited = new Set<string>();
+        for (let depth = 0; depth < 10; depth++) {
+          const info = procMap.get(current);
+          if (!info) break;
+          const pp = info.parentPid;
+          if (!pp || pp === '0' || pp === '4' || visited.has(pp)) break;
+          visited.add(pp);
+          const parentInfo = procMap.get(pp);
+          if (parentInfo && shellNames.has(parentInfo.name)) {
+            ancestors.push(pp);
+          }
+          current = pp;
+        }
+        return ancestors;
+      };
+
+      // ── 3. Find PIDs on target ports (netstat is fast, <100ms) ──
+      const findPidsOnPort = (port: number): string[] => {
+        const out = run(`netstat -aon | findstr :${port} | findstr LISTENING`);
+        const pids: string[] = [];
+        for (const line of out.split('\n')) {
+          const pid = line.trim().split(/\s+/).pop();
+          if (pid && /^\d+$/.test(pid) && pid !== '0') pids.push(pid);
+        }
+        return [...new Set(pids)];
+      };
+
+      // ── 4. Collect all PIDs to kill ──
+      const pidsToKill = new Set<string>();
+
+      for (const pid of findPidsOnPort(8001)) {
+        console.log(`[Shutdown] Python API PID ${pid}`);
+        pidsToKill.add(pid);
+        collectAncestors(pid).forEach(a => { console.log(`[Shutdown]   ancestor ${a}`); pidsToKill.add(a); });
+      }
+
+      for (const pid of findPidsOnPort(3000)) {
+        console.log(`[Shutdown] Vite PID ${pid}`);
+        pidsToKill.add(pid);
+        collectAncestors(pid).forEach(a => { console.log(`[Shutdown]   ancestor ${a}`); pidsToKill.add(a); });
+      }
+
+      const expressPid = String(process.pid);
+      console.log(`[Shutdown] Express PID ${expressPid}`);
+      collectAncestors(expressPid).forEach(a => { console.log(`[Shutdown]   ancestor ${a}`); pidsToKill.add(a); });
+
+      // ── 5. Kill everything ──
+      console.log(`[Shutdown] Killing ${pidsToKill.size} processes...`);
+      for (const pid of pidsToKill) {
+        try {
+          execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore', timeout: 5000 });
+        } catch { /* already dead */ }
+      }
+
+    } catch (e) {
+      console.error('[Shutdown] Error during shutdown', e);
+    }
+    // Exit this Express process last
+    setTimeout(() => process.exit(0), 500);
+  }, 300);
+});
+
 // oEmbed endpoint for rich embeds
 app.get('/api/oembed', async (req, res) => {
   const url = req.query.url as string;

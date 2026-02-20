@@ -35,9 +35,9 @@ class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorBoundary
       | AppErrorBoundaryState
       | null
       | ((
-          prevState: Readonly<AppErrorBoundaryState>,
-          props: Readonly<AppErrorBoundaryProps>
-        ) => AppErrorBoundaryState | null)
+        prevState: Readonly<AppErrorBoundaryState>,
+        props: Readonly<AppErrorBoundaryProps>
+      ) => AppErrorBoundaryState | null)
   ) => void;
 
   static getDerivedStateFromError(error: Error): AppErrorBoundaryState {
@@ -168,7 +168,7 @@ function AppContent() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentSongIdRef = useRef<string | null>(null);
   const pendingSeekRef = useRef<number | null>(null);
-  const playNextRef = useRef<() => void>(() => {});
+  const playNextRef = useRef<() => void>(() => { });
 
   // Mobile Details Modal State
   const [showMobileDetails, setShowMobileDetails] = useState(false);
@@ -184,8 +184,11 @@ function AppContent() {
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
     message: string;
+    confirmLabel?: string;
+    danger?: boolean;
     onConfirm: () => void;
   } | null>(null);
+  const [isShutdown, setIsShutdown] = useState(false);
 
   interface ReferenceTrack {
     id: string;
@@ -1034,8 +1037,8 @@ function AppContent() {
     const nextQueue = normalizedList && normalizedList.length > 0
       ? normalizedList
       : (playQueue.length > 0 && playQueue.some(s => s.id === normalizedSong.id))
-          ? playQueue
-          : (songs.some(s => s.id === normalizedSong.id) ? songs : [normalizedSong]);
+        ? playQueue
+        : (songs.some(s => s.id === normalizedSong.id) ? songs : [normalizedSong]);
     const nextIndex = nextQueue.findIndex(s => s.id === normalizedSong.id);
     setPlayQueue(nextQueue.map(normalizeSongForState));
     setQueueIndex(nextIndex);
@@ -1619,6 +1622,21 @@ function AppContent() {
           onOpenSettings={() => setShowSettingsModal(true)}
           isOpen={showLeftSidebar}
           onToggle={() => setShowLeftSidebar(!showLeftSidebar)}
+          onQuit={() => {
+            setConfirmDialog({
+              title: 'Quit ACE-Step',
+              message: 'Are you sure you wish to shut down ACE-Step? This will stop the Python API and all servers.',
+              confirmLabel: 'Shut Down',
+              danger: true,
+              onConfirm: async () => {
+                setConfirmDialog(null);
+                try {
+                  await fetch('/api/shutdown', { method: 'POST' });
+                } catch { /* server is shutting down */ }
+                setIsShutdown(true);
+              },
+            });
+          }}
         />
 
         <main className="flex-1 flex overflow-hidden relative">
@@ -1719,9 +1737,20 @@ function AppContent() {
         isOpen={confirmDialog !== null}
         title={confirmDialog?.title ?? ''}
         message={confirmDialog?.message ?? ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        danger={confirmDialog?.danger}
         onConfirm={() => confirmDialog?.onConfirm()}
         onCancel={() => setConfirmDialog(null)}
       />
+
+      {/* Shutdown overlay */}
+      {isShutdown && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black text-white">
+          <div className="text-6xl mb-6">👋</div>
+          <h1 className="text-2xl font-bold mb-2">ACE-Step has shut down</h1>
+          <p className="text-zinc-400">You may now close this browser tab.</p>
+        </div>
+      )}
     </div>
   );
 }
