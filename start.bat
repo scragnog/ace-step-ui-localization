@@ -81,6 +81,10 @@ echo ==================================
 echo.
 echo Opening browser...
 timeout /t 2 /nobreak >nul
-start http://localhost:3000
+if not defined ACESTEP_NO_BROWSER (
+    start http://localhost:3000
+) else (
+    echo   Skipped — using loading screen instead.
+)
 
 pause
