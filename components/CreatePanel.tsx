@@ -8,6 +8,12 @@ import { generateApi } from '../services/api';
 import { MAIN_STYLES, SUB_STYLES, ALL_STYLES } from '../data/genres';
 import { EditableSlider } from './EditableSlider';
 import GenerationSettingsAccordion from './accordions/GenerationSettingsAccordion';
+import { AudioSelectionSection } from './sections/AudioSelectionSection';
+import { LyricsSection } from './sections/LyricsSection';
+import { StyleSection } from './sections/StyleSection';
+import { MusicParametersSection } from './sections/MusicParametersSection';
+import { CoverRepaintSettings } from './sections/CoverRepaintSettings';
+
 import AdaptersAccordion from './accordions/AdaptersAccordion';
 import ScoreSystemAccordion from './accordions/ScoreSystemAccordion';
 
@@ -32,7 +38,7 @@ interface CreatePanelProps {
   onAudioSelectionApplied?: () => void;
 }
 
-const KEY_SIGNATURES = [
+export const KEY_SIGNATURES = [
   '',
   'C major', 'C minor',
   'C# major', 'C# minor',
@@ -53,9 +59,9 @@ const KEY_SIGNATURES = [
   'B major', 'B minor'
 ];
 
-const TIME_SIGNATURES = ['', '2/4', '3/4', '4/4', '6/8'];
+export const TIME_SIGNATURES = ['', '2/4', '3/4', '4/4', '6/8'];
 
-const VOCAL_LANGUAGE_KEYS = [
+export const VOCAL_LANGUAGE_KEYS = [
   { value: 'unknown', key: 'autoInstrumental' as const },
   { value: 'ar', key: 'vocalArabic' as const },
   { value: 'az', key: 'vocalAzerbaijani' as const },
@@ -1762,205 +1768,45 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         {/* CUSTOM MODE */}
         {customMode && (
           <div className="space-y-5">
-            {/* Use Reference Audio Toggle */}
-            <div className="flex items-center justify-between px-2">
-              <div>
-                <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wide">{t('useReferenceAudio')}</span>
-                <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('useReferenceAudioTooltip')}</p>
-              </div>
-              <button
-                onClick={() => {
-                  const newValue = !useReferenceAudio;
-                  setUseReferenceAudio(newValue);
-                  if (!newValue && taskType !== 'text2music') {
-                    setAudioTab('source');
-                  } else if (newValue) {
-                    setAudioTab('reference');
-                  }
-                }}
-                className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useReferenceAudio ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useReferenceAudio ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
-            </div>
-
             {/* Audio Section - Conditionally rendered */}
-            {(useReferenceAudio || taskType !== 'text2music') && (
-              <div
-                onDrop={(e) => handleDrop(e, audioTab)}
-                onDragOver={handleDragOver}
-                className="bg-white dark:bg-[#1a1a1f] rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden"
-              >
-                {/* Header with Audio label and tabs */}
-                <div className="px-3 py-2.5 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('audio')}</span>
-                    <div className="flex items-center gap-1 bg-zinc-200/50 dark:bg-black/30 rounded-lg p-0.5">
-                      {useReferenceAudio && (
-                        <button
-                          type="button"
-                          onClick={() => setAudioTab('reference')}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'reference'
-                            ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                            }`}
-                        >
-                          {t('reference')}
-                        </button>
-                      )}
-                      {taskType !== 'text2music' && (
-                        <button
-                          type="button"
-                          onClick={() => setAudioTab('source')}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'source'
-                            ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                            }`}
-                        >
-                          {t('cover')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Audio Content */}
-                <div className="p-3 space-y-2">
-                  {/* Reference Audio Player */}
-                  {audioTab === 'reference' && referenceAudioUrl && (
-                    <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => toggleAudio('reference')}
-                        className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 hover:scale-105 transition-transform"
-                      >
-                        {referencePlaying ? (
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                        ) : (
-                          <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                        )}
-                        <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
-                          {formatTime(referenceDuration)}
-                        </span>
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate mb-1.5">
-                          {referenceAudioTitle || getAudioLabel(referenceAudioUrl)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(referenceTime)}</span>
-                          <div
-                            className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
-                            onClick={(e) => {
-                              if (referenceAudioRef.current && referenceDuration > 0) {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const percent = (e.clientX - rect.left) / rect.width;
-                                referenceAudioRef.current.currentTime = percent * referenceDuration;
-                              }
-                            }}
-                          >
-                            <div
-                              className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all relative"
-                              style={{ width: referenceDuration ? `${Math.min(100, (referenceTime / referenceDuration) * 100)}%` : '0%' }}
-                            >
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
-                            </div>
-                          </div>
-                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(referenceDuration)}</span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setReferenceAudioUrl(''); setReferenceAudioTitle(''); setReferencePlaying(false); setReferenceTime(0); setReferenceDuration(0); }}
-                        className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Source/Cover Audio Player */}
-                  {audioTab === 'source' && sourceAudioUrl && (
-                    <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => toggleAudio('source')}
-                        className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
-                      >
-                        {sourcePlaying ? (
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                        ) : (
-                          <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                        )}
-                        <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
-                          {formatTime(sourceDuration)}
-                        </span>
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate mb-1.5">
-                          {sourceAudioTitle || getAudioLabel(sourceAudioUrl)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(sourceTime)}</span>
-                          <div
-                            className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
-                            onClick={(e) => {
-                              if (sourceAudioRef.current && sourceDuration > 0) {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const percent = (e.clientX - rect.left) / rect.width;
-                                sourceAudioRef.current.currentTime = percent * sourceDuration;
-                              }
-                            }}
-                          >
-                            <div
-                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all relative"
-                              style={{ width: sourceDuration ? `${Math.min(100, (sourceTime / sourceDuration) * 100)}%` : '0%' }}
-                            >
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
-                            </div>
-                          </div>
-                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(sourceDuration)}</span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setSourceAudioUrl(''); setSourceAudioTitle(''); setSourcePlaying(false); setSourceTime(0); setSourceDuration(0); }}
-                        className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openAudioModal(audioTab, 'uploads')}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                      </svg>
-                      {t('fromLibrary')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const input = audioTab === 'reference' ? referenceInputRef.current : sourceInputRef.current;
-                        input?.click();
-                      }}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                      {t('upload')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <AudioSelectionSection
+              useReferenceAudio={useReferenceAudio}
+              setUseReferenceAudio={setUseReferenceAudio}
+              taskType={taskType}
+              audioTab={audioTab}
+              setAudioTab={setAudioTab}
+              referenceAudioUrl={referenceAudioUrl}
+              referenceAudioTitle={referenceAudioTitle}
+              referencePlaying={referencePlaying}
+              toggleAudio={toggleAudio}
+              referenceDuration={referenceDuration}
+              referenceTime={referenceTime}
+              referenceAudioRef={referenceAudioRef}
+              setReferenceAudioUrl={setReferenceAudioUrl}
+              setReferenceAudioTitle={setReferenceAudioTitle}
+              setReferencePlaying={setReferencePlaying}
+              setReferenceTime={setReferenceTime}
+              setReferenceDuration={setReferenceDuration}
+              sourceAudioUrl={sourceAudioUrl}
+              sourceAudioTitle={sourceAudioTitle}
+              sourcePlaying={sourcePlaying}
+              sourceDuration={sourceDuration}
+              sourceTime={sourceTime}
+              sourceAudioRef={sourceAudioRef}
+              setSourceAudioUrl={setSourceAudioUrl}
+              setSourceAudioTitle={setSourceAudioTitle}
+              setSourcePlaying={setSourcePlaying}
+              setSourceTime={setSourceTime}
+              setSourceDuration={setSourceDuration}
+              openAudioModal={openAudioModal}
+              referenceInputRef={referenceInputRef}
+              sourceInputRef={sourceInputRef}
+              handleDrop={handleDrop}
+              handleDragOver={handleDragOver}
+              formatTime={formatTime}
+              getAudioLabel={getAudioLabel}
+            />
           </div>
         )}
 
@@ -2042,310 +1888,49 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 </div>
 
                 {/* ── Lyrics Sub-Accordion ── */}
-                {!instrumental && (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowLyricsSub(!showLyricsSub)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide"
-                    >
-                      <span>{t('lyrics')}</span>
-                      <ChevronDown size={14} className={`text-pink-500 chevron-icon ${showLyricsSub ? 'rotated' : ''}`} />
-                    </button>
-                    {showLyricsSub && (
-                      <div className="space-y-2">
-                        <div
-                          ref={lyricsRef}
-                          className="bg-zinc-50 dark:bg-black/20 rounded-lg border border-zinc-200 dark:border-white/10 overflow-hidden relative flex flex-col transition-colors focus-within:border-pink-500 dark:focus-within:border-pink-500"
-                          style={{ height: 'auto' }}
-                        >
-                          <div className="flex items-center justify-end gap-1 px-2 py-1.5 bg-zinc-100 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
-                            <button
-                              onClick={() => setInstrumental(!instrumental)}
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${instrumental
-                                ? 'bg-pink-600 text-white border-pink-500'
-                                : 'bg-white dark:bg-suno-card border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'
-                                }`}
-                            >
-                              {instrumental ? t('instrumental') : t('vocal')}
-                            </button>
-                            <button
-                              className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors ${isFormattingLyrics ? 'text-pink-500' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
-                              title={t('aiFormatTooltip')}
-                              onClick={() => handleFormat('lyrics')}
-                              disabled={isFormattingLyrics || !lyrics.trim()}
-                            >
-                              {isFormattingLyrics ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                            </button>
-                            <button
-                              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
-                              onClick={() => setLyrics('')}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                          <textarea
-                            value={lyrics}
-                            onChange={(e) => setLyrics(e.target.value)}
-                            placeholder={t('lyricsPlaceholder')}
-                            className="flex-1 bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none overflow-y-auto"
-                            style={{ minHeight: `${lyricsHeight}px`, maxHeight: `${lyricsHeight}px` }}
-                          />
-                          <div
-                            onMouseDown={startResizing}
-                            className="h-3 w-full cursor-ns-resize flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors absolute bottom-0 left-0 z-10"
-                          >
-                            <div className="w-8 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
-                          </div>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('leaveLyricsEmpty')}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <LyricsSection
+                  showLyricsSub={showLyricsSub}
+                  setShowLyricsSub={setShowLyricsSub}
+                  instrumental={instrumental}
+                  setInstrumental={setInstrumental}
+                  lyrics={lyrics}
+                  setLyrics={setLyrics}
+                  lyricsRef={lyricsRef}
+                  lyricsHeight={lyricsHeight}
+                  startResizing={startResizing}
+                  isFormattingLyrics={isFormattingLyrics}
+                  handleFormat={handleFormat}
+                />
 
                 {/* ── Style Sub-Accordion ── */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowStyleSub(!showStyleSub)}
-                    className="w-full flex items-center justify-between py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide"
-                  >
-                    <span>{t('styleOfMusic')}</span>
-                    <ChevronDown size={14} className={`text-pink-500 chevron-icon ${showStyleSub ? 'rotated' : ''}`} />
-                  </button>
-                  {showStyleSub && (
-                    <div className="space-y-3">
-                      <div className="bg-zinc-50 dark:bg-black/20 rounded-lg border border-zinc-200 dark:border-white/10 overflow-visible">
-                        <div className="flex items-center justify-between px-2 py-1.5 bg-zinc-100 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
-                          <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('genreMoodInstruments')}</p>
-                          <div className="flex items-center gap-1">
-                            <button className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors text-zinc-500 hover:text-black dark:hover:text-white" title={t('refreshGenres')} onClick={refreshMusicTags}><Dices size={14} /></button>
-                            <button className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded text-zinc-500 hover:text-black dark:hover:text-white transition-colors" onClick={() => setStyle('')}><Trash2 size={14} /></button>
-                            <button
-                              className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors ${isFormattingStyle ? 'text-pink-500' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
-                              title={t('aiFormatTooltip')}
-                              onClick={() => handleFormat('style')}
-                              disabled={isFormattingStyle || !style.trim()}
-                            >
-                              {isFormattingStyle ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                            </button>
-                          </div>
-                        </div>
-                        <div
-                          ref={styleRef}
-                          className="relative flex flex-col h-full transition-colors focus-within:border-pink-500 dark:focus-within:border-pink-500 rounded-b-lg overflow-hidden"
-                          style={{ minHeight: `${styleHeight}px`, maxHeight: `${styleHeight}px` }}
-                        >
-                          <textarea
-                            value={style}
-                            onChange={(e) => setStyle(e.target.value)}
-                            placeholder={t('styleOfMusicPlaceholder')}
-                            className="w-full flex-1 bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none overflow-y-auto pb-6"
-                          />
-                          <div
-                            onMouseDown={startResizingStyle}
-                            className="h-3 w-full cursor-ns-resize flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors absolute bottom-0 left-0 z-10"
-                          >
-                            <div className="w-8 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        {/* Combined Genre Dropdown with Search */}
-                        <div className="relative" ref={genreDropdownRef}>
-                          <button
-                            onClick={() => setShowGenreDropdown(!showGenreDropdown)}
-                            className="w-full flex items-center justify-between bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:border-pink-300 dark:hover:border-pink-500/50 transition-all shadow-sm"
-                          >
-                            <span className={selectedMainGenre || selectedSubGenre ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-400'}>
-                              {selectedSubGenre
-                                ? `${selectedMainGenre} › ${selectedSubGenre}`
-                                : selectedMainGenre
-                                  ? `${selectedMainGenre} ${getSubGenreCount(selectedMainGenre) > 0 ? `(${getSubGenreCount(selectedMainGenre)} ${t('subGenres')})` : ''}`
-                                  : t('selectGenre')}
-                            </span>
-                            <div className="flex items-center gap-1">
-                              {(selectedMainGenre || selectedSubGenre) && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedMainGenre('');
-                                    setSelectedSubGenre('');
-                                  }}
-                                  className="p-0.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                                  title={t('clearSelection')}
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                </button>
-                              )}
-                              <svg className={`w-4 h-4 text-zinc-400 transition-transform ${showGenreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </button>
-
-                          {/* Dropdown Panel */}
-                          {showGenreDropdown && (
-                            <div className="absolute z-[100] w-full mt-1 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl overflow-hidden" style={{ maxHeight: '500px' }}>
-                              {/* Search Input Inside Dropdown */}
-                              <div className="p-2 border-b border-zinc-100 dark:border-zinc-700">
-                                <div className="relative">
-                                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                  </svg>
-                                  <input
-                                    type="text"
-                                    value={genreSearch}
-                                    onChange={(e) => setGenreSearch(e.target.value)}
-                                    placeholder={t('searchGenre') || 'Search genres...'}
-                                    className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 placeholder:text-zinc-400"
-                                    autoFocus
-                                  />
-                                  {genreSearch && (
-                                    <button
-                                      onClick={() => setGenreSearch('')}
-                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                                    >
-                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Dropdown Options - Combined and Sorted */}
-                              <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
-                                {filteredCombinedGenres.length > 0 && (
-                                  <div className="py-1">
-                                    {filteredCombinedGenres.map(({ name, type }) => {
-                                      const subCount = type === 'main' ? getSubGenreCount(name) : 0;
-                                      const isSelected = selectedMainGenre === name;
-                                      return (
-                                        <button
-                                          key={name}
-                                          onClick={() => {
-                                            if (type === 'main') {
-                                              setSelectedMainGenre(name);
-                                              setSelectedSubGenre('');
-                                              setStyle(prev => prev ? `${prev}, ${name}` : name);
-                                              if (subCount === 0) {
-                                                setShowGenreDropdown(false);
-                                                setGenreSearch('');
-                                              }
-                                            } else {
-                                              // Other genre - no sub genres
-                                              setStyle(prev => prev ? `${prev}, ${name}` : name);
-                                              setSelectedMainGenre('');
-                                              setSelectedSubGenre('');
-                                              setShowGenreDropdown(false);
-                                              setGenreSearch('');
-                                            }
-                                          }}
-                                          className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${isSelected
-                                            ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
-                                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
-                                            }`}
-                                        >
-                                          <span className="flex items-center gap-2">
-                                            <span className={`w-1.5 h-1.5 rounded-full ${type === 'main' ? 'bg-pink-400' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                                            {name}
-                                          </span>
-                                          {type === 'main' && subCount > 0 && (
-                                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-700 px-1.5 py-0.5 rounded-full">
-                                              {subCount}
-                                            </span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Sub Genre Dropdown - Custom styled for dark mode support */}
-                        {selectedMainGenre && filteredSubGenres.length > 0 && (
-                          <div className="relative" ref={subGenreDropdownRef}>
-                            <button
-                              onClick={() => setShowSubGenreDropdown(!showSubGenreDropdown)}
-                              className="w-full flex items-center justify-between bg-gradient-to-r from-pink-50/80 to-purple-50/80 dark:from-pink-950/30 dark:to-purple-950/30 border border-pink-200 dark:border-pink-700/50 rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:border-pink-300 dark:hover:border-pink-500 transition-all shadow-sm"
-                            >
-                              <span className={selectedSubGenre ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-500 dark:text-zinc-400'}>
-                                {selectedSubGenre || `${t('selectSubGenre')} (${filteredSubGenres.length})`}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {selectedSubGenre && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedSubGenre('');
-                                    }}
-                                    className="p-0.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                                    title={t('clearSelection') || 'Clear'}
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  </button>
-                                )}
-                                <svg className={`w-4 h-4 text-zinc-400 transition-transform ${showSubGenreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </div>
-                            </button>
-
-                            {/* Sub Genre Dropdown Panel */}
-                            {showSubGenreDropdown && (
-                              <div className="absolute z-[100] w-full mt-1 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl overflow-hidden" style={{ maxHeight: '300px' }}>
-                                <div className="overflow-y-auto" style={{ maxHeight: '300px' }}>
-                                  <div className="py-1">
-                                    {filteredSubGenres.map(genre => (
-                                      <button
-                                        key={genre}
-                                        onClick={() => {
-                                          setSelectedSubGenre(genre);
-                                          setStyle(prev => prev ? `${prev}, ${genre}` : genre);
-                                          setShowSubGenreDropdown(false);
-                                        }}
-                                        className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${selectedSubGenre === genre
-                                          ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
-                                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
-                                          }`}
-                                      >
-                                        {genre}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-
-                      </div>
-                      {/* Quick Tags */}
-                      <div className="flex flex-wrap gap-2">
-                        {musicTags.map(tag => (
-                          <button
-                            key={tag}
-                            onClick={() => setStyle(prev => prev ? `${prev}, ${tag}` : tag)}
-                            className="text-[10px] font-medium bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white px-2.5 py-1 rounded-full transition-colors border border-zinc-200 dark:border-white/5"
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <StyleSection
+                  showStyleSub={showStyleSub}
+                  setShowStyleSub={setShowStyleSub}
+                  style={style}
+                  setStyle={setStyle}
+                  refreshMusicTags={refreshMusicTags}
+                  isFormattingStyle={isFormattingStyle}
+                  handleFormat={handleFormat}
+                  styleRef={styleRef}
+                  styleHeight={styleHeight}
+                  startResizingStyle={startResizingStyle}
+                  genreDropdownRef={genreDropdownRef}
+                  showGenreDropdown={showGenreDropdown}
+                  setShowGenreDropdown={setShowGenreDropdown}
+                  selectedMainGenre={selectedMainGenre}
+                  setSelectedMainGenre={setSelectedMainGenre}
+                  selectedSubGenre={selectedSubGenre}
+                  setSelectedSubGenre={setSelectedSubGenre}
+                  getSubGenreCount={getSubGenreCount}
+                  genreSearch={genreSearch}
+                  setGenreSearch={setGenreSearch}
+                  filteredCombinedGenres={filteredCombinedGenres}
+                  subGenreDropdownRef={subGenreDropdownRef}
+                  showSubGenreDropdown={showSubGenreDropdown}
+                  setShowSubGenreDropdown={setShowSubGenreDropdown}
+                  filteredSubGenres={filteredSubGenres}
+                  musicTags={musicTags}
+                />
 
                 {/* ── Music Parameters ── */}
                 <div className="space-y-4 pt-2 border-t border-zinc-200 dark:border-white/5">
@@ -2433,55 +2018,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         </div>
 
         {/* COVER / REPAINT SETTINGS (conditional on task type) */}
-        {taskType !== 'text2music' && (
-          <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
-            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
-              {taskType === 'repaint' ? t('repaintSettings') : t('coverSettings')}
-            </h3>
-
-            {/* Audio Cover Strength */}
-            <EditableSlider
-              label={t('audioCoverStrength')}
-              value={audioCoverStrength}
-              min={0}
-              max={1}
-              step={0.05}
-              onChange={(e) => setAudioCoverStrength(Number(e.target.value))}
-              formatDisplay={(val) => val.toFixed(2)}
-              helpText={t('audioCoverStrengthHelp')}
-              title={t('audioCoverStrengthTooltip')}
-            />
-
-            {/* Repainting Start/End - repaint mode only */}
-            {taskType === 'repaint' && (
-              <>
-                <EditableSlider
-                  label={t('repaintingStart')}
-                  value={repaintingStart}
-                  min={0}
-                  max={600}
-                  step={1}
-                  onChange={(e) => setRepaintingStart(Number(e.target.value))}
-                  formatDisplay={(val) => val === 0 ? t('beginning') : `${val}s`}
-                  helpText={t('repaintingStartHelp')}
-                  title={t('repaintingStartTooltip')}
-                />
-                <EditableSlider
-                  label={t('repaintingEnd')}
-                  value={repaintingEnd}
-                  min={-1}
-                  max={600}
-                  step={1}
-                  onChange={(e) => setRepaintingEnd(Number(e.target.value))}
-                  formatDisplay={(val) => val === -1 ? t('endOfTrack') : `${val}s`}
-                  helpText={t('repaintingEndHelp')}
-                  title={t('repaintingEndTooltip')}
-                />
-              </>
-            )}
-          </div>
-        )}
-
+        <CoverRepaintSettings
+          taskType={taskType}
+          audioCoverStrength={audioCoverStrength}
+          setAudioCoverStrength={setAudioCoverStrength}
+          repaintingStart={repaintingStart}
+          setRepaintingStart={setRepaintingStart}
+          repaintingEnd={repaintingEnd}
+          setRepaintingEnd={setRepaintingEnd}
+        />
 
         {/* GENERATION SETTINGS */}
         <GenerationSettingsAccordion
