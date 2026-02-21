@@ -2799,6 +2799,34 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 helpText={t('lmBatchChunkSizeHelp')}
                 title={t('lmBatchChunkSizeTooltip')}
               />
+
+              {/* Constrained Decoding Debug */}
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('constrainedDecodingDebug')}</span>
+                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('constrainedDecodingDebugHelp')}</p>
+                </div>
+                <button
+                  onClick={() => setConstrainedDecodingDebug(!constrainedDecodingDebug)}
+                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${constrainedDecodingDebug ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${constrainedDecodingDebug ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              {/* Format Caption */}
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('formatCaption')}</span>
+                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('formatCaptionHelp')}</p>
+                </div>
+                <button
+                  onClick={() => setIsFormatCaption(!isFormatCaption)}
+                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${isFormatCaption ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${isFormatCaption ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -3200,14 +3228,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                   <input type="checkbox" checked={autogen} onChange={() => setAutogen(!autogen)} />
                   {t('autogen')}
                 </label>
-                <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('constrainedDecodingDebugTooltip')}>
-                  <input type="checkbox" checked={constrainedDecodingDebug} onChange={() => setConstrainedDecodingDebug(!constrainedDecodingDebug)} />
-                  {t('constrainedDecodingDebug')}
-                </label>
-                <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('formatCaptionTooltip')}>
-                  <input type="checkbox" checked={isFormatCaption} onChange={() => setIsFormatCaption(!isFormatCaption)} />
-                  {t('formatCaption')}
-                </label>
+
 
                 <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('getLrcTooltip')}>
                   <input type="checkbox" checked={getLrc} onChange={() => setGetLrc(!getLrc)} />
