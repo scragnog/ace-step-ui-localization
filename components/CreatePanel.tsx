@@ -2255,7 +2255,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             >
               <div className="flex items-center gap-2">
                 <Sliders size={16} className="text-zinc-500" />
-                <span>LoRA</span>
+                <span>Adapters (LoRA / LoKR)</span>
               </div>
               <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showLoraPanel ? 'rotated' : ''}`} />
             </button>
