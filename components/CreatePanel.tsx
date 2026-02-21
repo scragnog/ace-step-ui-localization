@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain } from 'lucide-react';
+import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain, Crosshair } from 'lucide-react';
 import { GenerationParams, Song } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
@@ -154,6 +154,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   // Advanced Settings
   const [showAdvanced, setShowAdvanced] = usePersistedState('ace-showAdvanced', false);
   const [showCotSection, setShowCotSection] = usePersistedState('ace-showCotSection', false);
+  const [showGuidancePanel, setShowGuidancePanel] = usePersistedState('ace-showGuidancePanel', false);
   const [duration, setDuration] = usePersistedState('ace-duration', -1);
   const [batchSize, setBatchSize] = usePersistedState('ace-batchSize', 1);
   const [bulkCount, setBulkCount] = usePersistedState('ace-bulkCount', 1);
@@ -2865,19 +2866,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 title={t('inferenceStepsTooltip')}
               />
 
-              {/* Guidance Scale */}
-              <EditableSlider
-                label={t('guidanceScale')}
-                value={guidanceScale}
-                min={1}
-                max={15}
-                step={0.5}
-                onChange={setGuidanceScale}
-                formatDisplay={(val) => val.toFixed(1)}
-                helpText={t('howCloselyFollowPrompt')}
-                title={t('guidanceScaleTooltip')}
-              />
-
               {/* Audio Format & Inference Method */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -2906,56 +2894,123 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 </div>
               </div>
 
-              {/* Guidance Mode */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('guidanceModeTooltip')}>{t('guidanceMode')}</label>
-                <select
-                  value={guidanceMode}
-                  onChange={(e) => {
-                    const mode = e.target.value as typeof guidanceMode;
-                    setGuidanceMode(mode);
-                    setUseAdg(mode === 'adg');
-                    setUsePag(mode === 'pag');
-                  }}
-                  className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+
+              {/* Guidance Settings Accordion */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuidancePanel(!showGuidancePanel)}
+                  className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showGuidancePanel ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
                 >
-                  <option value="apg">{t('guidanceApg')}</option>
-                  <option value="adg">{t('guidanceAdg')}</option>
-                  <option value="pag">{t('guidancePag')}</option>
-                  <option value="cfg">{t('guidanceCfg')}</option>
-                  <option value="cfg_pp">{t('guidanceCfgPp')}</option>
-                  <option value="dynamic_cfg">{t('guidanceDynamic')}</option>
-                  <option value="rescaled_cfg">{t('guidanceRescaled')}</option>
-                </select>
+                  <span className="flex items-center gap-2"><Crosshair size={16} className="text-pink-500" />{t('guidanceSettings')}</span>
+                  <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showGuidancePanel ? 'rotated' : ''}`} />
+                </button>
+                {showGuidancePanel && (
+                  <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
+
+                    {/* Guidance Scale */}
+                    <EditableSlider
+                      label={t('guidanceScale')}
+                      value={guidanceScale}
+                      min={1}
+                      max={15}
+                      step={0.5}
+                      onChange={setGuidanceScale}
+                      formatDisplay={(val) => val.toFixed(1)}
+                      helpText={t('howCloselyFollowPrompt')}
+                      title={t('guidanceScaleTooltip')}
+                    />
+
+                    {/* Guidance Mode */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('guidanceModeTooltip')}>{t('guidanceMode')}</label>
+                      <select
+                        value={guidanceMode}
+                        onChange={(e) => {
+                          const mode = e.target.value as typeof guidanceMode;
+                          setGuidanceMode(mode);
+                          setUseAdg(mode === 'adg');
+                          setUsePag(mode === 'pag');
+                        }}
+                        className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+                      >
+                        <option value="apg">{t('guidanceApg')}</option>
+                        <option value="adg">{t('guidanceAdg')}</option>
+                        <option value="pag">{t('guidancePag')}</option>
+                        <option value="cfg">{t('guidanceCfg')}</option>
+                        <option value="cfg_pp">{t('guidanceCfgPp')}</option>
+                        <option value="dynamic_cfg">{t('guidanceDynamic')}</option>
+                        <option value="rescaled_cfg">{t('guidanceRescaled')}</option>
+                      </select>
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">
+                        {guidanceMode === 'apg' && t('guidanceApgDesc')}
+                        {guidanceMode === 'adg' && t('guidanceAdgDesc')}
+                        {guidanceMode === 'pag' && t('guidancePagDesc')}
+                        {guidanceMode === 'cfg' && t('guidanceCfgDesc')}
+                        {guidanceMode === 'cfg_pp' && t('guidanceCfgPpDesc')}
+                        {guidanceMode === 'dynamic_cfg' && t('guidanceDynamicDesc')}
+                        {guidanceMode === 'rescaled_cfg' && t('guidanceRescaledDesc')}
+                      </p>
+                    </div>
+
+                    {/* PAG Sub-Controls */}
+                    {guidanceMode === 'pag' && (
+                      <div className="space-y-3 p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl">
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Start</label>
+                            <span className="text-xs text-zinc-500">{pagStart.toFixed(2)}</span>
+                          </div>
+                          <input type="range" min="0" max="1" step="0.05" value={pagStart} onChange={(e) => setPagStart(parseFloat(e.target.value))} className="w-full accent-pink-500" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG End</label>
+                            <span className="text-xs text-zinc-500">{pagEnd.toFixed(2)}</span>
+                          </div>
+                          <input type="range" min="0" max="1" step="0.05" value={pagEnd} onChange={(e) => setPagEnd(parseFloat(e.target.value))} className="w-full accent-pink-500" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Scale</label>
+                            <span className="text-xs text-zinc-500">{pagScale.toFixed(2)}</span>
+                          </div>
+                          <input type="range" min="0" max="1" step="0.05" value={pagScale} onChange={(e) => setPagScale(parseFloat(e.target.value))} className="w-full accent-pink-500" />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CFG Interval */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('cfgInterval')}</label>
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('cfgIntervalHelp')}</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <EditableSlider
+                          label={t('cfgIntervalStart')}
+                          value={cfgIntervalStart}
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          onChange={(e) => setCfgIntervalStart(Number(e.target.value))}
+                          formatDisplay={(val) => val.toFixed(2)}
+                          title={t('cfgIntervalStartTooltip')}
+                        />
+                        <EditableSlider
+                          label={t('cfgIntervalEnd')}
+                          value={cfgIntervalEnd}
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          onChange={(e) => setCfgIntervalEnd(Number(e.target.value))}
+                          formatDisplay={(val) => val.toFixed(2)}
+                          title={t('cfgIntervalEndTooltip')}
+                        />
+                      </div>
+                    </div>
+
+                  </div>
+                )}
               </div>
-
-              {/* PAG Sub-Controls (only when PAG selected) */}
-              {guidanceMode === 'pag' && (
-                <div className="space-y-3 p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl">
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Start</label>
-                      <span className="text-xs text-zinc-500">{pagStart.toFixed(2)}</span>
-                    </div>
-                    <input type="range" min="0" max="1" step="0.05" value={pagStart} onChange={(e) => setPagStart(parseFloat(e.target.value))} className="w-full accent-pink-500" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG End</label>
-                      <span className="text-xs text-zinc-500">{pagEnd.toFixed(2)}</span>
-                    </div>
-                    <input type="range" min="0" max="1" step="0.05" value={pagEnd} onChange={(e) => setPagEnd(parseFloat(e.target.value))} className="w-full accent-pink-500" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Scale</label>
-                      <span className="text-xs text-zinc-500">{pagScale.toFixed(2)}</span>
-                    </div>
-                    <input type="range" min="0" max="1" step="0.05" value={pagScale} onChange={(e) => setPagScale(parseFloat(e.target.value))} className="w-full accent-pink-500" />
-                  </div>
-                </div>
-              )}
-
 
               {/* Seed */}
               <div className="space-y-2">
@@ -3034,36 +3089,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 />
               </div>
 
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('guidance')}</h4>
-                <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('advancedCfgScheduling')}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('cfgIntervalStartTooltip')}>{t('cfgIntervalStart')}</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    max="1"
-                    value={cfgIntervalStart}
-                    onChange={(e) => setCfgIntervalStart(Number(e.target.value))}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('cfgIntervalEndTooltip')}>{t('cfgIntervalEnd')}</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    max="1"
-                    value={cfgIntervalEnd}
-                    onChange={(e) => setCfgIntervalEnd(Number(e.target.value))}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-              </div>
+
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('customTimestepsTooltip')}>{t('customTimesteps')}</label>
