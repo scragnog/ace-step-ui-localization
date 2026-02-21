@@ -7,6 +7,8 @@ import { useI18n } from '../context/I18nContext';
 import { generateApi } from '../services/api';
 import { MAIN_STYLES, SUB_STYLES, ALL_STYLES } from '../data/genres';
 import { EditableSlider } from './EditableSlider';
+import GenerationSettingsAccordion from './accordions/GenerationSettingsAccordion';
+import ScoreSystemAccordion from './accordions/ScoreSystemAccordion';
 
 interface ReferenceTrack {
   id: string;
@@ -151,12 +153,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [keyScale, setKeyScale] = usePersistedState('ace-keyScale', '');
   const [timeSignature, setTimeSignature] = usePersistedState('ace-timeSignature', '');
 
-  // Advanced Settings
-  const [showAdvanced, setShowAdvanced] = usePersistedState('ace-showAdvanced', false);
-  const [showCotSection, setShowCotSection] = usePersistedState('ace-showCotSection', false);
-  const [showGuidancePanel, setShowGuidancePanel] = usePersistedState('ace-showGuidancePanel', false);
+  // Accordion open/close state
+  const [showGenerationSettings, setShowGenerationSettings] = usePersistedState('acestep-showGenerationSettings', false);
   const [showScorePanel, setShowScorePanel] = usePersistedState('ace-showScorePanel', false);
-  const [showExpert, setShowExpert] = usePersistedState('ace-showExpert', false);
   const [showTrackDetails, setShowTrackDetails] = usePersistedState('ace-showTrackDetails', true);
   const [showLyricsSub, setShowLyricsSub] = usePersistedState('ace-showLyricsSub', true);
   const [showStyleSub, setShowStyleSub] = usePersistedState('ace-showStyleSub', true);
@@ -2736,634 +2735,98 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         )}
 
 
-        {/* LANGUAGE MODEL & COT */}
-        <div>
-          <button
-            onClick={() => setShowCotSection(!showCotSection)}
-            className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showCotSection ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
-          >
-            <div className="flex items-center gap-2">
-              <Brain size={16} className="text-zinc-500" />
-              <span>{t('cotAndLmSettings')}</span>
-            </div>
-            <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showCotSection ? 'rotated' : ''}`} />
-          </button>
-
-          {showCotSection && (
-            <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
-
-              {/* Thinking Toggle */}
-              <div className="flex items-center justify-between py-1">
-                <span className={`text-xs font-medium ${loraLoaded ? 'text-zinc-400 dark:text-zinc-600' : 'text-zinc-600 dark:text-zinc-400'}`} title={t('thinkingTooltip')}>{t('thinkingCot')}</span>
-                <button
-                  onClick={() => !loraLoaded && setThinking(!thinking)}
-                  disabled={loraLoaded}
-                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${thinking ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} ${loraLoaded ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${thinking ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {/* LM Backend */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('lmBackendLabel')}</label>
-                <select
-                  value={lmBackend}
-                  onChange={(e) => setLmBackend(e.target.value as 'pt' | 'vllm')}
-                  className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                >
-                  <option value="pt">{t('lmBackendPt')}</option>
-                  <option value="vllm">{t('lmBackendVllm')}</option>
-                </select>
-                <p className="text-[10px] text-zinc-500">{t('lmBackendHint')}</p>
-              </div>
-
-              {/* LM Model */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('lmModelLabel')}</label>
-                <select
-                  value={lmModel}
-                  onChange={(e) => { const v = e.target.value; setLmModel(v); }}
-                  className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                >
-                  <option value="acestep-5Hz-lm-0.6B">{t('lmModel06B')}</option>
-                  <option value="acestep-5Hz-lm-1.7B">{t('lmModel17B')}</option>
-                  <option value="acestep-5Hz-lm-4B">{t('lmModel4B')}</option>
-                </select>
-                <p className="text-[10px] text-zinc-500">{t('lmModelHint')}</p>
-              </div>
-
-              {/* LM Parameters sub-accordion */}
-              <button
-                onClick={() => setShowLmParams(!showLmParams)}
-                className={`w-full flex items-center justify-between px-4 py-3 bg-white/60 dark:bg-black/20 border border-zinc-200/70 dark:border-white/10 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showLmParams ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
-              >
-                <div className="flex items-center gap-2">
-                  <Music2 size={16} className="text-zinc-500" />
-                  <div className="flex flex-col items-start">
-                    <span title={t('lmParametersTooltip')}>{t('lmParameters')}</span>
-                    <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal">{t('controlLyricGeneration')}</span>
-                  </div>
-                </div>
-                <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showLmParams ? 'rotated' : ''}`} />
-              </button>
-
-              {showLmParams && (
-                <div className="bg-zinc-50 dark:bg-black/10 rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
-                  {/* LM Temperature */}
-                  <EditableSlider
-                    label={t('lmTemperature')}
-                    value={lmTemperature}
-                    min={0}
-                    max={2}
-                    step={0.05}
-                    onChange={(e) => setLmTemperature(Number(e.target.value))}
-                    formatDisplay={(val) => val.toFixed(2)}
-                    helpText={t('higherMoreRandom')}
-                    title={t('lmTemperatureTooltip')}
-                  />
-
-                  {/* LM CFG Scale */}
-                  <EditableSlider
-                    label={t('lmCfgScale')}
-                    value={lmCfgScale}
-                    min={1}
-                    max={3}
-                    step={0.1}
-                    onChange={setLmCfgScale}
-                    formatDisplay={(val) => val.toFixed(1)}
-                    helpText={t('noCfgScale')}
-                    title={t('lmGuidanceScaleTooltip')}
-                  />
-
-                  {/* LM Top-K & Top-P */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <EditableSlider
-                      label={t('topK')}
-                      value={lmTopK}
-                      min={0}
-                      max={100}
-                      step={1}
-                      onChange={setLmTopK}
-                      title={t('lmTopKTooltip')}
-                    />
-                    <EditableSlider
-                      label={t('topP')}
-                      value={lmTopP}
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      onChange={setLmTopP}
-                      formatDisplay={(val) => val.toFixed(2)}
-                      title={t('lmTopPTooltip')}
-                    />
-                  </div>
-
-                  {/* LM Negative Prompt */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('lmNegativePromptTooltip')}>{t('lmNegativePrompt')}</label>
-                    <textarea
-                      value={lmNegativePrompt}
-                      onChange={(e) => setLmNegativePrompt(e.target.value)}
-                      placeholder={t('thingsToAvoid')}
-                      className="w-full h-16 bg-white dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg p-2 text-xs text-zinc-900 dark:text-white focus:outline-none resize-none"
-                    />
-                    <p className="text-[10px] text-zinc-500">{t('useWhenCfgScaleGreater')}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Allow LM Batch toggle */}
-              <div className="flex items-center justify-between py-1">
-                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('allowLmBatchTooltip')}>{t('allowLmBatch')}</span>
-                <button
-                  onClick={() => setAllowLmBatch(!allowLmBatch)}
-                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${allowLmBatch ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${allowLmBatch ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {/* CoT-dependent options (only visible when Thinking is ON) */}
-              {thinking && (
-                <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-white/5">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wide font-bold">{t('cotOptions')}</p>
-
-                  {/* Use CoT Metas */}
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotMetadataTooltip')}>{t('useCotMetas')}</span>
-                    <button
-                      onClick={() => setUseCotMetas(!useCotMetas)}
-                      className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useCotMetas ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                    >
-                      <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useCotMetas ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-
-                  {/* Use CoT Caption */}
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotCaptionTooltip')}>{t('useCotCaption')}</span>
-                    <button
-                      onClick={() => setUseCotCaption(!useCotCaption)}
-                      className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useCotCaption ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                    >
-                      <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useCotCaption ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-
-                  {/* Use CoT Language */}
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotLanguageTooltip')}>{t('useCotLanguage')}</span>
-                    <button
-                      onClick={() => setUseCotLanguage(!useCotLanguage)}
-                      className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useCotLanguage ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                    >
-                      <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useCotLanguage ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* LM Batch Chunk Size */}
-              <EditableSlider
-                label={t('lmBatchChunkSize')}
-                value={lmBatchChunkSize}
-                min={1}
-                max={32}
-                step={1}
-                onChange={(e) => setLmBatchChunkSize(Number(e.target.value))}
-                formatDisplay={(val) => `${val}`}
-                helpText={t('lmBatchChunkSizeHelp')}
-                title={t('lmBatchChunkSizeTooltip')}
-              />
-
-              {/* Constrained Decoding Debug */}
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('constrainedDecodingDebug')}</span>
-                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('constrainedDecodingDebugHelp')}</p>
-                </div>
-                <button
-                  onClick={() => setConstrainedDecodingDebug(!constrainedDecodingDebug)}
-                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${constrainedDecodingDebug ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${constrainedDecodingDebug ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {/* Format Caption */}
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('formatCaption')}</span>
-                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('formatCaptionHelp')}</p>
-                </div>
-                <button
-                  onClick={() => setIsFormatCaption(!isFormatCaption)}
-                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${isFormatCaption ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${isFormatCaption ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ADVANCED SETTINGS */}
-        <div>
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showAdvanced ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
-          >
-            <div className="flex items-center gap-2">
-              <Settings2 size={16} className="text-zinc-500" />
-              <span>{t('advancedSettings')}</span>
-            </div>
-            <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showAdvanced ? 'rotated' : ''}`} />
-          </button>
-
-          {showAdvanced && (
-            <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
-
-
-
-              {/* Batch Size */}
-              <EditableSlider
-                label={t('batchSize')}
-                value={batchSize}
-                min={1}
-                max={8}
-                step={1}
-                onChange={setBatchSize}
-                helpText={t('numberOfVariations')}
-                title={t('batchSizeTooltip')}
-              />
-
-              {/* Bulk Generate */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('bulkGenerate')}</label>
-                  <span className="text-xs font-mono text-zinc-900 dark:text-white bg-zinc-100 dark:bg-black/20 px-2 py-0.5 rounded">
-                    {bulkCount} {t(bulkCount === 1 ? 'job' : 'jobs')}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 5, 10].map((count) => (
-                    <button
-                      key={count}
-                      onClick={() => { setBulkCount(count); }}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${bulkCount === count
-                        ? 'bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-md'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                        }`}
-                    >
-                      {count}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-zinc-500">{t('queueMultipleJobs')}</p>
-              </div>
-
-              {/* Inference Steps */}
-              <EditableSlider
-                label={t('inferenceSteps')}
-                value={inferenceSteps}
-                min={4}
-                max={200}
-                step={1}
-                onChange={setInferenceSteps}
-                helpText={t('moreStepsBetterQuality')}
-                title={t('inferenceStepsTooltip')}
-              />
-
-              {/* Audio Format & Inference Method */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('audioFormat')}</label>
-                  <select
-                    value={audioFormat}
-                    onChange={(e) => setAudioFormat(e.target.value as 'mp3' | 'flac')}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                  >
-                    <option value="mp3">{t('mp3Smaller')}</option>
-                    <option value="flac">{t('flacLossless')}</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('inferMethodTooltip')}>{t('inferMethod')}</label>
-                  <select
-                    value={inferMethod}
-                    onChange={(e) => setInferMethod(e.target.value as 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4')}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                  >
-                    <option value="ode">{t('solverEuler')}</option>
-                    <option value="heun">{t('solverHeun')}</option>
-                    <option value="dpm2m">{t('solverDpm2m')}</option>
-                    <option value="rk4">{t('solverRk4')}</option>
-                  </select>
-                </div>
-              </div>
-
-
-              {/* Guidance Settings Accordion */}
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setShowGuidancePanel(!showGuidancePanel)}
-                  className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showGuidancePanel ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
-                >
-                  <span className="flex items-center gap-2"><Crosshair size={16} className="text-pink-500" />{t('guidanceSettings')}</span>
-                  <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showGuidancePanel ? 'rotated' : ''}`} />
-                </button>
-                {showGuidancePanel && (
-                  <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
-
-                    {/* Guidance Scale */}
-                    <EditableSlider
-                      label={t('guidanceScale')}
-                      value={guidanceScale}
-                      min={1}
-                      max={15}
-                      step={0.5}
-                      onChange={setGuidanceScale}
-                      formatDisplay={(val) => val.toFixed(1)}
-                      helpText={t('howCloselyFollowPrompt')}
-                      title={t('guidanceScaleTooltip')}
-                    />
-
-                    {/* Guidance Mode */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('guidanceModeTooltip')}>{t('guidanceMode')}</label>
-                      <select
-                        value={guidanceMode}
-                        onChange={(e) => {
-                          const mode = e.target.value as typeof guidanceMode;
-                          setGuidanceMode(mode);
-                          setUseAdg(mode === 'adg');
-                          setUsePag(mode === 'pag');
-                        }}
-                        className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                      >
-                        <option value="apg">{t('guidanceApg')}</option>
-                        <option value="adg">{t('guidanceAdg')}</option>
-                        <option value="pag">{t('guidancePag')}</option>
-                        <option value="cfg">{t('guidanceCfg')}</option>
-                        <option value="cfg_pp">{t('guidanceCfgPp')}</option>
-                        <option value="dynamic_cfg">{t('guidanceDynamic')}</option>
-                        <option value="rescaled_cfg">{t('guidanceRescaled')}</option>
-                      </select>
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">
-                        {guidanceMode === 'apg' && t('guidanceApgDesc')}
-                        {guidanceMode === 'adg' && t('guidanceAdgDesc')}
-                        {guidanceMode === 'pag' && t('guidancePagDesc')}
-                        {guidanceMode === 'cfg' && t('guidanceCfgDesc')}
-                        {guidanceMode === 'cfg_pp' && t('guidanceCfgPpDesc')}
-                        {guidanceMode === 'dynamic_cfg' && t('guidanceDynamicDesc')}
-                        {guidanceMode === 'rescaled_cfg' && t('guidanceRescaledDesc')}
-                      </p>
-                    </div>
-
-                    {/* PAG Sub-Controls */}
-                    {guidanceMode === 'pag' && (
-                      <div className="space-y-3 p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl">
-                        <div className="space-y-1">
-                          <div className="flex justify-between">
-                            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Start</label>
-                            <span className="text-xs text-zinc-500">{pagStart.toFixed(2)}</span>
-                          </div>
-                          <input type="range" min="0" max="1" step="0.05" value={pagStart} onChange={(e) => setPagStart(parseFloat(e.target.value))} className="w-full accent-pink-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between">
-                            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG End</label>
-                            <span className="text-xs text-zinc-500">{pagEnd.toFixed(2)}</span>
-                          </div>
-                          <input type="range" min="0" max="1" step="0.05" value={pagEnd} onChange={(e) => setPagEnd(parseFloat(e.target.value))} className="w-full accent-pink-500" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between">
-                            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Scale</label>
-                            <span className="text-xs text-zinc-500">{pagScale.toFixed(2)}</span>
-                          </div>
-                          <input type="range" min="0" max="1" step="0.05" value={pagScale} onChange={(e) => setPagScale(parseFloat(e.target.value))} className="w-full accent-pink-500" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* CFG Interval */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('cfgInterval')}</label>
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('cfgIntervalHelp')}</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <EditableSlider
-                          label={t('cfgIntervalStart')}
-                          value={cfgIntervalStart}
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          onChange={(e) => setCfgIntervalStart(Number(e.target.value))}
-                          formatDisplay={(val) => val.toFixed(2)}
-                          title={t('cfgIntervalStartTooltip')}
-                        />
-                        <EditableSlider
-                          label={t('cfgIntervalEnd')}
-                          value={cfgIntervalEnd}
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          onChange={(e) => setCfgIntervalEnd(Number(e.target.value))}
-                          formatDisplay={(val) => val.toFixed(2)}
-                          title={t('cfgIntervalEndTooltip')}
-                        />
-                      </div>
-                    </div>
-
-                  </div>
-                )}
-              </div>
-
-              {/* Seed */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Dices size={14} className="text-zinc-500" />
-                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('seedTooltip')}>{t('seed')}</span>
-                  </div>
-                  <button
-                    onClick={() => setRandomSeed(!randomSeed)}
-                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${randomSeed ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'}`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${randomSeed ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Hash size={14} className="text-zinc-500" />
-                  <input
-                    type="number"
-                    value={seed}
-                    onChange={(e) => setSeed(Number(e.target.value))}
-                    placeholder={t('enterFixedSeed')}
-                    disabled={randomSeed}
-                    onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
-                    className={`flex-1 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${randomSeed ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  />
-                </div>
-                <p className="text-[10px] text-zinc-500">{randomSeed ? t('randomSeedRecommended') : t('fixedSeedReproducible')}</p>
-              </div>
-
-
-              {/* Shift */}
-              <EditableSlider
-                label={t('shift')}
-                value={shift}
-                min={1}
-                max={5}
-                step={0.1}
-                onChange={setShift}
-                formatDisplay={(val) => val.toFixed(1)}
-                helpText={t('timestepShiftForBase')}
-                title={t('shiftTooltip')}
-              />
-
-            </div>
-          )}
-        </div>
+        {/* GENERATION SETTINGS */}
+        <GenerationSettingsAccordion
+          isOpen={showGenerationSettings}
+          onToggle={() => setShowGenerationSettings(!showGenerationSettings)}
+          batchSize={batchSize}
+          onBatchSizeChange={setBatchSize}
+          bulkCount={bulkCount}
+          onBulkCountChange={setBulkCount}
+          seed={seed}
+          onSeedChange={setSeed}
+          randomSeed={randomSeed}
+          onRandomSeedToggle={() => setRandomSeed(!randomSeed)}
+          shift={shift}
+          onShiftChange={setShift}
+          inferenceSteps={inferenceSteps}
+          onInferenceStepsChange={setInferenceSteps}
+          inferMethod={inferMethod}
+          onInferMethodChange={setInferMethod}
+          audioFormat={audioFormat}
+          onAudioFormatChange={setAudioFormat}
+          guidanceScale={guidanceScale}
+          onGuidanceScaleChange={setGuidanceScale}
+          guidanceMode={guidanceMode}
+          onGuidanceModeChange={(mode) => { setGuidanceMode(mode); setUseAdg(mode === 'adg'); setUsePag(mode === 'pag'); }}
+          pagStart={pagStart}
+          onPagStartChange={setPagStart}
+          pagEnd={pagEnd}
+          onPagEndChange={setPagEnd}
+          pagScale={pagScale}
+          onPagScaleChange={setPagScale}
+          cfgIntervalStart={cfgIntervalStart}
+          onCfgIntervalStartChange={setCfgIntervalStart}
+          cfgIntervalEnd={cfgIntervalEnd}
+          onCfgIntervalEndChange={setCfgIntervalEnd}
+          thinking={thinking}
+          onThinkingToggle={() => setThinking(!thinking)}
+          loraLoaded={loraLoaded}
+          lmBackend={lmBackend}
+          onLmBackendChange={setLmBackend}
+          lmModel={lmModel}
+          onLmModelChange={setLmModel}
+          lmTemperature={lmTemperature}
+          onLmTemperatureChange={setLmTemperature}
+          lmCfgScale={lmCfgScale}
+          onLmCfgScaleChange={setLmCfgScale}
+          lmTopK={lmTopK}
+          onLmTopKChange={setLmTopK}
+          lmTopP={lmTopP}
+          onLmTopPChange={setLmTopP}
+          lmNegativePrompt={lmNegativePrompt}
+          onLmNegativePromptChange={setLmNegativePrompt}
+          allowLmBatch={allowLmBatch}
+          onAllowLmBatchToggle={() => setAllowLmBatch(!allowLmBatch)}
+          useCotMetas={useCotMetas}
+          onUseCotMetasToggle={() => setUseCotMetas(!useCotMetas)}
+          useCotCaption={useCotCaption}
+          onUseCotCaptionToggle={() => setUseCotCaption(!useCotCaption)}
+          useCotLanguage={useCotLanguage}
+          onUseCotLanguageToggle={() => setUseCotLanguage(!useCotLanguage)}
+          lmBatchChunkSize={lmBatchChunkSize}
+          onLmBatchChunkSizeChange={setLmBatchChunkSize}
+          constrainedDecodingDebug={constrainedDecodingDebug}
+          onConstrainedDecodingDebugToggle={() => setConstrainedDecodingDebug(!constrainedDecodingDebug)}
+          isFormatCaption={isFormatCaption}
+          onIsFormatCaptionToggle={() => setIsFormatCaption(!isFormatCaption)}
+          uploadError={uploadError}
+          audioCodes={audioCodes}
+          onAudioCodesChange={setAudioCodes}
+          instruction={instruction}
+          onInstructionChange={setInstruction}
+          customTimesteps={customTimesteps}
+          onCustomTimestepsChange={setCustomTimesteps}
+          trackName={trackName}
+          onTrackNameChange={setTrackName}
+          completeTrackClasses={completeTrackClasses}
+          onCompleteTrackClassesChange={setCompleteTrackClasses}
+          autogen={autogen}
+          onToggleAutogen={() => setAutogen(!autogen)}
+          getLrc={getLrc}
+          onToggleGetLrc={() => setGetLrc(!getLrc)}
+        />
 
         {/* SCORE SYSTEM */}
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowScorePanel(!showScorePanel)}
-            className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showScorePanel ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
-          >
-            <span className="flex items-center gap-2"><BarChart3 size={16} className="text-pink-500" />{t('scoreSystem')}</span>
-            <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showScorePanel ? 'rotated' : ''}`} />
-          </button>
-          {showScorePanel && (
-            <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
+        <ScoreSystemAccordion
+          isOpen={showScorePanel}
+          onToggle={() => setShowScorePanel(!showScorePanel)}
+          getScores={getScores}
+          onToggleGetScores={() => setGetScores(!getScores)}
+          scoreScale={scoreScale}
+          onScoreScaleChange={setScoreScale}
+        />
 
-              {/* Auto Quality Scoring */}
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('autoQualityScoring')}</span>
-                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('autoQualityScoringHelp')}</p>
-                </div>
-                <button
-                  onClick={() => setGetScores(!getScores)}
-                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${getScores ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${getScores ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {/* Score Sensitivity */}
-              <EditableSlider
-                label={t('scoreSensitivity')}
-                value={scoreScale}
-                min={0.01}
-                max={1}
-                step={0.01}
-                onChange={(e) => setScoreScale(Number(e.target.value))}
-                formatDisplay={(val) => val.toFixed(2)}
-                helpText={t('scoreSensitivityHelp')}
-                title={t('scoreScaleTooltip')}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* EXPERT CONTROLS */}
-        <div>
-          <button
-            onClick={() => setShowExpert(!showExpert)}
-            className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showExpert ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
-          >
-            <span className="flex items-center gap-2"><Settings2 size={16} className="text-pink-500" />{t('expertControls')}</span>
-            <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showExpert ? 'rotated' : ''}`} />
-          </button>
-          {showExpert && (
-            <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
-
-              {uploadError && (
-                <div className="text-[11px] text-rose-500">{uploadError}</div>
-              )}
-
-
-              <div className="space-y-1">
-                <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide" title={t('transformTooltip')}>{t('transform')}</h4>
-                <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('controlSourceAudio')}</p>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('audioCodesTooltip')}>{t('audioCodes')}</label>
-                <textarea
-                  value={audioCodes}
-                  onChange={(e) => setAudioCodes(e.target.value)}
-                  placeholder={t('optionalAudioCodes')}
-                  className="w-full h-16 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg p-2 text-xs text-zinc-900 dark:text-white focus:outline-none resize-none"
-                />
-              </div>
-
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('instructionTooltip')}>{t('instruction')}</label>
-                <textarea
-                  value={instruction}
-                  onChange={(e) => setInstruction(e.target.value)}
-                  className="w-full h-16 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg p-2 text-xs text-zinc-900 dark:text-white focus:outline-none resize-none"
-                />
-              </div>
-
-
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('customTimestepsTooltip')}>{t('customTimesteps')}</label>
-                <input
-                  type="text"
-                  value={customTimesteps}
-                  onChange={(e) => setCustomTimesteps(e.target.value)}
-                  placeholder={t('timestepsPlaceholder')}
-                  className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                />
-              </div>
-
-
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('trackName')}</label>
-                <input
-                  type="text"
-                  value={trackName}
-                  onChange={(e) => setTrackName(e.target.value)}
-                  placeholder={t('optionalTrackName')}
-                  className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('completeTrackClasses')}</label>
-                <input
-                  type="text"
-                  value={completeTrackClasses}
-                  onChange={(e) => setCompleteTrackClasses(e.target.value)}
-                  placeholder={t('trackClassesPlaceholder')}
-                  className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('autogenHint')}>
-                  <input type="checkbox" checked={autogen} onChange={() => setAutogen(!autogen)} />
-                  {t('autogen')}
-                </label>
-
-
-                <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('getLrcTooltip')}>
-                  <input type="checkbox" checked={getLrc} onChange={() => setGetLrc(!getLrc)} />
-                  {t('getLrcLyrics')}
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       {
