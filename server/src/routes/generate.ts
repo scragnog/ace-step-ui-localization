@@ -997,9 +997,16 @@ router.get('/models', async (_req, res: Response) => {
 
     const result = await modelsResponse.json();
     res.json(result.data || result);
-  } catch (error) {
-    console.error('Models proxy error:', error);
-    res.status(500).json({ error: 'Failed to fetch models from backend' });
+  } catch (error: any) {
+    const isConnRefused = error?.cause?.code === 'ECONNREFUSED' ||
+      error?.code === 'ECONNREFUSED';
+    if (isConnRefused) {
+      console.warn('Models proxy: ACE-Step backend not reachable yet');
+      res.status(503).json({ error: 'ACE-Step 后端暂未启动', backend_unavailable: true });
+    } else {
+      console.error('Models proxy error:', error);
+      res.status(500).json({ error: 'Failed to fetch models from backend' });
+    }
   }
 });
 

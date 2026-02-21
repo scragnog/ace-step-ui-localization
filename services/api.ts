@@ -872,6 +872,7 @@ export const trainingApi = {
     training_shift?: number;
     training_seed?: number;
     lora_output_dir?: string;
+    network_weights?: string;
     use_fp8?: boolean;
     gradient_checkpointing?: boolean;
   }, token: string): Promise<{
@@ -899,6 +900,7 @@ export const trainingApi = {
     training_shift?: number;
     training_seed?: number;
     output_dir?: string;
+    network_weights?: string;
     gradient_checkpointing?: boolean;
   }, token: string): Promise<{
     message: string;

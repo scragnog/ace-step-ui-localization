@@ -205,6 +205,7 @@ export const translations = {
     // CreatePanel - Model Status
     modelActive: '● Active',
     modelReady: '● Ready',
+    backendNotStarted: 'ACE-Step backend not started yet, using default model list',
 
     // CreatePanel - Advanced
     randomSeed: 'Random Seed',
@@ -736,6 +737,8 @@ export const translations = {
     gradientAccumulation: 'Gradient Accumulation',
     saveEvery: 'Save Every',
     epochs: 'epochs',
+    networkWeights: 'Resume from Previous Weights (Optional)',
+    networkWeightsPlaceholder: './lora_output/checkpoints/epoch_xxx/adapter_model.safetensors',
     outputDirectory: 'Output Directory',
     useFP8: 'Use FP8 Quantization',
     fp8Description: 'Reduces VRAM usage',
@@ -977,6 +980,7 @@ export const translations = {
     // CreatePanel - Model Status
     modelActive: '● 激活',
     modelReady: '● 就绪',
+    backendNotStarted: 'ACE-Step 后端暂未启动，使用默认模型列表',
 
     // CreatePanel - Advanced
     randomSeed: '随机种子',
@@ -1517,6 +1521,8 @@ export const translations = {
     gradientAccumulation: '梯度累积',
     saveEvery: '保存间隔',
     epochs: '轮',
+    networkWeights: '读取之前训练的权重（可选）',
+    networkWeightsPlaceholder: './lora_output/checkpoints/epoch_xxx/adapter_model.safetensors',
     outputDirectory: '输出目录',
     useFP8: '使用 FP8 量化',
     fp8Description: '减少显存占用',
@@ -1879,6 +1885,7 @@ export const translations = {
     // CreatePanel - Model Status
     modelActive: '● アクティブ',
     modelReady: '● 準備完了',
+    backendNotStarted: 'ACE-Step バックエンドが未起動です。デフォルトモデルリストを使用中',
 
     // CreatePanel - Tooltips
     aiFormatTooltip: 'AIフォーマット - スタイルを強化しパラメータを自動入力',
@@ -2311,6 +2318,8 @@ export const translations = {
     gradientAccumulation: 'グラデーション累積',
     saveEvery: '保存間隔',
     epochs: 'エポック',
+    networkWeights: '以前のトレーニング重みを読み込む（オプション）',
+    networkWeightsPlaceholder: './lora_output/checkpoints/epoch_xxx/adapter_model.safetensors',
     outputDirectory: '出力ディレクトリ',
     useFP8: 'FP8 量子化を使用',
     fp8Description: 'VRAM を削減',
@@ -2672,6 +2681,7 @@ export const translations = {
     // CreatePanel - Model Status
     modelActive: '● 활성',
     modelReady: '● 준비됨',
+    backendNotStarted: 'ACE-Step 백엔드가 아직 시작되지 않았습니다. 기본 모델 목록 사용 중',
 
     // CreatePanel - Tooltips
     aiFormatTooltip: 'AI 포맷 - 스타일 강화 및 자동 매개변수 채우기',
@@ -3103,6 +3113,8 @@ export const translations = {
     gradientAccumulation: '그래디언트 누적',
     saveEvery: '저장 간격',
     epochs: '에포크',
+    networkWeights: '이전 훈련 가중치 불러오기 (선택사항)',
+    networkWeightsPlaceholder: './lora_output/checkpoints/epoch_xxx/adapter_model.safetensors',
     outputDirectory: '출력 디렉토리',
     useFP8: 'FP8 양자화 사용',
     fp8Description: 'VRAM 사용량 감소',
