@@ -110,7 +110,9 @@ export const translations = {
     keyTooltip: 'Musical key signature. Auto lets the model choose.',
     timeTooltip: 'Time signature (e.g. 4/4, 3/4). Auto lets the model choose.',
     advancedSettings: 'Advanced Settings',
-    cotAndLmSettings: 'Language Model & CoT',
+    generationSettings: 'Generation Settings',
+    inferenceSettings: 'Inference Settings',
+    lmCotSettings: 'LM / CoT Settings',
     cotOptions: 'CoT Options',
 
     // CreatePanel - LoRA
@@ -973,7 +975,9 @@ export const translations = {
     keyTooltip: '音乐调性。自动模式让模型选择。',
     timeTooltip: '拍号（如4/4、3/4）。自动模式让模型选择。',
     advancedSettings: '高级设置',
-    cotAndLmSettings: '语言模型 & 思维链',
+    generationSettings: '生成设置',
+    inferenceSettings: '推理设置',
+    lmCotSettings: '语言模型与思维链设置',
     cotOptions: '思维链选项',
 
     // CreatePanel - LoRA
@@ -1210,8 +1214,8 @@ export const translations = {
     maleVocals: '男声',
     femaleVocals: '女声',
     failedToFetchReferenceTracks: '获取参考曲目失败',
-    failedToTranscribe: '转录失败',
     transcriptionFailed: '转录失败',
+    failedToTranscribe: '转录失败',
     failedToDeleteTrack: '删除曲目失败',
 
     // CreatePanel - Drag & Drop
@@ -1808,8 +1812,10 @@ export const translations = {
     bpmTooltip: '1分あたりのビート数。Autoでモデルがスタイルに基づいて選択します。',
     keyTooltip: '音楽のキー。Autoでモデルが選択します。',
     timeTooltip: '拍子記号（例：4/4、3/4）。Autoでモデルが選択します。',
-    advancedSettings: '詳細設定',
-    cotAndLmSettings: '言語モデル & CoT',
+    advancedSettings: '高度な設定',
+    generationSettings: '生成設定',
+    inferenceSettings: '推論設定',
+    lmCotSettings: '言語モデル / CoT設定',
     cotOptions: 'CoTオプション',
 
     // CreatePanel - LoRA
@@ -2657,7 +2663,9 @@ export const translations = {
     keyTooltip: '음악 키. Auto는 모델이 선택합니다.',
     timeTooltip: '박자(예: 4/4, 3/4). Auto는 모델이 선택합니다.',
     advancedSettings: '고급 설정',
-    cotAndLmSettings: '언어 모델 & CoT',
+    generationSettings: '생성 설정',
+    inferenceSettings: '추론 설정',
+    lmCotSettings: '언어 모델 / CoT 설정',
     cotOptions: 'CoT 옵션',
 
     // CreatePanel - LoRA
