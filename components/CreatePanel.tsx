@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain, Crosshair, BarChart3 } from 'lucide-react';
+import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain, Crosshair, BarChart3, FileText } from 'lucide-react';
 import { GenerationParams, Song } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
@@ -157,6 +157,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [showGuidancePanel, setShowGuidancePanel] = usePersistedState('ace-showGuidancePanel', false);
   const [showScorePanel, setShowScorePanel] = usePersistedState('ace-showScorePanel', false);
   const [showExpert, setShowExpert] = usePersistedState('ace-showExpert', false);
+  const [showTrackDetails, setShowTrackDetails] = usePersistedState('ace-showTrackDetails', true);
+  const [showLyricsSub, setShowLyricsSub] = usePersistedState('ace-showLyricsSub', true);
+  const [showStyleSub, setShowStyleSub] = usePersistedState('ace-showStyleSub', true);
+  const [showMusicParamsSub, setShowMusicParamsSub] = usePersistedState('ace-showMusicParamsSub', false);
   const [duration, setDuration] = usePersistedState('ace-duration', -1);
   const [batchSize, setBatchSize] = usePersistedState('ace-batchSize', 1);
   const [bulkCount, setBulkCount] = usePersistedState('ace-bulkCount', 1);
@@ -394,6 +398,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [showAudioModal, setShowAudioModal] = useState(false);
   const [audioModalTarget, setAudioModalTarget] = useState<'reference' | 'source'>('reference');
   const [tempAudioUrl, setTempAudioUrl] = useState('');
+  const [useReferenceAudio, setUseReferenceAudio] = usePersistedState('acestep-useReferenceAudio', false);
   const [audioTab, setAudioTab] = useState<'reference' | 'source'>('reference');
   const referenceAudioRef = useRef<HTMLAudioElement>(null);
   const sourceAudioRef = useRef<HTMLAudioElement>(null);
@@ -446,6 +451,13 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   });
   const [isResizing, setIsResizing] = useState(false);
   const lyricsRef = useRef<HTMLDivElement>(null);
+
+  const [styleHeight, setStyleHeight] = useState(() => {
+    const saved = localStorage.getItem('acestep_style_height');
+    return saved ? parseInt(saved, 10) : 80; // default initial height
+  });
+  const [isResizingStyle, setIsResizingStyle] = useState(false);
+  const styleRef = useRef<HTMLDivElement>(null);
 
 
   // Close model menu when clicking outside
@@ -775,6 +787,40 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     };
   }, [isResizing]);
 
+  useEffect(() => {
+    const handleMouseMoveStyle = (e: MouseEvent) => {
+      if (!isResizingStyle) return;
+      if (styleRef.current) {
+        const rect = styleRef.current.getBoundingClientRect();
+        const newHeight = e.clientY - rect.top;
+        if (newHeight > 60 && newHeight < 600) {
+          setStyleHeight(newHeight);
+        }
+      }
+    };
+
+    const handleMouseUpStyle = () => {
+      setIsResizingStyle(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+      localStorage.setItem('acestep_style_height', String(styleHeight));
+    };
+
+    if (isResizingStyle) {
+      window.addEventListener('mousemove', handleMouseMoveStyle);
+      window.addEventListener('mouseup', handleMouseUpStyle);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMoveStyle);
+      window.removeEventListener('mouseup', handleMouseUpStyle);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+  }, [isResizingStyle]);
+
   const refreshModels = useCallback(async (isInitial = false): Promise<boolean> => {
     try {
       const modelsRes = await fetch('/api/generate/models');
@@ -971,6 +1017,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const startResizing = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
+  };
+
+  const startResizingStyle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingStyle(true);
   };
 
   const uploadAudio = async (file: File, target: 'reference' | 'source') => {
@@ -1557,6 +1608,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 setTaskType(e.target.value);
                 if (e.target.value === 'text2music' && audioTab === 'source') {
                   setAudioTab('reference');
+                } else if (e.target.value !== 'text2music' && !useReferenceAudio) {
+                  setAudioTab('source');
                 }
               }}
               className="bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
@@ -1709,484 +1762,658 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         {/* CUSTOM MODE */}
         {customMode && (
           <div className="space-y-5">
-            {/* Audio Section */}
-            <div
-              onDrop={(e) => handleDrop(e, audioTab)}
-              onDragOver={handleDragOver}
-              className="bg-white dark:bg-[#1a1a1f] rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden"
-            >
-              {/* Header with Audio label and tabs */}
-              <div className="px-3 py-2.5 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('audio')}</span>
-                  <div className="flex items-center gap-1 bg-zinc-200/50 dark:bg-black/30 rounded-lg p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setAudioTab('reference')}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'reference'
-                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                        }`}
-                    >
-                      {t('reference')}
-                    </button>
-                    {taskType !== 'text2music' && (
+            {/* Use Reference Audio Toggle */}
+            <div className="flex items-center justify-between px-2">
+              <div>
+                <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wide">{t('useReferenceAudio')}</span>
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('useReferenceAudioTooltip')}</p>
+              </div>
+              <button
+                onClick={() => {
+                  const newValue = !useReferenceAudio;
+                  setUseReferenceAudio(newValue);
+                  if (!newValue && taskType !== 'text2music') {
+                    setAudioTab('source');
+                  } else if (newValue) {
+                    setAudioTab('reference');
+                  }
+                }}
+                className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useReferenceAudio ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useReferenceAudio ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Audio Section - Conditionally rendered */}
+            {(useReferenceAudio || taskType !== 'text2music') && (
+              <div
+                onDrop={(e) => handleDrop(e, audioTab)}
+                onDragOver={handleDragOver}
+                className="bg-white dark:bg-[#1a1a1f] rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden"
+              >
+                {/* Header with Audio label and tabs */}
+                <div className="px-3 py-2.5 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('audio')}</span>
+                    <div className="flex items-center gap-1 bg-zinc-200/50 dark:bg-black/30 rounded-lg p-0.5">
+                      {useReferenceAudio && (
+                        <button
+                          type="button"
+                          onClick={() => setAudioTab('reference')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'reference'
+                            ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                            }`}
+                        >
+                          {t('reference')}
+                        </button>
+                      )}
+                      {taskType !== 'text2music' && (
+                        <button
+                          type="button"
+                          onClick={() => setAudioTab('source')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'source'
+                            ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                            }`}
+                        >
+                          {t('cover')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audio Content */}
+                <div className="p-3 space-y-2">
+                  {/* Reference Audio Player */}
+                  {audioTab === 'reference' && referenceAudioUrl && (
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5">
                       <button
                         type="button"
-                        onClick={() => setAudioTab('source')}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'source'
-                          ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                          }`}
+                        onClick={() => toggleAudio('reference')}
+                        className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 hover:scale-105 transition-transform"
                       >
-                        {t('cover')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Audio Content */}
-              <div className="p-3 space-y-2">
-                {/* Reference Audio Player */}
-                {audioTab === 'reference' && referenceAudioUrl && (
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5">
-                    <button
-                      type="button"
-                      onClick={() => toggleAudio('reference')}
-                      className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 hover:scale-105 transition-transform"
-                    >
-                      {referencePlaying ? (
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                      ) : (
-                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                      )}
-                      <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
-                        {formatTime(referenceDuration)}
-                      </span>
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate mb-1.5">
-                        {referenceAudioTitle || getAudioLabel(referenceAudioUrl)}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(referenceTime)}</span>
-                        <div
-                          className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
-                          onClick={(e) => {
-                            if (referenceAudioRef.current && referenceDuration > 0) {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const percent = (e.clientX - rect.left) / rect.width;
-                              referenceAudioRef.current.currentTime = percent * referenceDuration;
-                            }
-                          }}
-                        >
-                          <div
-                            className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all relative"
-                            style={{ width: referenceDuration ? `${Math.min(100, (referenceTime / referenceDuration) * 100)}%` : '0%' }}
-                          >
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                        <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(referenceDuration)}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setReferenceAudioUrl(''); setReferenceAudioTitle(''); setReferencePlaying(false); setReferenceTime(0); setReferenceDuration(0); }}
-                      className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                )}
-
-                {/* Source/Cover Audio Player */}
-                {audioTab === 'source' && sourceAudioUrl && (
-                  <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5">
-                    <button
-                      type="button"
-                      onClick={() => toggleAudio('source')}
-                      className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
-                    >
-                      {sourcePlaying ? (
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                      ) : (
-                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                      )}
-                      <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
-                        {formatTime(sourceDuration)}
-                      </span>
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate mb-1.5">
-                        {sourceAudioTitle || getAudioLabel(sourceAudioUrl)}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(sourceTime)}</span>
-                        <div
-                          className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
-                          onClick={(e) => {
-                            if (sourceAudioRef.current && sourceDuration > 0) {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const percent = (e.clientX - rect.left) / rect.width;
-                              sourceAudioRef.current.currentTime = percent * sourceDuration;
-                            }
-                          }}
-                        >
-                          <div
-                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all relative"
-                            style={{ width: sourceDuration ? `${Math.min(100, (sourceTime / sourceDuration) * 100)}%` : '0%' }}
-                          >
-                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                        <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(sourceDuration)}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setSourceAudioUrl(''); setSourceAudioTitle(''); setSourcePlaying(false); setSourceTime(0); setSourceDuration(0); }}
-                      className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                )}
-
-                {/* Action buttons */}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openAudioModal(audioTab, 'uploads')}
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                    </svg>
-                    {t('fromLibrary')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const input = audioTab === 'reference' ? referenceInputRef.current : sourceInputRef.current;
-                      input?.click();
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    {t('upload')}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Lyrics Input */}
-            <div
-              ref={lyricsRef}
-              className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden transition-colors group focus-within:border-zinc-400 dark:focus-within:border-white/20 relative flex flex-col"
-              style={{ height: 'auto' }}
-            >
-              <div className="flex items-center justify-between px-3 py-2.5 bg-zinc-50 dark:bg-white/5 border-b border-zinc-100 dark:border-white/5 flex-shrink-0">
-                <div>
-                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('lyrics')}</span>
-                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">{t('leaveLyricsEmpty')}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setInstrumental(!instrumental)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${instrumental
-                      ? 'bg-pink-600 text-white border-pink-500'
-                      : 'bg-white dark:bg-suno-card border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'
-                      }`}
-                  >
-                    {instrumental ? t('instrumental') : t('vocal')}
-                  </button>
-                  <button
-                    className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors ${isFormattingLyrics ? 'text-pink-500' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
-                    title={t('aiFormatTooltip')}
-                    onClick={() => handleFormat('lyrics')}
-                    disabled={isFormattingLyrics || !style.trim()}
-                  >
-                    {isFormattingLyrics ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  </button>
-                  <button
-                    className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
-                    onClick={() => setLyrics('')}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-              <textarea
-                disabled={instrumental}
-                value={lyrics}
-                onChange={(e) => setLyrics(e.target.value)}
-                placeholder={instrumental ? t('instrumental') + ' mode' : t('lyricsPlaceholder')}
-                className={`w-full bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none font-mono leading-relaxed ${instrumental ? 'opacity-30 cursor-not-allowed' : ''}`}
-                style={{ height: `${lyricsHeight}px` }}
-              />
-              {/* Resize Handle */}
-              <div
-                onMouseDown={startResizing}
-                className="h-3 w-full cursor-ns-resize flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors absolute bottom-0 left-0 z-10"
-              >
-                <div className="w-8 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
-              </div>
-            </div>
-
-            {/* Style Input */}
-            <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-visible transition-colors group focus-within:border-zinc-400 dark:focus-within:border-white/20">
-              <div className="flex items-center justify-between px-3 py-2.5 bg-zinc-50 dark:bg-white/5 border-b border-zinc-100 dark:border-white/5">
-                <div>
-                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('styleOfMusic')}</span>
-                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">{t('genreMoodInstruments')}</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors text-zinc-500 hover:text-black dark:hover:text-white"
-                    title={t('refreshGenres')}
-                    onClick={refreshMusicTags}
-                  >
-                    <Dices size={14} />
-                  </button>
-                  <button
-                    className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
-                    onClick={() => setStyle('')}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                  <button
-                    className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors ${isFormattingStyle ? 'text-pink-500' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
-                    title={t('aiFormatTooltip')}
-                    onClick={() => handleFormat('style')}
-                    disabled={isFormattingStyle || !style.trim()}
-                  >
-                    {isFormattingStyle ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  </button>
-                </div>
-              </div>
-              <textarea
-                value={style}
-                onChange={(e) => setStyle(e.target.value)}
-                placeholder={t('stylePlaceholder')}
-                className="w-full h-20 bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none"
-              />
-              <div className="px-3 pb-3 space-y-3">
-                {/* Genre Selector with Integrated Search */}
-                <div className="space-y-3">
-                  {/* Combined Genre Dropdown with Search */}
-                  <div className="relative" ref={genreDropdownRef}>
-                    <button
-                      onClick={() => setShowGenreDropdown(!showGenreDropdown)}
-                      className="w-full flex items-center justify-between bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:border-pink-300 dark:hover:border-pink-500/50 transition-all shadow-sm"
-                    >
-                      <span className={selectedMainGenre || selectedSubGenre ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-400'}>
-                        {selectedSubGenre
-                          ? `${selectedMainGenre} › ${selectedSubGenre}`
-                          : selectedMainGenre
-                            ? `${selectedMainGenre} ${getSubGenreCount(selectedMainGenre) > 0 ? `(${getSubGenreCount(selectedMainGenre)} ${t('subGenres')})` : ''}`
-                            : t('selectGenre')}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {(selectedMainGenre || selectedSubGenre) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedMainGenre('');
-                              setSelectedSubGenre('');
-                            }}
-                            className="p-0.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                            title={t('clearSelection')}
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                        {referencePlaying ? (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                        ) : (
+                          <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                         )}
-                        <svg className={`w-4 h-4 text-zinc-400 transition-transform ${showGenreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </button>
-
-                    {/* Dropdown Panel */}
-                    {showGenreDropdown && (
-                      <div className="absolute z-[100] w-full mt-1 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl overflow-hidden" style={{ maxHeight: '500px' }}>
-                        {/* Search Input Inside Dropdown */}
-                        <div className="p-2 border-b border-zinc-100 dark:border-zinc-700">
-                          <div className="relative">
-                            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                              type="text"
-                              value={genreSearch}
-                              onChange={(e) => setGenreSearch(e.target.value)}
-                              placeholder={t('searchGenre') || 'Search genres...'}
-                              className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 placeholder:text-zinc-400"
-                              autoFocus
-                            />
-                            {genreSearch && (
-                              <button
-                                onClick={() => setGenreSearch('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Dropdown Options - Combined and Sorted */}
-                        <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
-                          {filteredCombinedGenres.length > 0 && (
-                            <div className="py-1">
-                              {filteredCombinedGenres.map(({ name, type }) => {
-                                const subCount = type === 'main' ? getSubGenreCount(name) : 0;
-                                const isSelected = selectedMainGenre === name;
-                                return (
-                                  <button
-                                    key={name}
-                                    onClick={() => {
-                                      if (type === 'main') {
-                                        setSelectedMainGenre(name);
-                                        setSelectedSubGenre('');
-                                        setStyle(prev => prev ? `${prev}, ${name}` : name);
-                                        if (subCount === 0) {
-                                          setShowGenreDropdown(false);
-                                          setGenreSearch('');
-                                        }
-                                      } else {
-                                        // Other genre - no sub genres
-                                        setStyle(prev => prev ? `${prev}, ${name}` : name);
-                                        setSelectedMainGenre('');
-                                        setSelectedSubGenre('');
-                                        setShowGenreDropdown(false);
-                                        setGenreSearch('');
-                                      }
-                                    }}
-                                    className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${isSelected
-                                      ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
-                                      : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
-                                      }`}
-                                  >
-                                    <span className="flex items-center gap-2">
-                                      <span className={`w-1.5 h-1.5 rounded-full ${type === 'main' ? 'bg-pink-400' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                                      {name}
-                                    </span>
-                                    {type === 'main' && subCount > 0 && (
-                                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-700 px-1.5 py-0.5 rounded-full">
-                                        {subCount}
-                                      </span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Sub Genre Dropdown - Custom styled for dark mode support */}
-                  {selectedMainGenre && filteredSubGenres.length > 0 && (
-                    <div className="relative" ref={subGenreDropdownRef}>
-                      <button
-                        onClick={() => setShowSubGenreDropdown(!showSubGenreDropdown)}
-                        className="w-full flex items-center justify-between bg-gradient-to-r from-pink-50/80 to-purple-50/80 dark:from-pink-950/30 dark:to-purple-950/30 border border-pink-200 dark:border-pink-700/50 rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:border-pink-300 dark:hover:border-pink-500 transition-all shadow-sm"
-                      >
-                        <span className={selectedSubGenre ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-500 dark:text-zinc-400'}>
-                          {selectedSubGenre || `${t('selectSubGenre')} (${filteredSubGenres.length})`}
+                        <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
+                          {formatTime(referenceDuration)}
                         </span>
-                        <div className="flex items-center gap-1">
-                          {selectedSubGenre && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedSubGenre('');
-                              }}
-                              className="p-0.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                              title={t('clearSelection') || 'Clear'}
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          )}
-                          <svg className={`w-4 h-4 text-zinc-400 transition-transform ${showSubGenreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
                       </button>
-
-                      {/* Sub Genre Dropdown Panel */}
-                      {showSubGenreDropdown && (
-                        <div className="absolute z-[100] w-full mt-1 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl overflow-hidden" style={{ maxHeight: '300px' }}>
-                          <div className="overflow-y-auto" style={{ maxHeight: '300px' }}>
-                            <div className="py-1">
-                              {filteredSubGenres.map(genre => (
-                                <button
-                                  key={genre}
-                                  onClick={() => {
-                                    setSelectedSubGenre(genre);
-                                    setStyle(prev => prev ? `${prev}, ${genre}` : genre);
-                                    setShowSubGenreDropdown(false);
-                                  }}
-                                  className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${selectedSubGenre === genre
-                                    ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
-                                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
-                                    }`}
-                                >
-                                  {genre}
-                                </button>
-                              ))}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate mb-1.5">
+                          {referenceAudioTitle || getAudioLabel(referenceAudioUrl)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(referenceTime)}</span>
+                          <div
+                            className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
+                            onClick={(e) => {
+                              if (referenceAudioRef.current && referenceDuration > 0) {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const percent = (e.clientX - rect.left) / rect.width;
+                                referenceAudioRef.current.currentTime = percent * referenceDuration;
+                              }
+                            }}
+                          >
+                            <div
+                              className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all relative"
+                              style={{ width: referenceDuration ? `${Math.min(100, (referenceTime / referenceDuration) * 100)}%` : '0%' }}
+                            >
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
                             </div>
                           </div>
+                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(referenceDuration)}</span>
                         </div>
-                      )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setReferenceAudioUrl(''); setReferenceAudioTitle(''); setReferencePlaying(false); setReferenceTime(0); setReferenceDuration(0); }}
+                        className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
                     </div>
                   )}
 
+                  {/* Source/Cover Audio Player */}
+                  {audioTab === 'source' && sourceAudioUrl && (
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-white/[0.03] border border-zinc-100 dark:border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => toggleAudio('source')}
+                        className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
+                      >
+                        {sourcePlaying ? (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                        ) : (
+                          <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                        )}
+                        <span className="absolute -bottom-1 -right-1 text-[8px] font-bold bg-zinc-900 text-white px-1 py-0.5 rounded">
+                          {formatTime(sourceDuration)}
+                        </span>
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate mb-1.5">
+                          {sourceAudioTitle || getAudioLabel(sourceAudioUrl)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(sourceTime)}</span>
+                          <div
+                            className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
+                            onClick={(e) => {
+                              if (sourceAudioRef.current && sourceDuration > 0) {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const percent = (e.clientX - rect.left) / rect.width;
+                                sourceAudioRef.current.currentTime = percent * sourceDuration;
+                              }
+                            }}
+                          >
+                            <div
+                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all relative"
+                              style={{ width: sourceDuration ? `${Math.min(100, (sourceTime / sourceDuration) * 100)}%` : '0%' }}
+                            >
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 tabular-nums">{formatTime(sourceDuration)}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSourceAudioUrl(''); setSourceAudioTitle(''); setSourcePlaying(false); setSourceTime(0); setSourceDuration(0); }}
+                        className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  )}
 
-                </div>
-                {/* Quick Tags */}
-                <div className="flex flex-wrap gap-2">
-                  {musicTags.map(tag => (
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
                     <button
-                      key={tag}
-                      onClick={() => setStyle(prev => prev ? `${prev}, ${tag}` : tag)}
-                      className="text-[10px] font-medium bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white px-2.5 py-1 rounded-full transition-colors border border-zinc-200 dark:border-white/5"
+                      type="button"
+                      onClick={() => openAudioModal(audioTab, 'uploads')}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
                     >
-                      {tag}
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                      </svg>
+                      {t('fromLibrary')}
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = audioTab === 'reference' ? referenceInputRef.current : sourceInputRef.current;
+                        input?.click();
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 px-3 py-2 text-xs font-medium transition-colors border border-zinc-200 dark:border-white/5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      {t('upload')}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Title Input */}
-            <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden">
-              <div className="px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/5">
-                {t('title')}
-              </div>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={t('nameSong')}
-                className="w-full bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none"
-              />
-            </div>
+            )}
           </div>
         )}
 
-        {/* COMMON SETTINGS */}
+        {/* TRACK DETAILS ACCORDION (Custom mode only) */}
+        {customMode && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowTrackDetails(!showTrackDetails)}
+              className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showTrackDetails ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
+            >
+              <span className="flex items-center gap-2"><FileText size={16} className="text-pink-500" />{t('trackDetails')}</span>
+              <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showTrackDetails ? 'rotated' : ''}`} />
+            </button>
+            {showTrackDetails && (
+              <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
+
+                {/* Vocal Language & Gender */}
+                {!instrumental && (
+                  <div className="grid grid-cols-2 gap-3 mb-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('vocalLanguageTooltip')}>{t('vocalLanguage')}</label>
+                      <select
+                        value={vocalLanguage}
+                        onChange={(e) => setVocalLanguage(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+                      >
+                        {VOCAL_LANGUAGE_KEYS.map(lang => (
+                          <option key={lang.value} value={lang.value}>{t(lang.key)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('vocalGenderTooltip')}>{t('vocalGender')}</label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setVocalGender(vocalGender === 'male' ? '' : 'male')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${vocalGender === 'male' ? 'bg-pink-600 text-white border-pink-600' : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/20'}`}
+                        >
+                          {t('male')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVocalGender(vocalGender === 'female' ? '' : 'female')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${vocalGender === 'female' ? 'bg-pink-600 text-white border-pink-600' : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/20'}`}
+                        >
+                          {t('female')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Title Input */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('titleTooltip')}>{t('title')}</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={t('nameSong')}
+                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors"
+                  />
+                </div>
+
+                {/* Instrumental Toggle */}
+                <div className="flex items-center justify-between py-1 border-b border-zinc-200 dark:border-white/5 pb-3">
+                  <div>
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('instrumental')}</span>
+                    <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('instrumentalTooltip')}</p>
+                  </div>
+                  <button
+                    onClick={() => setInstrumental(!instrumental)}
+                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${instrumental ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${instrumental ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {/* ── Lyrics Sub-Accordion ── */}
+                {!instrumental && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowLyricsSub(!showLyricsSub)}
+                      className="w-full flex items-center justify-between py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide"
+                    >
+                      <span>{t('lyrics')}</span>
+                      <ChevronDown size={14} className={`text-pink-500 chevron-icon ${showLyricsSub ? 'rotated' : ''}`} />
+                    </button>
+                    {showLyricsSub && (
+                      <div className="space-y-2">
+                        <div
+                          ref={lyricsRef}
+                          className="bg-zinc-50 dark:bg-black/20 rounded-lg border border-zinc-200 dark:border-white/10 overflow-hidden relative flex flex-col transition-colors focus-within:border-pink-500 dark:focus-within:border-pink-500"
+                          style={{ height: 'auto' }}
+                        >
+                          <div className="flex items-center justify-end gap-1 px-2 py-1.5 bg-zinc-100 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
+                            <button
+                              onClick={() => setInstrumental(!instrumental)}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${instrumental
+                                ? 'bg-pink-600 text-white border-pink-500'
+                                : 'bg-white dark:bg-suno-card border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'
+                                }`}
+                            >
+                              {instrumental ? t('instrumental') : t('vocal')}
+                            </button>
+                            <button
+                              className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors ${isFormattingLyrics ? 'text-pink-500' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
+                              title={t('aiFormatTooltip')}
+                              onClick={() => handleFormat('lyrics')}
+                              disabled={isFormattingLyrics || !lyrics.trim()}
+                            >
+                              {isFormattingLyrics ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                            </button>
+                            <button
+                              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded text-zinc-500 hover:text-black dark:hover:text-white transition-colors"
+                              onClick={() => setLyrics('')}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          <textarea
+                            value={lyrics}
+                            onChange={(e) => setLyrics(e.target.value)}
+                            placeholder={t('lyricsPlaceholder')}
+                            className="flex-1 bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none overflow-y-auto"
+                            style={{ minHeight: `${lyricsHeight}px`, maxHeight: `${lyricsHeight}px` }}
+                          />
+                          <div
+                            onMouseDown={startResizing}
+                            className="h-3 w-full cursor-ns-resize flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors absolute bottom-0 left-0 z-10"
+                          >
+                            <div className="w-8 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('leaveLyricsEmpty')}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Style Sub-Accordion ── */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowStyleSub(!showStyleSub)}
+                    className="w-full flex items-center justify-between py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide"
+                  >
+                    <span>{t('styleOfMusic')}</span>
+                    <ChevronDown size={14} className={`text-pink-500 chevron-icon ${showStyleSub ? 'rotated' : ''}`} />
+                  </button>
+                  {showStyleSub && (
+                    <div className="space-y-3">
+                      <div className="bg-zinc-50 dark:bg-black/20 rounded-lg border border-zinc-200 dark:border-white/10 overflow-visible">
+                        <div className="flex items-center justify-between px-2 py-1.5 bg-zinc-100 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
+                          <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('genreMoodInstruments')}</p>
+                          <div className="flex items-center gap-1">
+                            <button className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors text-zinc-500 hover:text-black dark:hover:text-white" title={t('refreshGenres')} onClick={refreshMusicTags}><Dices size={14} /></button>
+                            <button className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded text-zinc-500 hover:text-black dark:hover:text-white transition-colors" onClick={() => setStyle('')}><Trash2 size={14} /></button>
+                            <button
+                              className={`p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors ${isFormattingStyle ? 'text-pink-500' : 'text-zinc-500 hover:text-black dark:hover:text-white'}`}
+                              title={t('aiFormatTooltip')}
+                              onClick={() => handleFormat('style')}
+                              disabled={isFormattingStyle || !style.trim()}
+                            >
+                              {isFormattingStyle ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                            </button>
+                          </div>
+                        </div>
+                        <div
+                          ref={styleRef}
+                          className="relative flex flex-col h-full transition-colors focus-within:border-pink-500 dark:focus-within:border-pink-500 rounded-b-lg overflow-hidden"
+                          style={{ minHeight: `${styleHeight}px`, maxHeight: `${styleHeight}px` }}
+                        >
+                          <textarea
+                            value={style}
+                            onChange={(e) => setStyle(e.target.value)}
+                            placeholder={t('styleOfMusicPlaceholder')}
+                            className="w-full flex-1 bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none overflow-y-auto pb-6"
+                          />
+                          <div
+                            onMouseDown={startResizingStyle}
+                            className="h-3 w-full cursor-ns-resize flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors absolute bottom-0 left-0 z-10"
+                          >
+                            <div className="w-8 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {/* Combined Genre Dropdown with Search */}
+                        <div className="relative" ref={genreDropdownRef}>
+                          <button
+                            onClick={() => setShowGenreDropdown(!showGenreDropdown)}
+                            className="w-full flex items-center justify-between bg-white dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:border-pink-300 dark:hover:border-pink-500/50 transition-all shadow-sm"
+                          >
+                            <span className={selectedMainGenre || selectedSubGenre ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-400'}>
+                              {selectedSubGenre
+                                ? `${selectedMainGenre} › ${selectedSubGenre}`
+                                : selectedMainGenre
+                                  ? `${selectedMainGenre} ${getSubGenreCount(selectedMainGenre) > 0 ? `(${getSubGenreCount(selectedMainGenre)} ${t('subGenres')})` : ''}`
+                                  : t('selectGenre')}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {(selectedMainGenre || selectedSubGenre) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMainGenre('');
+                                    setSelectedSubGenre('');
+                                  }}
+                                  className="p-0.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                  title={t('clearSelection')}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                              <svg className={`w-4 h-4 text-zinc-400 transition-transform ${showGenreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </button>
+
+                          {/* Dropdown Panel */}
+                          {showGenreDropdown && (
+                            <div className="absolute z-[100] w-full mt-1 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl overflow-hidden" style={{ maxHeight: '500px' }}>
+                              {/* Search Input Inside Dropdown */}
+                              <div className="p-2 border-b border-zinc-100 dark:border-zinc-700">
+                                <div className="relative">
+                                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                  </svg>
+                                  <input
+                                    type="text"
+                                    value={genreSearch}
+                                    onChange={(e) => setGenreSearch(e.target.value)}
+                                    placeholder={t('searchGenre') || 'Search genres...'}
+                                    className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 placeholder:text-zinc-400"
+                                    autoFocus
+                                  />
+                                  {genreSearch && (
+                                    <button
+                                      onClick={() => setGenreSearch('')}
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Dropdown Options - Combined and Sorted */}
+                              <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
+                                {filteredCombinedGenres.length > 0 && (
+                                  <div className="py-1">
+                                    {filteredCombinedGenres.map(({ name, type }) => {
+                                      const subCount = type === 'main' ? getSubGenreCount(name) : 0;
+                                      const isSelected = selectedMainGenre === name;
+                                      return (
+                                        <button
+                                          key={name}
+                                          onClick={() => {
+                                            if (type === 'main') {
+                                              setSelectedMainGenre(name);
+                                              setSelectedSubGenre('');
+                                              setStyle(prev => prev ? `${prev}, ${name}` : name);
+                                              if (subCount === 0) {
+                                                setShowGenreDropdown(false);
+                                                setGenreSearch('');
+                                              }
+                                            } else {
+                                              // Other genre - no sub genres
+                                              setStyle(prev => prev ? `${prev}, ${name}` : name);
+                                              setSelectedMainGenre('');
+                                              setSelectedSubGenre('');
+                                              setShowGenreDropdown(false);
+                                              setGenreSearch('');
+                                            }
+                                          }}
+                                          className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${isSelected
+                                            ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
+                                            : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
+                                            }`}
+                                        >
+                                          <span className="flex items-center gap-2">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${type === 'main' ? 'bg-pink-400' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                                            {name}
+                                          </span>
+                                          {type === 'main' && subCount > 0 && (
+                                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-700 px-1.5 py-0.5 rounded-full">
+                                              {subCount}
+                                            </span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Sub Genre Dropdown - Custom styled for dark mode support */}
+                        {selectedMainGenre && filteredSubGenres.length > 0 && (
+                          <div className="relative" ref={subGenreDropdownRef}>
+                            <button
+                              onClick={() => setShowSubGenreDropdown(!showSubGenreDropdown)}
+                              className="w-full flex items-center justify-between bg-gradient-to-r from-pink-50/80 to-purple-50/80 dark:from-pink-950/30 dark:to-purple-950/30 border border-pink-200 dark:border-pink-700/50 rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 hover:border-pink-300 dark:hover:border-pink-500 transition-all shadow-sm"
+                            >
+                              <span className={selectedSubGenre ? 'text-zinc-900 dark:text-white font-medium' : 'text-zinc-500 dark:text-zinc-400'}>
+                                {selectedSubGenre || `${t('selectSubGenre')} (${filteredSubGenres.length})`}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {selectedSubGenre && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedSubGenre('');
+                                    }}
+                                    className="p-0.5 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                    title={t('clearSelection') || 'Clear'}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                )}
+                                <svg className={`w-4 h-4 text-zinc-400 transition-transform ${showSubGenreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </button>
+
+                            {/* Sub Genre Dropdown Panel */}
+                            {showSubGenreDropdown && (
+                              <div className="absolute z-[100] w-full mt-1 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-2xl overflow-hidden" style={{ maxHeight: '300px' }}>
+                                <div className="overflow-y-auto" style={{ maxHeight: '300px' }}>
+                                  <div className="py-1">
+                                    {filteredSubGenres.map(genre => (
+                                      <button
+                                        key={genre}
+                                        onClick={() => {
+                                          setSelectedSubGenre(genre);
+                                          setStyle(prev => prev ? `${prev}, ${genre}` : genre);
+                                          setShowSubGenreDropdown(false);
+                                        }}
+                                        className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${selectedSubGenre === genre
+                                          ? 'bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300'
+                                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-700 dark:hover:text-pink-300'
+                                          }`}
+                                      >
+                                        {genre}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+
+                      </div>
+                      {/* Quick Tags */}
+                      <div className="flex flex-wrap gap-2">
+                        {musicTags.map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => setStyle(prev => prev ? `${prev}, ${tag}` : tag)}
+                            className="text-[10px] font-medium bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white px-2.5 py-1 rounded-full transition-colors border border-zinc-200 dark:border-white/5"
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Music Parameters ── */}
+                <div className="space-y-4 pt-2 border-t border-zinc-200 dark:border-white/5">
+                  <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('musicParameters')}</h4>
+
+                  {/* BPM */}
+                  <EditableSlider
+                    label={t('bpm')}
+                    value={bpm}
+                    min={0}
+                    max={300}
+                    step={5}
+                    onChange={setBpm}
+                    formatDisplay={(val) => val === 0 ? t('auto') : val.toString()}
+                    title={t('bpmTooltip')}
+                    autoLabel={t('auto')}
+                  />
+
+                  {/* Key & Time Signature */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('keyTooltip')}>{t('key')}</label>
+                      <select
+                        value={keyScale}
+                        onChange={(e) => setKeyScale(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+                      >
+                        <option value="">{t('autoOption')}</option>
+                        {KEY_SIGNATURES.filter(k => k).map(key => (
+                          <option key={key} value={key}>{key}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('timeTooltip')}>{t('time')}</label>
+                      <select
+                        value={timeSignature}
+                        onChange={(e) => setTimeSignature(e.target.value)}
+                        className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+                      >
+                        <option value="">{t('autoOption')}</option>
+                        {TIME_SIGNATURES.filter(t => t).map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Duration */}
+                  <EditableSlider
+                    label={t('duration')}
+                    value={duration}
+                    min={-1}
+                    max={600}
+                    step={5}
+                    onChange={setDuration}
+                    formatDisplay={(val) => val === -1 ? t('auto') : `${val}${t('seconds')}`}
+                    title={t('durationTooltip')}
+                    autoLabel={t('auto')}
+                  />
+                </div>
+
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* COMMON SETTINGS (Simple mode only) */}
         <div className="space-y-4">
           {/* Instrumental Toggle (Simple Mode) */}
           {!customMode && (
@@ -2201,47 +2428,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               >
                 <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${instrumental ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
-            </div>
-          )}
-
-          {/* Vocal Language (Custom mode) */}
-          {customMode && !instrumental && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide px-1">
-                  {t('vocalLanguage')}
-                </label>
-                <select
-                  value={vocalLanguage}
-                  onChange={(e) => setVocalLanguage(e.target.value)}
-                  className="w-full bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 rounded-xl px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                >
-                  {VOCAL_LANGUAGE_KEYS.map(lang => (
-                    <option key={lang.value} value={lang.value}>{t(lang.key)}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide px-1">
-                  {t('vocalGender')}
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setVocalGender(vocalGender === 'male' ? '' : 'male')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${vocalGender === 'male' ? 'bg-pink-600 text-white border-pink-600' : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/20'}`}
-                  >
-                    {t('male')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVocalGender(vocalGender === 'female' ? '' : 'female')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${vocalGender === 'female' ? 'bg-pink-600 text-white border-pink-600' : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/20'}`}
-                  >
-                    {t('female')}
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -2549,55 +2735,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           </div>
         )}
 
-        {/* MUSIC PARAMETERS */}
-        <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
-          <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide flex items-center gap-2">
-            <Sliders size={14} />
-            {t('musicParameters')}
-          </h3>
-
-          {/* BPM */}
-          <EditableSlider
-            label={t('bpm')}
-            value={bpm}
-            min={0}
-            max={300}
-            step={5}
-            onChange={setBpm}
-            formatDisplay={(val) => val === 0 ? t('auto') : val.toString()}
-            autoLabel={t('auto')}
-          />
-
-          {/* Key & Time Signature */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('key')}</label>
-              <select
-                value={keyScale}
-                onChange={(e) => setKeyScale(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-              >
-                <option value="">{t('autoOption')}</option>
-                {KEY_SIGNATURES.filter(k => k).map(key => (
-                  <option key={key} value={key}>{key}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('time')}</label>
-              <select
-                value={timeSignature}
-                onChange={(e) => setTimeSignature(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-              >
-                <option value="">{t('autoOption')}</option>
-                {TIME_SIGNATURES.filter(t => t).map(time => (
-                  <option key={time} value={time}>{time}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
 
         {/* LANGUAGE MODEL & COT */}
         <div>
@@ -2847,18 +2984,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           {showAdvanced && (
             <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
 
-              {/* Duration */}
-              <EditableSlider
-                label={t('duration')}
-                value={duration}
-                min={-1}
-                max={600}
-                step={5}
-                onChange={setDuration}
-                formatDisplay={(val) => val === -1 ? t('auto') : `${val}${t('seconds')}`}
-                autoLabel={t('auto')}
-                helpText={`${t('auto')} - 10 ${t('min')}`}
-              />
+
 
               {/* Batch Size */}
               <EditableSlider
@@ -3240,167 +3366,251 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         </div>
       </div>
 
-      {showAudioModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => { setShowAudioModal(false); setPlayingTrackId(null); setPlayingTrackSource(null); }}
-          />
-          <div className="relative w-[92%] max-w-lg rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden">
-            {/* Header */}
-            <div className="p-5 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">
-                    {audioModalTarget === 'reference' ? t('referenceModalTitle') : t('coverModalTitle')}
-                  </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    {audioModalTarget === 'reference'
-                      ? t('referenceModalDescription')
-                      : t('coverModalDescription')}
-                  </p>
+      {
+        showAudioModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => { setShowAudioModal(false); setPlayingTrackId(null); setPlayingTrackSource(null); }}
+            />
+            <div className="relative w-[92%] max-w-lg rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-5 pb-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">
+                      {audioModalTarget === 'reference' ? t('referenceModalTitle') : t('coverModalTitle')}
+                    </h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                      {audioModalTarget === 'reference'
+                        ? t('referenceModalDescription')
+                        : t('coverModalDescription')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setShowAudioModal(false); setPlayingTrackId(null); setPlayingTrackSource(null); }}
+                    className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
+
+                {/* Upload Button */}
                 <button
-                  onClick={() => { setShowAudioModal(false); setPlayingTrackId(null); setPlayingTrackSource(null); }}
-                  className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                  type="button"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.mp3,.wav,.flac,.m4a,.mp4,audio/*';
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) void uploadReferenceTrack(file);
+                    };
+                    input.click();
+                  }}
+                  disabled={isUploadingReference || isTranscribingReference}
+                  className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 dark:border-white/20 bg-zinc-50 dark:bg-white/5 px-4 py-3 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 hover:border-zinc-400 dark:hover:border-white/30 transition-all"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  {isUploadingReference ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      {t('uploadingAudio')}
+                    </>
+                  ) : isTranscribingReference ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      {t('transcribing')}
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} />
+                      {t('uploadAudio')}
+                      <span className="text-xs text-zinc-400 ml-1">{t('audioFormats')}</span>
+                    </>
+                  )}
                 </button>
-              </div>
 
-              {/* Upload Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.mp3,.wav,.flac,.m4a,.mp4,audio/*';
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) void uploadReferenceTrack(file);
-                  };
-                  input.click();
-                }}
-                disabled={isUploadingReference || isTranscribingReference}
-                className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 dark:border-white/20 bg-zinc-50 dark:bg-white/5 px-4 py-3 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 hover:border-zinc-400 dark:hover:border-white/30 transition-all"
-              >
-                {isUploadingReference ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    {t('uploadingAudio')}
-                  </>
-                ) : isTranscribingReference ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    {t('transcribing')}
-                  </>
-                ) : (
-                  <>
-                    <Upload size={16} />
-                    {t('uploadAudio')}
-                    <span className="text-xs text-zinc-400 ml-1">{t('audioFormats')}</span>
-                  </>
+                {uploadError && (
+                  <div className="mt-2 text-xs text-rose-500">{uploadError}</div>
                 )}
-              </button>
-
-              {uploadError && (
-                <div className="mt-2 text-xs text-rose-500">{uploadError}</div>
-              )}
-              {isTranscribingReference && (
-                <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
-                  <span>{t('transcribingWithWhisper')}</span>
-                  <button
-                    type="button"
-                    onClick={cancelTranscription}
-                    className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                  >
-                    {t('cancel')}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Library Section */}
-            <div className="border-t border-zinc-100 dark:border-white/5">
-              <div className="px-5 py-3 flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-zinc-200/60 dark:bg-white/10 rounded-full p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setLibraryTab('uploads')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${libraryTab === 'uploads'
-                      ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                      }`}
-                  >
-                    {t('uploaded')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLibraryTab('created')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${libraryTab === 'created'
-                      ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                      }`}
-                  >
-                    {t('createdTab')}
-                  </button>
-                </div>
+                {isTranscribingReference && (
+                  <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
+                    <span>{t('transcribingWithWhisper')}</span>
+                    <button
+                      type="button"
+                      onClick={cancelTranscription}
+                      className="text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+                    >
+                      {t('cancel')}
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Track List */}
-              <div className="max-h-[280px] overflow-y-auto">
-                {libraryTab === 'uploads' ? (
-                  isLoadingTracks ? (
-                    <div className="px-5 py-8 text-center">
-                      <RefreshCw size={20} className="animate-spin mx-auto text-zinc-400" />
-                      <p className="text-xs text-zinc-400 mt-2">{t('loadingTracks')}</p>
-                    </div>
-                  ) : referenceTracks.length === 0 ? (
+              {/* Library Section */}
+              <div className="border-t border-zinc-100 dark:border-white/5">
+                <div className="px-5 py-3 flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-zinc-200/60 dark:bg-white/10 rounded-full p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setLibraryTab('uploads')}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${libraryTab === 'uploads'
+                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                        }`}
+                    >
+                      {t('uploaded')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLibraryTab('created')}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${libraryTab === 'created'
+                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                        }`}
+                    >
+                      {t('createdTab')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Track List */}
+                <div className="max-h-[280px] overflow-y-auto">
+                  {libraryTab === 'uploads' ? (
+                    isLoadingTracks ? (
+                      <div className="px-5 py-8 text-center">
+                        <RefreshCw size={20} className="animate-spin mx-auto text-zinc-400" />
+                        <p className="text-xs text-zinc-400 mt-2">{t('loadingTracks')}</p>
+                      </div>
+                    ) : referenceTracks.length === 0 ? (
+                      <div className="px-5 py-8 text-center">
+                        <Music2 size={24} className="mx-auto text-zinc-300 dark:text-zinc-600" />
+                        <p className="text-sm text-zinc-400 mt-2">{t('noTracksYet')}</p>
+                        <p className="text-xs text-zinc-400 mt-1">{t('uploadAudioFilesAsReferences')}</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-zinc-100 dark:divide-white/5">
+                        {referenceTracks.map((track) => (
+                          <div
+                            key={track.id}
+                            className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group"
+                          >
+                            {/* Play Button */}
+                            <button
+                              type="button"
+                              onClick={() => toggleModalTrack({ id: track.id, audio_url: track.audio_url, source: 'uploads' })}
+                              className="flex-shrink-0 w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors"
+                            >
+                              {playingTrackId === track.id && playingTrackSource === 'uploads' ? (
+                                <Pause size={14} fill="currentColor" />
+                              ) : (
+                                <Play size={14} fill="currentColor" className="ml-0.5" />
+                              )}
+                            </button>
+
+                            {/* Track Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                                  {track.filename.replace(/\.[^/.]+$/, '')}
+                                </span>
+                                {track.tags && track.tags.length > 0 && (
+                                  <div className="flex gap-1">
+                                    {track.tags.slice(0, 2).map((tag, i) => (
+                                      <span key={i} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {/* Progress bar with seek - show when this track is playing */}
+                              {playingTrackId === track.id && playingTrackSource === 'uploads' ? (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <span className="text-[10px] text-zinc-400 tabular-nums w-8">
+                                    {formatTime(modalTrackTime)}
+                                  </span>
+                                  <div
+                                    className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
+                                    onClick={(e) => {
+                                      if (modalAudioRef.current && modalTrackDuration > 0) {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const percent = (e.clientX - rect.left) / rect.width;
+                                        modalAudioRef.current.currentTime = percent * modalTrackDuration;
+                                      }
+                                    }}
+                                  >
+                                    <div
+                                      className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full relative"
+                                      style={{ width: modalTrackDuration > 0 ? `${(modalTrackTime / modalTrackDuration) * 100}%` : '0%' }}
+                                    >
+                                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] text-zinc-400 tabular-nums w-8 text-right">
+                                    {formatTime(modalTrackDuration)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-zinc-400 mt-0.5">
+                                  {track.duration ? formatTime(track.duration) : '--:--'}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => useReferenceTrack({ audio_url: track.audio_url, title: track.filename })}
+                                className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
+                              >
+                                {t('useTrack')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void deleteReferenceTrack(track.id)}
+                                className="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-rose-500 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : createdTrackOptions.length === 0 ? (
                     <div className="px-5 py-8 text-center">
                       <Music2 size={24} className="mx-auto text-zinc-300 dark:text-zinc-600" />
-                      <p className="text-sm text-zinc-400 mt-2">{t('noTracksYet')}</p>
-                      <p className="text-xs text-zinc-400 mt-1">{t('uploadAudioFilesAsReferences')}</p>
+                      <p className="text-sm text-zinc-400 mt-2">{t('noCreatedSongsYet')}</p>
+                      <p className="text-xs text-zinc-400 mt-1">{t('generateSongsToReuse')}</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-zinc-100 dark:divide-white/5">
-                      {referenceTracks.map((track) => (
+                      {createdTrackOptions.map((track) => (
                         <div
                           key={track.id}
                           className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group"
                         >
-                          {/* Play Button */}
                           <button
                             type="button"
-                            onClick={() => toggleModalTrack({ id: track.id, audio_url: track.audio_url, source: 'uploads' })}
+                            onClick={() => toggleModalTrack({ id: track.id, audio_url: track.audio_url, source: 'created' })}
                             className="flex-shrink-0 w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors"
                           >
-                            {playingTrackId === track.id && playingTrackSource === 'uploads' ? (
+                            {playingTrackId === track.id && playingTrackSource === 'created' ? (
                               <Pause size={14} fill="currentColor" />
                             ) : (
                               <Play size={14} fill="currentColor" className="ml-0.5" />
                             )}
                           </button>
 
-                          {/* Track Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                                {track.filename.replace(/\.[^/.]+$/, '')}
-                              </span>
-                              {track.tags && track.tags.length > 0 && (
-                                <div className="flex gap-1">
-                                  {track.tags.slice(0, 2).map((tag, i) => (
-                                    <span key={i} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">
-                                      {tag}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
+                            <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                              {track.title}
                             </div>
-                            {/* Progress bar with seek - show when this track is playing */}
-                            {playingTrackId === track.id && playingTrackSource === 'uploads' ? (
+                            {playingTrackId === track.id && playingTrackSource === 'created' ? (
                               <div className="flex items-center gap-2 mt-1.5">
                                 <span className="text-[10px] text-zinc-400 tabular-nums w-8">
                                   {formatTime(modalTrackTime)}
@@ -3428,111 +3638,27 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                               </div>
                             ) : (
                               <div className="text-xs text-zinc-400 mt-0.5">
-                                {track.duration ? formatTime(track.duration) : '--:--'}
+                                {track.duration || '--:--'}
                               </div>
                             )}
                           </div>
 
-                          {/* Actions */}
                           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               type="button"
-                              onClick={() => useReferenceTrack({ audio_url: track.audio_url, title: track.filename })}
+                              onClick={() => useReferenceTrack({ audio_url: track.audio_url, title: track.title })}
                               className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
                             >
                               {t('useTrack')}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void deleteReferenceTrack(track.id)}
-                              className="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-400 hover:text-rose-500 transition-colors"
-                            >
-                              <Trash2 size={14} />
                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
-                  )
-                ) : createdTrackOptions.length === 0 ? (
-                  <div className="px-5 py-8 text-center">
-                    <Music2 size={24} className="mx-auto text-zinc-300 dark:text-zinc-600" />
-                    <p className="text-sm text-zinc-400 mt-2">{t('noCreatedSongsYet')}</p>
-                    <p className="text-xs text-zinc-400 mt-1">{t('generateSongsToReuse')}</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-zinc-100 dark:divide-white/5">
-                    {createdTrackOptions.map((track) => (
-                      <div
-                        key={track.id}
-                        className="px-5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors group"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => toggleModalTrack({ id: track.id, audio_url: track.audio_url, source: 'created' })}
-                          className="flex-shrink-0 w-9 h-9 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors"
-                        >
-                          {playingTrackId === track.id && playingTrackSource === 'created' ? (
-                            <Pause size={14} fill="currentColor" />
-                          ) : (
-                            <Play size={14} fill="currentColor" className="ml-0.5" />
-                          )}
-                        </button>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">
-                            {track.title}
-                          </div>
-                          {playingTrackId === track.id && playingTrackSource === 'created' ? (
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <span className="text-[10px] text-zinc-400 tabular-nums w-8">
-                                {formatTime(modalTrackTime)}
-                              </span>
-                              <div
-                                className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 cursor-pointer group/seek"
-                                onClick={(e) => {
-                                  if (modalAudioRef.current && modalTrackDuration > 0) {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    const percent = (e.clientX - rect.left) / rect.width;
-                                    modalAudioRef.current.currentTime = percent * modalTrackDuration;
-                                  }
-                                }}
-                              >
-                                <div
-                                  className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full relative"
-                                  style={{ width: modalTrackDuration > 0 ? `${(modalTrackTime / modalTrackDuration) * 100}%` : '0%' }}
-                                >
-                                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
-                                </div>
-                              </div>
-                              <span className="text-[10px] text-zinc-400 tabular-nums w-8 text-right">
-                                {formatTime(modalTrackDuration)}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="text-xs text-zinc-400 mt-0.5">
-                              {track.duration || '--:--'}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => useReferenceTrack({ audio_url: track.audio_url, title: track.title })}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
-                          >
-                            {t('useTrack')}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* Hidden audio element for modal playback */}
             <audio
               ref={modalAudioRef}
               onTimeUpdate={() => {
@@ -3564,8 +3690,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               onEnded={() => setPlayingTrackId(null)}
             />
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Footer Create Button */}
       <div className="p-4 mt-auto sticky bottom-0 bg-zinc-50/95 dark:bg-suno-panel/95 backdrop-blur-sm z-10 border-t border-zinc-200 dark:border-white/5 space-y-3">
@@ -3600,6 +3726,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           )}
         </button>
       </div>
-    </div>
+    </div >
   );
 };
+
+export default CreatePanel;
