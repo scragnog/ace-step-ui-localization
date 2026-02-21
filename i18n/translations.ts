@@ -101,6 +101,8 @@ export const translations = {
     title: 'Title',
     musicParameters: 'Music Parameters',
     advancedSettings: 'Advanced Settings',
+    cotAndLmSettings: 'Language Model & CoT',
+    cotOptions: 'CoT Options',
 
     // CreatePanel - LoRA
     loraPath: 'LoRA Path',
@@ -926,6 +928,8 @@ export const translations = {
     title: '标题',
     musicParameters: '音乐参数',
     advancedSettings: '高级设置',
+    cotAndLmSettings: '语言模型 & 思维链',
+    cotOptions: '思维链选项',
 
     // CreatePanel - LoRA
     loraPath: 'LoRA 路径',
@@ -1724,6 +1728,8 @@ export const translations = {
     title: 'タイトル',
     musicParameters: '音楽パラメータ',
     advancedSettings: '詳細設定',
+    cotAndLmSettings: '言語モデル & CoT',
+    cotOptions: 'CoTオプション',
 
     // CreatePanel - LoRA
     loraPath: 'LoRA パス',
@@ -2534,6 +2540,8 @@ export const translations = {
     title: '제목',
     musicParameters: '음악 매개변수',
     advancedSettings: '고급 설정',
+    cotAndLmSettings: '언어 모델 & CoT',
+    cotOptions: 'CoT 옵션',
 
     // CreatePanel - LoRA
     loraPath: 'LoRA 경로',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2 } from 'lucide-react';
+import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain } from 'lucide-react';
 import { GenerationParams, Song } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
@@ -153,6 +153,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
   // Advanced Settings
   const [showAdvanced, setShowAdvanced] = usePersistedState('ace-showAdvanced', false);
+  const [showCotSection, setShowCotSection] = usePersistedState('ace-showCotSection', false);
   const [duration, setDuration] = usePersistedState('ace-duration', -1);
   const [batchSize, setBatchSize] = usePersistedState('ace-batchSize', 1);
   const [bulkCount, setBulkCount] = usePersistedState('ace-bulkCount', 1);
@@ -2521,6 +2522,195 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           </div>
         </div>
 
+        {/* LANGUAGE MODEL & COT */}
+        <button
+          onClick={() => setShowCotSection(!showCotSection)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Brain size={16} className="text-zinc-500" />
+            <span>{t('cotAndLmSettings')}</span>
+          </div>
+          <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showCotSection ? 'rotated' : ''}`} />
+        </button>
+
+        {showCotSection && (
+          <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
+
+            {/* Thinking Toggle */}
+            <div className="flex items-center justify-between py-1">
+              <span className={`text-xs font-medium ${loraLoaded ? 'text-zinc-400 dark:text-zinc-600' : 'text-zinc-600 dark:text-zinc-400'}`} title={t('thinkingTooltip')}>{t('thinkingCot')}</span>
+              <button
+                onClick={() => !loraLoaded && setThinking(!thinking)}
+                disabled={loraLoaded}
+                className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${thinking ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} ${loraLoaded ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${thinking ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* LM Backend */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('lmBackendLabel')}</label>
+              <select
+                value={lmBackend}
+                onChange={(e) => setLmBackend(e.target.value as 'pt' | 'vllm')}
+                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+              >
+                <option value="pt">{t('lmBackendPt')}</option>
+                <option value="vllm">{t('lmBackendVllm')}</option>
+              </select>
+              <p className="text-[10px] text-zinc-500">{t('lmBackendHint')}</p>
+            </div>
+
+            {/* LM Model */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('lmModelLabel')}</label>
+              <select
+                value={lmModel}
+                onChange={(e) => { const v = e.target.value; setLmModel(v); }}
+                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+              >
+                <option value="acestep-5Hz-lm-0.6B">{t('lmModel06B')}</option>
+                <option value="acestep-5Hz-lm-1.7B">{t('lmModel17B')}</option>
+                <option value="acestep-5Hz-lm-4B">{t('lmModel4B')}</option>
+              </select>
+              <p className="text-[10px] text-zinc-500">{t('lmModelHint')}</p>
+            </div>
+
+            {/* LM Parameters sub-accordion */}
+            <button
+              onClick={() => setShowLmParams(!showLmParams)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-white/60 dark:bg-black/20 rounded-xl border border-zinc-200/70 dark:border-white/10 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Music2 size={16} className="text-zinc-500" />
+                <div className="flex flex-col items-start">
+                  <span title={t('lmParametersTooltip')}>{t('lmParameters')}</span>
+                  <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal">{t('controlLyricGeneration')}</span>
+                </div>
+              </div>
+              <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showLmParams ? 'rotated' : ''}`} />
+            </button>
+
+            {showLmParams && (
+              <div className="bg-zinc-50 dark:bg-black/10 rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
+                {/* LM Temperature */}
+                <EditableSlider
+                  label={t('lmTemperature')}
+                  value={lmTemperature}
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  onChange={(e) => setLmTemperature(Number(e.target.value))}
+                  formatDisplay={(val) => val.toFixed(2)}
+                  helpText={t('higherMoreRandom')}
+                  title={t('lmTemperatureTooltip')}
+                />
+
+                {/* LM CFG Scale */}
+                <EditableSlider
+                  label={t('lmCfgScale')}
+                  value={lmCfgScale}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  onChange={setLmCfgScale}
+                  formatDisplay={(val) => val.toFixed(1)}
+                  helpText={t('noCfgScale')}
+                  title={t('lmGuidanceScaleTooltip')}
+                />
+
+                {/* LM Top-K & Top-P */}
+                <div className="grid grid-cols-2 gap-3">
+                  <EditableSlider
+                    label={t('topK')}
+                    value={lmTopK}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onChange={setLmTopK}
+                    title={t('lmTopKTooltip')}
+                  />
+                  <EditableSlider
+                    label={t('topP')}
+                    value={lmTopP}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onChange={setLmTopP}
+                    formatDisplay={(val) => val.toFixed(2)}
+                    title={t('lmTopPTooltip')}
+                  />
+                </div>
+
+                {/* LM Negative Prompt */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('lmNegativePromptTooltip')}>{t('lmNegativePrompt')}</label>
+                  <textarea
+                    value={lmNegativePrompt}
+                    onChange={(e) => setLmNegativePrompt(e.target.value)}
+                    placeholder={t('thingsToAvoid')}
+                    className="w-full h-16 bg-white dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg p-2 text-xs text-zinc-900 dark:text-white focus:outline-none resize-none"
+                  />
+                  <p className="text-[10px] text-zinc-500">{t('useWhenCfgScaleGreater')}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Allow LM Batch toggle */}
+            <div className="flex items-center justify-between py-1">
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('allowLmBatchTooltip')}>{t('allowLmBatch')}</span>
+              <button
+                onClick={() => setAllowLmBatch(!allowLmBatch)}
+                className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${allowLmBatch ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${allowLmBatch ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* CoT-dependent options (only visible when Thinking is ON) */}
+            {thinking && (
+              <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-white/5">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wide font-bold">{t('cotOptions')}</p>
+
+                {/* Use CoT Metas */}
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotMetadataTooltip')}>{t('useCotMetas')}</span>
+                  <button
+                    onClick={() => setUseCotMetas(!useCotMetas)}
+                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useCotMetas ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useCotMetas ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {/* Use CoT Caption */}
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotCaptionTooltip')}>{t('useCotCaption')}</span>
+                  <button
+                    onClick={() => setUseCotCaption(!useCotCaption)}
+                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useCotCaption ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useCotCaption ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {/* Use CoT Language */}
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotLanguageTooltip')}>{t('useCotLanguage')}</span>
+                  <button
+                    onClick={() => setUseCotLanguage(!useCotLanguage)}
+                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useCotLanguage ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useCotLanguage ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ADVANCED SETTINGS */}
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
@@ -2689,34 +2879,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               </div>
             )}
 
-            {/* LM Backend */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('lmBackendLabel')}</label>
-              <select
-                value={lmBackend}
-                onChange={(e) => setLmBackend(e.target.value as 'pt' | 'vllm')}
-                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-              >
-                <option value="pt">{t('lmBackendPt')}</option>
-                <option value="vllm">{t('lmBackendVllm')}</option>
-              </select>
-              <p className="text-[10px] text-zinc-500">{t('lmBackendHint')}</p>
-            </div>
-
-            {/* LM Model */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('lmModelLabel')}</label>
-              <select
-                value={lmModel}
-                onChange={(e) => { const v = e.target.value; setLmModel(v); }}
-                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-              >
-                <option value="acestep-5Hz-lm-0.6B">{t('lmModel06B')}</option>
-                <option value="acestep-5Hz-lm-1.7B">{t('lmModel17B')}</option>
-                <option value="acestep-5Hz-lm-4B">{t('lmModel4B')}</option>
-              </select>
-              <p className="text-[10px] text-zinc-500">{t('lmModelHint')}</p>
-            </div>
 
             {/* Seed */}
             <div className="space-y-2">
@@ -2747,17 +2909,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               <p className="text-[10px] text-zinc-500">{randomSeed ? t('randomSeedRecommended') : t('fixedSeedReproducible')}</p>
             </div>
 
-            {/* Thinking Toggle */}
-            <div className="flex items-center justify-between py-2 border-t border-zinc-100 dark:border-white/5">
-              <span className={`text-xs font-medium ${loraLoaded ? 'text-zinc-400 dark:text-zinc-600' : 'text-zinc-600 dark:text-zinc-400'}`} title={t('thinkingTooltip')}>{t('thinkingCot')}</span>
-              <button
-                onClick={() => !loraLoaded && setThinking(!thinking)}
-                disabled={loraLoaded}
-                className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${thinking ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} ${loraLoaded ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${thinking ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
-            </div>
 
             {/* Shift */}
             <EditableSlider
@@ -2781,85 +2932,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               <div className="text-[11px] text-rose-500">{uploadError}</div>
             )}
 
-            {/* LM Parameters */}
-            <button
-              onClick={() => setShowLmParams(!showLmParams)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-white/60 dark:bg-black/20 rounded-xl border border-zinc-200/70 dark:border-white/10 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Music2 size={16} className="text-zinc-500" />
-                <div className="flex flex-col items-start">
-                  <span title={t('lmParametersTooltip')}>{t('lmParameters')}</span>
-                  <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal">{t('controlLyricGeneration')}</span>
-                </div>
-              </div>
-              <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showLmParams ? 'rotated' : ''}`} />
-            </button>
-
-            {showLmParams && (
-              <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
-                {/* LM Temperature */}
-                <EditableSlider
-                  label={t('lmTemperature')}
-                  value={lmTemperature}
-                  min={0}
-                  max={2}
-                  step={0.05}
-                  onChange={(e) => setLmTemperature(Number(e.target.value))}
-                  formatDisplay={(val) => val.toFixed(2)}
-                  helpText={t('higherMoreRandom')}
-                  title={t('lmTemperatureTooltip')}
-                />
-
-                {/* LM CFG Scale */}
-                <EditableSlider
-                  label={t('lmCfgScale')}
-                  value={lmCfgScale}
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  onChange={setLmCfgScale}
-                  formatDisplay={(val) => val.toFixed(1)}
-                  helpText={t('noCfgScale')}
-                  title={t('lmGuidanceScaleTooltip')}
-                />
-
-                {/* LM Top-K & Top-P */}
-                <div className="grid grid-cols-2 gap-3">
-                  <EditableSlider
-                    label={t('topK')}
-                    value={lmTopK}
-                    min={0}
-                    max={100}
-                    step={1}
-                    onChange={setLmTopK}
-                    title={t('lmTopKTooltip')}
-                  />
-                  <EditableSlider
-                    label={t('topP')}
-                    value={lmTopP}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={setLmTopP}
-                    formatDisplay={(val) => val.toFixed(2)}
-                    title={t('lmTopPTooltip')}
-                  />
-                </div>
-
-                {/* LM Negative Prompt */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('lmNegativePromptTooltip')}>{t('lmNegativePrompt')}</label>
-                  <textarea
-                    value={lmNegativePrompt}
-                    onChange={(e) => setLmNegativePrompt(e.target.value)}
-                    placeholder={t('thingsToAvoid')}
-                    className="w-full h-16 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg p-2 text-xs text-zinc-900 dark:text-white focus:outline-none resize-none"
-                  />
-                  <p className="text-[10px] text-zinc-500">{t('useWhenCfgScaleGreater')}</p>
-                </div>
-              </div>
-            )}
 
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide" title={t('transformTooltip')}>{t('transform')}</h4>
@@ -3023,22 +3095,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('allowLmBatchTooltip')}>
-                <input type="checkbox" checked={allowLmBatch} onChange={() => setAllowLmBatch(!allowLmBatch)} />
-                {t('allowLmBatch')}
-              </label>
-              <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotMetadataTooltip')}>
-                <input type="checkbox" checked={useCotMetas} onChange={() => setUseCotMetas(!useCotMetas)} />
-                {t('useCotMetas')}
-              </label>
-              <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotCaptionTooltip')}>
-                <input type="checkbox" checked={useCotCaption} onChange={() => setUseCotCaption(!useCotCaption)} />
-                {t('useCotCaption')}
-              </label>
-              <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('useCotLanguageTooltip')}>
-                <input type="checkbox" checked={useCotLanguage} onChange={() => setUseCotLanguage(!useCotLanguage)} />
-                {t('useCotLanguage')}
-              </label>
               <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('autogenHint')}>
                 <input type="checkbox" checked={autogen} onChange={() => setAutogen(!autogen)} />
                 {t('autogen')}
