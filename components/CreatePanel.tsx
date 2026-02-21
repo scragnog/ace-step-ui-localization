@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain, Crosshair } from 'lucide-react';
+import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain, Crosshair, BarChart3 } from 'lucide-react';
 import { GenerationParams, Song } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
@@ -155,6 +155,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [showAdvanced, setShowAdvanced] = usePersistedState('ace-showAdvanced', false);
   const [showCotSection, setShowCotSection] = usePersistedState('ace-showCotSection', false);
   const [showGuidancePanel, setShowGuidancePanel] = usePersistedState('ace-showGuidancePanel', false);
+  const [showScorePanel, setShowScorePanel] = usePersistedState('ace-showScorePanel', false);
+  const [showExpert, setShowExpert] = usePersistedState('ace-showExpert', false);
   const [duration, setDuration] = usePersistedState('ace-duration', -1);
   const [batchSize, setBatchSize] = usePersistedState('ace-batchSize', 1);
   const [bulkCount, setBulkCount] = usePersistedState('ace-bulkCount', 1);
@@ -2784,6 +2786,19 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* LM Batch Chunk Size */}
+              <EditableSlider
+                label={t('lmBatchChunkSize')}
+                value={lmBatchChunkSize}
+                min={1}
+                max={32}
+                step={1}
+                onChange={(e) => setLmBatchChunkSize(Number(e.target.value))}
+                formatDisplay={(val) => `${val}`}
+                helpText={t('lmBatchChunkSizeHelp')}
+                title={t('lmBatchChunkSizeTooltip')}
+              />
             </div>
           )}
         </div>
@@ -3055,10 +3070,64 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 title={t('shiftTooltip')}
               />
 
-              {/* Divider */}
-              <div className="border-t border-zinc-200 dark:border-white/10 pt-4">
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wide font-bold mb-3">{t('expertControls')}</p>
+            </div>
+          )}
+        </div>
+
+        {/* SCORE SYSTEM */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowScorePanel(!showScorePanel)}
+            className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showScorePanel ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
+          >
+            <span className="flex items-center gap-2"><BarChart3 size={16} className="text-pink-500" />{t('scoreSystem')}</span>
+            <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showScorePanel ? 'rotated' : ''}`} />
+          </button>
+          {showScorePanel && (
+            <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
+
+              {/* Auto Quality Scoring */}
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('autoQualityScoring')}</span>
+                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('autoQualityScoringHelp')}</p>
+                </div>
+                <button
+                  onClick={() => setGetScores(!getScores)}
+                  className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${getScores ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${getScores ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
               </div>
+
+              {/* Score Sensitivity */}
+              <EditableSlider
+                label={t('scoreSensitivity')}
+                value={scoreScale}
+                min={0.01}
+                max={1}
+                step={0.01}
+                onChange={(e) => setScoreScale(Number(e.target.value))}
+                formatDisplay={(val) => val.toFixed(2)}
+                helpText={t('scoreSensitivityHelp')}
+                title={t('scoreScaleTooltip')}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* EXPERT CONTROLS */}
+        <div>
+          <button
+            onClick={() => setShowExpert(!showExpert)}
+            className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showExpert ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
+          >
+            <span className="flex items-center gap-2"><Settings2 size={16} className="text-pink-500" />{t('expertControls')}</span>
+            <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showExpert ? 'rotated' : ''}`} />
+          </button>
+          {showExpert && (
+            <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
 
               {uploadError && (
                 <div className="text-[11px] text-rose-500">{uploadError}</div>
@@ -3102,28 +3171,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('scoreScaleTooltip')}>{t('scoreScale')}</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={scoreScale}
-                    onChange={(e) => setScoreScale(Number(e.target.value))}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('lmBatchChunkSizeTooltip')}>{t('lmBatchChunkSize')}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={lmBatchChunkSize}
-                    onChange={(e) => setLmBatchChunkSize(Number(e.target.value))}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-              </div>
+
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('trackName')}</label>
@@ -3160,10 +3208,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                   <input type="checkbox" checked={isFormatCaption} onChange={() => setIsFormatCaption(!isFormatCaption)} />
                   {t('formatCaption')}
                 </label>
-                <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('getScoresTooltip')}>
-                  <input type="checkbox" checked={getScores} onChange={() => setGetScores(!getScores)} />
-                  {t('getScores')}
-                </label>
+
                 <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('getLrcTooltip')}>
                   <input type="checkbox" checked={getLrc} onChange={() => setGetLrc(!getLrc)} />
                   {t('getLrcLyrics')}

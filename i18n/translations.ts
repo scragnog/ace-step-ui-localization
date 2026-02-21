@@ -353,6 +353,12 @@ export const translations = {
     customTimestepsTooltip: 'Override the default timestep schedule (advanced).',
     scoreScaleTooltip: 'Scale score-based guidance (advanced).',
     lmBatchChunkSizeTooltip: 'Larger chunks are faster but use more memory.',
+    lmBatchChunkSizeHelp: 'How many samples the LM processes at once. Higher = faster but uses more VRAM.',
+    scoreSystem: 'Score System',
+    autoQualityScoring: 'Auto Quality Scoring',
+    autoQualityScoringHelp: 'Automatically score each generation for quality after completion.',
+    scoreSensitivity: 'Score Sensitivity',
+    scoreSensitivityHelp: 'How aggressively scoring weights differences. Lower = more selective.',
     min: 'min',
 
     // CreatePanel - Misc
@@ -1214,6 +1220,12 @@ export const translations = {
     customTimestepsTooltip: '覆盖默认时间步调度（高级）。',
     scoreScaleTooltip: '缩放基于分数的引导（高级）。',
     lmBatchChunkSizeTooltip: '更大的分块可以更快但使用更多内存。',
+    lmBatchChunkSizeHelp: 'LM每次处理多少个样本。越高越快，但使用更多显存。',
+    scoreSystem: '评分系统',
+    autoQualityScoring: '自动质量评分',
+    autoQualityScoringHelp: '生成完成后自动对每个生成进行质量评分。',
+    scoreSensitivity: '评分敏感度',
+    scoreSensitivityHelp: '评分对差异的加权程度。越低越挑剔。',
 
     // CreatePanel - Transcription
     transcribing: '转录中...',
@@ -2060,6 +2072,12 @@ export const translations = {
     customTimestepsTooltip: 'デフォルトのタイムステップスケジュールを上書き（高度）。',
     scoreScaleTooltip: 'スコアベースのガイダンスをスケーリング（高度）。',
     lmBatchChunkSizeTooltip: '大きなチャンクは速くなりますが、より多くのメモリを使用します。',
+    lmBatchChunkSizeHelp: 'LMが一度に処理するサンプル数。高いほど速いが、VRAMを多く使用。',
+    scoreSystem: 'スコアシステム',
+    autoQualityScoring: '自動品質スコアリング',
+    autoQualityScoringHelp: '完了後に各生成を自動的に品質スコアリング。',
+    scoreSensitivity: 'スコア感度',
+    scoreSensitivityHelp: 'スコアリングが差異をどの程度重み付けするか。低いほど厳選。',
 
     // CreatePanel - Transcription
     transcribing: '文字起こし中...',
@@ -2889,6 +2907,12 @@ export const translations = {
     customTimestepsTooltip: '기본 타임스텝 스케줄을 재정의합니다(고급).',
     scoreScaleTooltip: '점수 기반 가이던스를 스케일링합니다(고급).',
     lmBatchChunkSizeTooltip: '더 큰 청크는 더 빠를 수 있지만 더 많은 메모리를 사용합니다.',
+    lmBatchChunkSizeHelp: 'LM이 한 번에 처리하는 샘플 수. 높을수록 빠르지만 VRAM 사용량 증가.',
+    scoreSystem: '스코어 시스템',
+    autoQualityScoring: '자동 품질 스코어링',
+    autoQualityScoringHelp: '완료 후 각 생성을 자동으로 품질 스코어링합니다.',
+    scoreSensitivity: '스코어 감도',
+    scoreSensitivityHelp: '스코어링이 차이를 얼마나 가중하는지. 낮을수록 더 엄격.',
 
     // CreatePanel - Transcription
     transcribing: '전사 중...',
