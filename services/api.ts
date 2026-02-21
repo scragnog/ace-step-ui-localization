@@ -322,6 +322,12 @@ export interface GenerationParams {
   completeTrackClasses?: string[];
   isFormatCaption?: boolean;
   loraLoaded?: boolean;
+
+  // PAG (Perturbed-Attention Guidance)
+  usePag?: boolean;
+  pagStart?: number;
+  pagEnd?: number;
+  pagScale?: number;
 }
 
 export interface GenerationJob {

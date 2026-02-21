@@ -162,7 +162,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [thinking, setThinking] = usePersistedState('ace-thinking', false); // Default false for GPU compatibility
   const [audioFormat, setAudioFormat] = usePersistedState<'mp3' | 'flac'>('ace-audioFormat', 'mp3');
   const [inferenceSteps, setInferenceSteps] = usePersistedState('ace-inferenceSteps', 12);
-  const [inferMethod, setInferMethod] = usePersistedState<'ode' | 'sde'>('ace-inferMethod', 'ode');
+  const [inferMethod, setInferMethod] = usePersistedState<'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4'>('ace-inferMethod', 'ode');
   const [lmBackend, setLmBackend] = usePersistedState<'pt' | 'vllm'>('ace-lmBackend', 'pt');
   const [lmModel, setLmModel] = usePersistedState('ace-lmModel', 'acestep-5Hz-lm-0.6B');
   const [shift, setShift] = usePersistedState('ace-shift', 3.0);
@@ -187,6 +187,13 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [audioCoverStrength, setAudioCoverStrength] = usePersistedState('ace-audioCoverStrength', 1.0);
   const [taskType, setTaskType] = useState('text2music');
   const [useAdg, setUseAdg] = usePersistedState('ace-useAdg', false);
+  // Guidance Mode: 'apg' (default), 'adg', or 'pag'
+  const [guidanceMode, setGuidanceMode] = usePersistedState<'apg' | 'adg' | 'pag' | 'cfg' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg'>('ace-guidanceMode', 'apg');
+  // PAG (Perturbed-Attention Guidance) Parameters
+  const [usePag, setUsePag] = usePersistedState('ace-usePag', false);
+  const [pagStart, setPagStart] = usePersistedState('ace-pagStart', 0.30);
+  const [pagEnd, setPagEnd] = usePersistedState('ace-pagEnd', 0.80);
+  const [pagScale, setPagScale] = usePersistedState('ace-pagScale', 0.2);
   const [cfgIntervalStart, setCfgIntervalStart] = usePersistedState('ace-cfgIntervalStart', 0.0);
   const [cfgIntervalEnd, setCfgIntervalEnd] = usePersistedState('ace-cfgIntervalEnd', 1.0);
   const [customTimesteps, setCustomTimesteps] = useState('');
@@ -459,11 +466,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     previousModelRef.current = selectedModel;
   }, [selectedModel, loraLoaded]);
 
-  // Auto-disable thinking and ADG when LoRA is loaded
+  // Auto-disable thinking and guidance modes when LoRA is loaded
   useEffect(() => {
     if (loraLoaded) {
       if (thinking) setThinking(false);
-      if (useAdg) setUseAdg(false);
+      if (guidanceMode !== 'apg') {
+        setGuidanceMode('apg');
+        setUseAdg(false);
+        setUsePag(false);
+      }
     }
   }, [loraLoaded]);
 
@@ -1327,7 +1338,12 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         instruction,
         audioCoverStrength,
         taskType,
-        useAdg,
+        useAdg: guidanceMode === 'adg',
+        guidanceMode,
+        usePag: guidanceMode === 'pag',
+        pagStart: guidanceMode === 'pag' ? pagStart : undefined,
+        pagEnd: guidanceMode === 'pag' ? pagEnd : undefined,
+        pagScale: guidanceMode === 'pag' ? pagScale : undefined,
         cfgIntervalStart,
         cfgIntervalEnd,
         customTimesteps: customTimesteps.trim() || undefined,
@@ -2612,14 +2628,66 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('inferMethodTooltip')}>{t('inferMethod')}</label>
                 <select
                   value={inferMethod}
-                  onChange={(e) => setInferMethod(e.target.value as 'ode' | 'sde')}
+                  onChange={(e) => setInferMethod(e.target.value as 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4')}
                   className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
                 >
-                  <option value="ode">{t('odeDeterministic')}</option>
-                  <option value="sde">{t('sdeStochastic')}</option>
+                  <option value="ode">{t('solverEuler')}</option>
+                  <option value="heun">{t('solverHeun')}</option>
+                  <option value="dpm2m">{t('solverDpm2m')}</option>
+                  <option value="rk4">{t('solverRk4')}</option>
                 </select>
               </div>
             </div>
+
+            {/* Guidance Mode */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('guidanceModeTooltip')}>{t('guidanceMode')}</label>
+              <select
+                value={guidanceMode}
+                onChange={(e) => {
+                  const mode = e.target.value as typeof guidanceMode;
+                  setGuidanceMode(mode);
+                  setUseAdg(mode === 'adg');
+                  setUsePag(mode === 'pag');
+                }}
+                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+              >
+                <option value="apg">{t('guidanceApg')}</option>
+                <option value="adg">{t('guidanceAdg')}</option>
+                <option value="pag">{t('guidancePag')}</option>
+                <option value="cfg">{t('guidanceCfg')}</option>
+                <option value="cfg_pp">{t('guidanceCfgPp')}</option>
+                <option value="dynamic_cfg">{t('guidanceDynamic')}</option>
+                <option value="rescaled_cfg">{t('guidanceRescaled')}</option>
+              </select>
+            </div>
+
+            {/* PAG Sub-Controls (only when PAG selected) */}
+            {guidanceMode === 'pag' && (
+              <div className="space-y-3 p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl">
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Start</label>
+                    <span className="text-xs text-zinc-500">{pagStart.toFixed(2)}</span>
+                  </div>
+                  <input type="range" min="0" max="1" step="0.05" value={pagStart} onChange={(e) => setPagStart(parseFloat(e.target.value))} className="w-full accent-pink-500" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG End</label>
+                    <span className="text-xs text-zinc-500">{pagEnd.toFixed(2)}</span>
+                  </div>
+                  <input type="range" min="0" max="1" step="0.05" value={pagEnd} onChange={(e) => setPagEnd(parseFloat(e.target.value))} className="w-full accent-pink-500" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">PAG Scale</label>
+                    <span className="text-xs text-zinc-500">{pagScale.toFixed(2)}</span>
+                  </div>
+                  <input type="range" min="0" max="1" step="0.05" value={pagScale} onChange={(e) => setPagScale(parseFloat(e.target.value))} className="w-full accent-pink-500" />
+                </div>
+              </div>
+            )}
 
             {/* LM Backend */}
             <div className="space-y-1.5">
@@ -2955,13 +3023,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <label
-                className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400"
-                title={t('useAdgTooltip')}
-              >
-                <input type="checkbox" checked={useAdg} onChange={() => setUseAdg(!useAdg)} />
-                {t('useAdg')}
-              </label>
               <label className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('allowLmBatchTooltip')}>
                 <input type="checkbox" checked={allowLmBatch} onChange={() => setAllowLmBatch(!allowLmBatch)} />
                 {t('allowLmBatch')}

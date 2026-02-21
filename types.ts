@@ -79,7 +79,7 @@ export interface GenerationParams {
   seed: number;
   thinking: boolean;
   audioFormat: 'mp3' | 'flac';
-  inferMethod: 'ode' | 'sde';
+  inferMethod: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4';
   shift: number;
 
   // LM Parameters
@@ -103,6 +103,7 @@ export interface GenerationParams {
   audioCoverStrength?: number;
   taskType?: string;
   useAdg?: boolean;
+  guidanceMode?: string;
   cfgIntervalStart?: number;
   cfgIntervalEnd?: number;
   customTimesteps?: string;
@@ -119,6 +120,12 @@ export interface GenerationParams {
   trackName?: string;
   completeTrackClasses?: string[];
   isFormatCaption?: boolean;
+
+  // PAG (Perturbed-Attention Guidance)
+  usePag?: boolean;
+  pagStart?: number;
+  pagEnd?: number;
+  pagScale?: number;
 }
 
 export interface PlayerState {

@@ -85,7 +85,7 @@ interface GenerateBody {
   seed?: number;
   thinking?: boolean;
   audioFormat?: 'mp3' | 'flac';
-  inferMethod?: 'ode' | 'sde';
+  inferMethod?: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4';
   shift?: number;
 
   // LM Parameters
@@ -109,6 +109,7 @@ interface GenerateBody {
   audioCoverStrength?: number;
   taskType?: string;
   useAdg?: boolean;
+  guidanceMode?: string;
   cfgIntervalStart?: number;
   cfgIntervalEnd?: number;
   customTimesteps?: string;
@@ -126,6 +127,12 @@ interface GenerateBody {
   completeTrackClasses?: string[];
   isFormatCaption?: boolean;
   loraLoaded?: boolean;
+
+  // PAG (Perturbed-Attention Guidance)
+  usePag?: boolean;
+  pagStart?: number;
+  pagEnd?: number;
+  pagScale?: number;
 }
 
 router.post('/upload-audio', authMiddleware, audioUpload.single('audio'), async (req: AuthenticatedRequest, res: Response) => {
@@ -216,6 +223,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       audioCoverStrength,
       taskType,
       useAdg,
+      guidanceMode,
       cfgIntervalStart,
       cfgIntervalEnd,
       customTimesteps,
@@ -233,6 +241,10 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       completeTrackClasses,
       isFormatCaption,
       loraLoaded,
+      usePag,
+      pagStart,
+      pagEnd,
+      pagScale,
     } = req.body as GenerateBody;
 
     if (!customMode && !songDescription) {
@@ -285,6 +297,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       audioCoverStrength,
       taskType,
       useAdg,
+      guidanceMode,
       cfgIntervalStart,
       cfgIntervalEnd,
       customTimesteps,
@@ -302,6 +315,10 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       completeTrackClasses,
       isFormatCaption,
       loraLoaded,
+      usePag,
+      pagStart,
+      pagEnd,
+      pagScale,
     };
 
     // Create job record in database
@@ -341,10 +358,16 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         audio_cover_strength: params.audioCoverStrength || 1.0,
         task_type: params.taskType || 'text2music',
         use_adg: params.loraLoaded ? false : (params.useAdg || false),
+        guidance_mode: params.guidanceMode || '',
         cfg_interval_start: params.cfgIntervalStart || 0.0,
         cfg_interval_end: params.cfgIntervalEnd || 1.0,
         infer_method: params.inferMethod || 'ode',
         shift: params.shift,
+        // PAG (Perturbed-Attention Guidance)
+        use_pag: params.usePag || false,
+        pag_start: params.pagStart ?? 0.30,
+        pag_end: params.pagEnd ?? 0.80,
+        pag_scale: params.pagScale ?? 0.2,
         audio_format: params.audioFormat || 'mp3',
         ...(!params.loraLoaded && params.thinking ? {
           lm_model_path: params.lmModel || undefined,
