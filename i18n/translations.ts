@@ -231,7 +231,7 @@ export const translations = {
     inferMethod: 'Inference Method',
     shift: 'Shift',
     timestepShiftForBase: 'Timestep shift for base models (not effective for turbo)',
-    expertControls: 'EXPERT CONTROLS',
+    expertControls: 'Additional Settings',
     lmParameters: 'LM Parameters',
     controlLyricGeneration: 'Control lyric generation + creativity',
     transform: 'TRANSFORM',

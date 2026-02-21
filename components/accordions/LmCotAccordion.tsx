@@ -93,7 +93,7 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
             >
                 <div className="flex items-center gap-2">
                     <Brain size={16} className="text-zinc-500" />
-                    <span>{t('cotAndLmSettings')}</span>
+                    <span>{t('lmCotSettings')}</span>
                 </div>
                 <ChevronDown size={18} className={`text-pink-500 chevron-icon ${isOpen ? 'rotated' : ''}`} />
             </button>
