@@ -186,7 +186,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [repaintingEnd, setRepaintingEnd] = useState(-1);
   const [instruction, setInstruction] = useState(t('instructionDefault'));
   const [audioCoverStrength, setAudioCoverStrength] = usePersistedState('ace-audioCoverStrength', 1.0);
-  const [taskType, setTaskType] = useState('text2music');
+  const [taskType, setTaskType] = usePersistedState('ace-taskType', 'text2music');
   const [useAdg, setUseAdg] = usePersistedState('ace-useAdg', false);
   // Guidance Mode: 'apg' (default), 'adg', or 'pag'
   const [guidanceMode, setGuidanceMode] = usePersistedState<'apg' | 'adg' | 'pag' | 'cfg' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg'>('ace-guidanceMode', 'apg');
@@ -1544,6 +1544,28 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           </div>
         )}
 
+        {/* TASK TYPE SELECTOR */}
+        <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden">
+          <div className="px-3 py-2.5 flex items-center justify-between">
+            <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('taskType')}</span>
+            <select
+              value={taskType}
+              onChange={(e) => {
+                setTaskType(e.target.value);
+                if (e.target.value === 'text2music' && audioTab === 'source') {
+                  setAudioTab('reference');
+                }
+              }}
+              className="bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
+            >
+              <option value="text2music">{t('textToMusic')}</option>
+              <option value="cover">{t('coverTask')}</option>
+              <option value="repaint">{t('repaintTask')}</option>
+              <option value="audio2audio">{t('audio2audio')}</option>
+            </select>
+          </div>
+        </div>
+
         {/* SIMPLE MODE */}
         {!customMode && (
           <div className="space-y-5">
@@ -1705,16 +1727,18 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                     >
                       {t('reference')}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setAudioTab('source')}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'source'
-                        ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
-                        }`}
-                    >
-                      {t('cover')}
-                    </button>
+                    {taskType !== 'text2music' && (
+                      <button
+                        type="button"
+                        onClick={() => setAudioTab('source')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${audioTab === 'source'
+                          ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                          }`}
+                      >
+                        {t('cover')}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2472,6 +2496,56 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           </div>
         )}
 
+        {/* COVER / REPAINT SETTINGS (conditional on task type) */}
+        {taskType !== 'text2music' && (
+          <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
+            <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+              {taskType === 'repaint' ? t('repaintSettings') : t('coverSettings')}
+            </h3>
+
+            {/* Audio Cover Strength */}
+            <EditableSlider
+              label={t('audioCoverStrength')}
+              value={audioCoverStrength}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(e) => setAudioCoverStrength(Number(e.target.value))}
+              formatDisplay={(val) => val.toFixed(2)}
+              helpText={t('audioCoverStrengthHelp')}
+              title={t('audioCoverStrengthTooltip')}
+            />
+
+            {/* Repainting Start/End - repaint mode only */}
+            {taskType === 'repaint' && (
+              <>
+                <EditableSlider
+                  label={t('repaintingStart')}
+                  value={repaintingStart}
+                  min={0}
+                  max={600}
+                  step={1}
+                  onChange={(e) => setRepaintingStart(Number(e.target.value))}
+                  formatDisplay={(val) => val === 0 ? t('beginning') : `${val}s`}
+                  helpText={t('repaintingStartHelp')}
+                  title={t('repaintingStartTooltip')}
+                />
+                <EditableSlider
+                  label={t('repaintingEnd')}
+                  value={repaintingEnd}
+                  min={-1}
+                  max={600}
+                  step={1}
+                  onChange={(e) => setRepaintingEnd(Number(e.target.value))}
+                  formatDisplay={(val) => val === -1 ? t('endOfTrack') : `${val}s`}
+                  helpText={t('repaintingEndHelp')}
+                  title={t('repaintingEndTooltip')}
+                />
+              </>
+            )}
+          </div>
+        )}
+
         {/* MUSIC PARAMETERS */}
         <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
           <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide flex items-center gap-2">
@@ -2950,56 +3024,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('taskTypeTooltip')}>{t('taskType')}</label>
-                  <select
-                    value={taskType}
-                    onChange={(e) => setTaskType(e.target.value)}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                  >
-                    <option value="text2music">{t('textToMusic')}</option>
-                    <option value="audio2audio">{t('audio2audio')}</option>
-                    <option value="cover">{t('coverTask')}</option>
-                    <option value="repaint">{t('repaintTask')}</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('audioCoverStrengthTooltip')}>{t('audioCoverStrength')}</label>
-                  <input
-                    type="number"
-                    step="0.05"
-                    min="0"
-                    max="1"
-                    value={audioCoverStrength}
-                    onChange={(e) => setAudioCoverStrength(Number(e.target.value))}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('repaintingStartTooltip')}>{t('repaintingStart')}</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={repaintingStart}
-                    onChange={(e) => setRepaintingStart(Number(e.target.value))}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('repaintingEndTooltip')}>{t('repaintingEnd')}</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={repaintingEnd}
-                    onChange={(e) => setRepaintingEnd(Number(e.target.value))}
-                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-              </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('instructionTooltip')}>{t('instruction')}</label>
