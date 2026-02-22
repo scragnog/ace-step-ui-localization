@@ -7,7 +7,7 @@ import GuidanceSettingsAccordion from './GuidanceSettingsAccordion';
 import LmCotAccordion from './LmCotAccordion';
 import ExpertControlsAccordion from './ExpertControlsAccordion';
 
-type GuidanceMode = 'apg' | 'adg' | 'pag' | 'cfg' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg';
+type GuidanceMode = 'apg' | 'adg' | 'pag' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg';
 
 interface GenerationSettingsAccordionProps {
     isOpen: boolean;
