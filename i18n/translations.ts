@@ -542,6 +542,8 @@ export const translations = {
     trackPercussion: 'Percussion',
     trackFx: 'FX',
     selectTrackToExtract: 'Select track to extract...',
+    lyricsGuidanceOptional: 'Lyrics Guidance (Optional)',
+    lyricsGuidancePlaceholder: 'Paste lyrics here to help guide vocal extraction accuracy...',
 
     // Search Page
     searchSongsPlaceholder: 'Search for songs, playlists, creators, or genres',
@@ -1397,6 +1399,8 @@ export const translations = {
     trackPercussion: '打击乐',
     trackFx: '效果',
     selectTrackToExtract: '选择要提取的音轨...',
+    lyricsGuidanceOptional: '歌词引导（可选）',
+    lyricsGuidancePlaceholder: '在此粘贴歌词以帮助提高人声提取准确性...',
 
     // Search Page
     searchSongsPlaceholder: '搜索歌曲、播放列表、创作者或风格',
@@ -2278,6 +2282,8 @@ export const translations = {
     trackPercussion: 'パーカッション',
     trackFx: 'FX',
     selectTrackToExtract: '抽出するトラックを選択...',
+    lyricsGuidanceOptional: '歌詞ガイダンス（任意）',
+    lyricsGuidancePlaceholder: '歌詞を貼り付けてボーカル抽出の精度を向上させます...',
 
     // Search Page
     searchSongsPlaceholder: '曲、プレイリスト、クリエイター、スタイルを検索',
@@ -3145,6 +3151,8 @@ export const translations = {
     trackPercussion: '타악기',
     trackFx: 'FX',
     selectTrackToExtract: '추출할 트랙 선택...',
+    lyricsGuidanceOptional: '가사 가이드 (선택사항)',
+    lyricsGuidancePlaceholder: '보컬 추출 정확도를 높이기 위해 여기에 가사를 붙여넣으세요...',
 
     // Search Page
     searchSongsPlaceholder: '곡, 재생목록, 제작자 또는 스타일 검색',

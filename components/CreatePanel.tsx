@@ -1405,14 +1405,20 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       onGenerate({
         customMode,
         songDescription: taskType === 'extract' ? undefined : (customMode ? undefined : songDescription),
-        prompt: taskType === 'extract' ? '' : lyrics,
-        lyrics: taskType === 'extract' ? '' : lyrics,
+        prompt: taskType === 'extract'
+          ? ((extractTrack === 'vocals' || extractTrack === 'backing_vocals') ? lyrics : '')
+          : lyrics,
+        lyrics: taskType === 'extract'
+          ? ((extractTrack === 'vocals' || extractTrack === 'backing_vocals') ? lyrics : '')
+          : lyrics,
         style: taskType === 'extract' ? '' : styleWithGender,
         title: taskType === 'extract'
           ? `Extract ${extractTrack}`
           : (bulkCount > 1 ? `${title} (${i + 1})` : title),
         ditModel: selectedModel,
-        instrumental: taskType === 'extract' ? true : instrumental,
+        instrumental: taskType === 'extract'
+          ? (extractTrack !== 'vocals' && extractTrack !== 'backing_vocals')
+          : instrumental,
         vocalLanguage,
         bpm,
         keyScale,
@@ -1819,6 +1825,25 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               setExtractTrack={setExtractTrack}
               isTurboModel={isTurboModel(selectedModel)}
             />
+
+            {/* Optional lyrics guidance for vocal extraction */}
+            {(extractTrack === 'vocals' || extractTrack === 'backing_vocals') && (
+              <div className="card">
+                <div className="card-header">
+                  <h3 className="card-title text-xs">{t('lyricsGuidanceOptional')}</h3>
+                </div>
+                <div className="p-3">
+                  <textarea
+                    className="form-textarea w-full text-xs"
+                    rows={4}
+                    value={lyrics}
+                    onChange={(e) => setLyrics(e.target.value)}
+                    placeholder={t('lyricsGuidancePlaceholder')}
+                    style={{ resize: 'vertical', minHeight: '60px' }}
+                  />
+                </div>
+              </div>
+            )}
             <AudioSelectionSection
               useReferenceAudio={false}
               setUseReferenceAudio={setUseReferenceAudio}
