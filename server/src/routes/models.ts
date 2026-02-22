@@ -1,7 +1,15 @@
 import { Router, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
+
+// Resolve project root (ace-step-ui/server/src/routes -> ../../../../)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 
 const ACESTEP_API_URL = process.env.ACESTEP_API_URL || 'http://127.0.0.1:8001';
 const ACESTEP_API_KEY = process.env.ACESTEP_API_KEY || '';
@@ -77,6 +85,46 @@ router.post('/switch', authMiddleware, async (req: AuthenticatedRequest, res: Re
         const result = await proxyToAceStep('/v1/models/switch', 'POST', req.body);
         res.json(result);
     } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/models/update-env - Update .env model selections (used by loading screen)
+// No auth required — only called during startup before app is fully loaded
+router.post('/update-env', async (req: any, res: Response) => {
+    try {
+        const { ACESTEP_CONFIG_PATH, ACESTEP_LM_MODEL_PATH } = req.body;
+        if (!ACESTEP_CONFIG_PATH && !ACESTEP_LM_MODEL_PATH) {
+            res.status(400).json({ error: 'At least one of ACESTEP_CONFIG_PATH or ACESTEP_LM_MODEL_PATH required' });
+            return;
+        }
+
+        const envPath = path.join(PROJECT_ROOT, '.env');
+        if (!fs.existsSync(envPath)) {
+            res.status(404).json({ error: '.env file not found' });
+            return;
+        }
+
+        let envContent = fs.readFileSync(envPath, 'utf-8');
+
+        if (ACESTEP_CONFIG_PATH) {
+            envContent = envContent.replace(
+                /^ACESTEP_CONFIG_PATH=.*/m,
+                `ACESTEP_CONFIG_PATH=${ACESTEP_CONFIG_PATH}`
+            );
+        }
+        if (ACESTEP_LM_MODEL_PATH) {
+            envContent = envContent.replace(
+                /^ACESTEP_LM_MODEL_PATH=.*/m,
+                `ACESTEP_LM_MODEL_PATH=${ACESTEP_LM_MODEL_PATH}`
+            );
+        }
+
+        fs.writeFileSync(envPath, envContent, 'utf-8');
+        console.log(`[Models] .env updated: CONFIG_PATH=${ACESTEP_CONFIG_PATH || '(unchanged)'}, LM_MODEL_PATH=${ACESTEP_LM_MODEL_PATH || '(unchanged)'}`);
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('[Models] Failed to update .env:', error);
         res.status(500).json({ error: error.message });
     }
 });

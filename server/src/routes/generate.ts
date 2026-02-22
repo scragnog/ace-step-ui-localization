@@ -257,9 +257,10 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         steering_enabled: params.steeringEnabled || false,
         steering_loaded: params.steeringLoaded || [],
         steering_alphas: params.steeringAlphas || {},
+        // Always send LM model selection (enables hot-switching regardless of thinking mode)
+        lm_model_path: params.lmModel || undefined,
+        lm_backend: params.lmBackend || 'pt',
         ...(!params.loraLoaded && params.thinking ? {
-          lm_model_path: params.lmModel || undefined,
-          lm_backend: params.lmBackend || 'pt',
           lm_temperature: params.lmTemperature,
           lm_cfg_scale: params.lmCfgScale,
           lm_top_k: params.lmTopK,

@@ -862,6 +862,24 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               localStorage.setItem('ace-model', active.name);
             }
           }
+
+          // Also fetch LM model status to sync the LM dropdown on initial load
+          if (isInitial) {
+            try {
+              const statusRes = await fetch('/api/models/status');
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                const loadedLm = statusData?.lm_model;
+                if (loadedLm && isMountedRef.current) {
+                  setLmModel(loadedLm);
+                  localStorage.setItem('ace-lmModel', JSON.stringify(loadedLm));
+                }
+              }
+            } catch {
+              // Non-critical — just use persisted/default value
+            }
+          }
+
           return true;
         }
       } else if (modelsRes.status === 503) {
