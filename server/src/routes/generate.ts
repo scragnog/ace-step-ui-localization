@@ -234,19 +234,6 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       [localJobId, req.user!.id, JSON.stringify(params)]
     );
 
-    // Debug: log resolved audio paths
-    if (params.sourceAudioUrl || params.referenceAudioUrl) {
-      console.log('[Generate] Audio paths:', {
-        sourceAudioUrl: params.sourceAudioUrl,
-        resolvedSrc: params.sourceAudioUrl ? resolveAudioPath(params.sourceAudioUrl) : undefined,
-        referenceAudioUrl: params.referenceAudioUrl,
-        resolvedRef: params.referenceAudioUrl ? resolveAudioPath(params.referenceAudioUrl) : undefined,
-        AUDIO_DIR,
-        taskType: params.taskType,
-        trackName: params.trackName,
-      });
-    }
-
     // Call 8001 API to start generation
     const acestepResponse = await fetch(`${config.acestep.apiUrl}/release_task`, {
       method: 'POST',
