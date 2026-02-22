@@ -19,6 +19,26 @@ import { getStorageProvider } from '../services/storage/factory.js';
 
 const router = Router();
 
+const AUDIO_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/audio');
+
+/** Resolve /audio/ URLs to local filesystem paths for the Python backend */
+const resolveAudioPath = (audioUrl: string): string => {
+  if (audioUrl.startsWith('/audio/')) {
+    return path.join(AUDIO_DIR, audioUrl.replace('/audio/', ''));
+  }
+  if (audioUrl.startsWith('http')) {
+    try {
+      const parsed = new URL(audioUrl);
+      if (parsed.pathname.startsWith('/audio/')) {
+        return path.join(AUDIO_DIR, parsed.pathname.replace('/audio/', ''));
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return audioUrl;
+};
+
 const audioUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max
@@ -248,6 +268,9 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         cfg_interval_end: params.cfgIntervalEnd || 1.0,
         infer_method: params.inferMethod || 'ode',
         shift: params.shift,
+        // Audio paths — resolve /audio/ URLs to local filesystem paths
+        ...(params.sourceAudioUrl ? { src_audio_path: resolveAudioPath(params.sourceAudioUrl) } : {}),
+        ...(params.referenceAudioUrl ? { reference_audio_path: resolveAudioPath(params.referenceAudioUrl) } : {}),
         // PAG (Perturbed-Attention Guidance)
         use_pag: params.usePag || false,
         pag_start: params.pagStart ?? 0.30,
