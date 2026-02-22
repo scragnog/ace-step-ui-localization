@@ -201,7 +201,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    if (params.customMode && !params.style && !params.lyrics && !params.referenceAudioUrl) {
+    if (params.customMode && !params.style && !params.lyrics && !params.referenceAudioUrl && params.taskType !== 'extract') {
       res.status(400).json({ error: 'Style, lyrics, or reference audio required for custom mode' });
       return;
     }
