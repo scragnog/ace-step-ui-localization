@@ -8,6 +8,7 @@ import { LibraryView } from './components/LibraryView';
 import { CreatePlaylistModal, AddToPlaylistModal } from './components/PlaylistModals';
 import { VideoGeneratorModal } from './components/VideoGeneratorModal';
 import { UsernameModal } from './components/UsernameModal';
+import { DownloadModal, DownloadFormat } from './components/DownloadModal';
 import { UserProfile } from './components/UserProfile';
 import { SettingsModal } from './components/SettingsModal';
 import { SongProfile } from './components/SongProfile';
@@ -149,6 +150,10 @@ function AppContent() {
   // Video Modal
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [songForVideo, setSongForVideo] = useState<Song | null>(null);
+
+  // Download Modal
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [songToDownload, setSongToDownload] = useState<Song | null>(null);
 
   // Settings Modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -1408,6 +1413,34 @@ function AppContent() {
     window.history.pushState({}, '', '/library');
   };
 
+  const openDownloadModal = (song: Song) => {
+    setSongToDownload(song);
+    setIsDownloadModalOpen(true);
+  };
+
+  const handleDownloadFormat = async (format: DownloadFormat) => {
+    if (!songToDownload?.audioUrl) return;
+    try {
+      // Direct the browser to our new express endpoint which handles format conversion and original file piping
+      const targetUrl = new URL('/api/songs/download', window.location.origin);
+      targetUrl.searchParams.set('audioUrl', songToDownload.audioUrl);
+      targetUrl.searchParams.set('title', songToDownload.title || 'song');
+      targetUrl.searchParams.set('format', format);
+
+      const link = document.createElement('a');
+      link.href = targetUrl.toString();
+      const ext = format === 'opus' ? 'ogg' : format;
+      link.download = `${songToDownload.title || 'song'}.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (error) {
+      console.error('Download failed:', error);
+      showToast(`Failed to download ${format.toUpperCase()}`, 'error');
+    }
+  };
+
   const openVideoGenerator = (song: Song) => {
     if (isPlaying) {
       setIsPlaying(false);
@@ -1640,6 +1673,7 @@ function AppContent() {
                 onDeleteAll={handleDeleteAll}
                 onUseAsReference={handleUseAsReference}
                 onCoverSong={handleCoverSong}
+                onDownloadFormat={openDownloadModal}
                 onUseUploadAsReference={handleUseUploadAsReference}
                 onCoverUpload={handleCoverUpload}
                 onSongUpdate={handleSongUpdate}
@@ -1751,6 +1785,7 @@ function AppContent() {
         onNavigateToSong={handleNavigateToSong}
         onOpenVideo={() => currentSong && openVideoGenerator(currentSong)}
         onReusePrompt={() => currentSong && handleReuse(currentSong)}
+        onDownloadFormat={() => currentSong && openDownloadModal(currentSong)}
         onAddToPlaylist={() => currentSong && openAddToPlaylistModal(currentSong)}
         onDelete={() => currentSong && handleDeleteSong(currentSong)}
       />
@@ -1784,6 +1819,12 @@ function AppContent() {
       <UsernameModal
         isOpen={showUsernameModal}
         onSubmit={handleUsernameSubmit}
+      />
+      <DownloadModal
+        isOpen={isDownloadModalOpen}
+        onClose={() => setIsDownloadModalOpen(false)}
+        onDownload={handleDownloadFormat}
+        songTitle={songToDownload?.title}
       />
       <SettingsModal
         isOpen={showSettingsModal}

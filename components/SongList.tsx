@@ -31,6 +31,7 @@ interface SongListProps {
     onCoverSong?: (song: Song) => void;
     onUseUploadAsReference?: (track: { audio_url: string; filename: string }) => void;
     onCoverUpload?: (track: { audio_url: string; filename: string }) => void;
+    onDownloadFormat?: (song: Song) => void;
     onDeleteUpload?: (trackId: string) => void;
 }
 
@@ -111,6 +112,7 @@ export const SongList: React.FC<SongListProps> = ({
     onCoverSong,
     onUseUploadAsReference,
     onCoverUpload,
+    onDownloadFormat,
     onDeleteUpload
 }) => {
     const { user } = useAuth();
@@ -424,6 +426,7 @@ export const SongList: React.FC<SongListProps> = ({
                                     onSongUpdate={onSongUpdate}
                                     onUseAsReference={() => onUseAsReference?.(item.song)}
                                     onCoverSong={() => onCoverSong?.(item.song)}
+                                    onDownloadFormat={() => onDownloadFormat?.(item.song)}
                                 />
                             ) : (
                                 <UploadItem
@@ -522,6 +525,7 @@ interface SongItemProps {
     onSongUpdate?: (updatedSong: Song) => void;
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
+    onDownloadFormat?: () => void;
 }
 
 const SongItem: React.FC<SongItemProps> = ({
@@ -545,7 +549,8 @@ const SongItem: React.FC<SongItemProps> = ({
     onDelete,
     onSongUpdate,
     onUseAsReference,
-    onCoverSong
+    onCoverSong,
+    onDownloadFormat
 }) => {
     const { token } = useAuth();
     const { t } = useI18n();
@@ -853,6 +858,7 @@ const SongItem: React.FC<SongItemProps> = ({
                                     onShare={() => setShareModalOpen(true)}
                                     onUseAsReference={() => onUseAsReference?.()}
                                     onCoverSong={() => onCoverSong?.()}
+                                    onDownloadFormat={() => onDownloadFormat?.()}
                                 />
                             </div>
                         </div>

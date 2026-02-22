@@ -31,8 +31,8 @@ interface GenerationSettingsAccordionProps {
     inferMethod: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4';
     onInferMethodChange: (val: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4') => void;
     // Audio Format
-    audioFormat: 'mp3' | 'flac';
-    onAudioFormatChange: (val: 'mp3' | 'flac') => void;
+    audioFormat: 'mp3' | 'flac' | 'wav' | 'opus';
+    onAudioFormatChange: (val: 'mp3' | 'flac' | 'wav' | 'opus') => void;
     // Guidance
     guidanceScale: number;
     onGuidanceScaleChange: (val: number) => void;
@@ -236,9 +236,11 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('audioFormat')}</label>
-                                        <select value={props.audioFormat} onChange={(e) => props.onAudioFormatChange(e.target.value as 'mp3' | 'flac')} className={selectClass}>
+                                        <select value={props.audioFormat} onChange={(e) => props.onAudioFormatChange(e.target.value as 'mp3' | 'flac' | 'wav' | 'opus')} className={selectClass}>
                                             <option value="mp3">{t('mp3Smaller')}</option>
                                             <option value="flac">{t('flacLossless')}</option>
+                                            <option value="wav">WAV</option>
+                                            <option value="opus">Opus</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">

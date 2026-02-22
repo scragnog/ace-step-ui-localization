@@ -4,6 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../db/pool.js';
 import { authMiddleware, optionalAuthMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import { getStorageProvider } from '../services/storage/factory.js';
+import { config } from '../config/index.js';
+import { spawn } from 'child_process';
+import path from 'path';
 
 const router = Router();
 
@@ -98,6 +101,181 @@ router.get('/:id/audio', optionalAuthMiddleware, async (req: AuthenticatedReques
   } catch (error) {
     console.error('Get audio error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Download audio with format conversion
+router.get('/download', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const audioUrl = req.query.audioUrl as string;
+    const format = req.query.format as string;
+    const title = (req.query.title as string) || 'download';
+
+    if (!audioUrl || !format) {
+      res.status(400).json({ error: 'audioUrl and format are required' });
+      return;
+    }
+
+    const validFormats = ['mp3', 'flac', 'wav', 'opus'];
+    if (!validFormats.includes(format)) {
+      res.status(400).json({ error: 'Invalid format requested' });
+      return;
+    }
+
+    // Determine the actual file path. 
+    // In this app, audioUrl might be a relative path like /audio/xxxxx.xxx.
+    const urlObj = new URL(audioUrl, `${req.protocol}://${req.get('host')}`);
+    let sourcePath = '';
+
+    // We only support local files via /audio/ mounts or /api/audio/file for conversion currently
+    if (urlObj.pathname.startsWith('/audio/')) {
+      const audioDir = config.storage.audioDir;
+      const filename = decodeURIComponent(urlObj.pathname.replace('/audio/', ''));
+      sourcePath = path.join(audioDir, filename);
+    } else if (urlObj.pathname === '/api/audio/file') {
+      const filePath = urlObj.searchParams.get('path');
+      if (!filePath) {
+        res.status(400).json({ error: 'Missing path parameter in audioUrl' });
+        return;
+      }
+
+      // Handle absolute or relative paths
+      if (path.isAbsolute(filePath)) {
+        sourcePath = filePath;
+      } else {
+        // Assume it's relative to the datasets or audio dir. The `/api/audio/file` route checks 
+        // multiple places, but for generated songs they usually live in audioDir or datasets.
+        sourcePath = path.join(config.storage.audioDir, filePath);
+
+        // Fallback: If it's not in audioDir, let's assume it might be a raw dataset path
+        const fs = await import('fs');
+        if (!fs.existsSync(sourcePath)) {
+          // Same base resolution logic as /api/audio/file in index.ts
+          const serverRoot = path.join(process.cwd());
+          const projectRoot = path.join(serverRoot, '..');
+          const workspaceRoot = path.join(projectRoot, '..');
+
+          const possible = [
+            path.join(workspaceRoot, filePath),
+            path.join(projectRoot, filePath),
+            path.join(serverRoot, filePath)
+          ];
+
+          sourcePath = possible.find(p => fs.existsSync(p)) || sourcePath;
+        }
+      }
+    } else if (urlObj.pathname === '/v1/audio') {
+      const filePath = urlObj.searchParams.get('path');
+      if (!filePath) {
+        res.status(400).json({ error: 'Missing path parameter in audioUrl' });
+        return;
+      }
+      // This is typically an absolute path coming from the fastAPI backend
+      sourcePath = filePath;
+    } else {
+      res.status(400).json({ error: 'Unsupported audioUrl format for conversion' });
+      return;
+    }
+
+    const fs = await import('fs');
+    if (!fs.existsSync(sourcePath)) {
+      console.error('[Download Route] Source file not found on disk:', sourcePath, 'Original URL:', audioUrl);
+      res.status(404).json({ error: 'Source file not found on disk: ' + sourcePath });
+      return;
+    }
+
+    console.log('[Download Route] Successfully resolved source path:', sourcePath);
+    const currentExt = path.extname(sourcePath).toLowerCase().replace('.', '');
+
+    // Determine output file extension
+    const outputExt = format === 'opus' ? 'ogg' : format;
+
+    // Clean up title for filename header to prevent quote breakage
+    const safeTitle = title.replace(/"/g, "'").replace(/[\\/]/g, "");
+
+    // Set headers for download
+    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}.${outputExt}"`);
+    res.setHeader('Content-Type', `audio/${format === 'mp3' ? 'mpeg' : (format === 'opus' ? 'ogg' : format)}`);
+
+    if (currentExt === format) {
+      // No conversion needed, just stream the file directly
+      const fs = await import('fs');
+      if (!fs.existsSync(sourcePath)) {
+        console.error('[Download Route] NATIVE PATH FAIL:', sourcePath);
+        res.status(404).json({ error: 'Source file not found' });
+        return;
+      }
+      console.log('[Download Route] Starting native stream for:', sourcePath);
+
+      const readStream = fs.createReadStream(sourcePath);
+      readStream.on('error', (err) => {
+        console.error('[Download Route] Native read stream error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to read source file' });
+        }
+      });
+      readStream.pipe(res);
+    } else {
+      console.log('[Download Route] Starting FFMPEG conversion to', format);
+      // We need to convert using ffmpeg
+      const crypto = await import('crypto');
+      const fs = await import('fs');
+      const os = await import('os');
+
+      const tempFilename = path.join(os.tmpdir(), `ace-dl-${crypto.randomUUID()}.${outputExt}`);
+      const ffmpegArgs = ['-i', sourcePath];
+
+      if (format === 'mp3') {
+        ffmpegArgs.push('-c:a', 'libmp3lame', '-q:a', '0', '-f', 'mp3');
+      } else if (format === 'flac') {
+        ffmpegArgs.push('-c:a', 'flac', '-sample_fmt', 's16', '-ar', '44100', '-f', 'flac');
+      } else if (format === 'wav') {
+        ffmpegArgs.push('-c:a', 'pcm_s16le', '-f', 'wav');
+      } else if (format === 'opus') {
+        ffmpegArgs.push('-c:a', 'libopus', '-b:a', '128k', '-vbr', 'on', '-compression_level', '10', '-f', 'ogg');
+      }
+
+      ffmpegArgs.push('-y', tempFilename); // Write to temp file instead of pipe
+
+      const ffmpeg = spawn('ffmpeg', ffmpegArgs);
+
+      let ffmpegErr = '';
+      ffmpeg.stderr.on('data', (data) => {
+        ffmpegErr += data.toString();
+      });
+
+      ffmpeg.on('close', (code) => {
+        if (code !== 0) {
+          console.error(`ffmpeg process exited with code ${code}. err: ${ffmpegErr}`);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Audio conversion failed' });
+          }
+          // Cleanup
+          if (fs.existsSync(tempFilename)) fs.unlinkSync(tempFilename);
+        } else {
+          // Send the converted file
+          res.sendFile(tempFilename, (err) => {
+            if (err) console.error('Error sending converted file:', err);
+            // Cleanup temp file after sending finishes or fails
+            if (fs.existsSync(tempFilename)) fs.unlinkSync(tempFilename);
+          });
+        }
+      });
+
+      // Ensure we kill the process and clean up if the client aborts the request
+      req.on('close', () => {
+        ffmpeg.kill();
+        setTimeout(() => {
+          if (fs.existsSync(tempFilename)) fs.unlinkSync(tempFilename);
+        }, 1000); // Give ffmpeg time to die before deleting its output file
+      });
+    }
+
+  } catch (error) {
+    console.error('Download audio error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 });
 

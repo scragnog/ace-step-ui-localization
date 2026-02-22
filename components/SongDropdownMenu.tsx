@@ -24,7 +24,7 @@ interface SongDropdownMenuProps {
     onExtractStems?: () => void;
     onReusePrompt?: () => void;
     onAddToPlaylist?: () => void;
-    onDownload?: () => void;
+    onDownloadFormat?: () => void;
     onShare?: () => void;
     onDelete?: () => void;
     onUseAsReference?: () => void;
@@ -71,7 +71,7 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
     onExtractStems,
     onReusePrompt,
     onAddToPlaylist,
-    onDownload,
+    onDownloadFormat,
     onShare,
     onDelete,
     onUseAsReference,
@@ -134,25 +134,9 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
         onClose();
     };
 
-    const handleDownload = async () => {
-        if (!song.audioUrl) return;
-        try {
-            // Fetch as blob to handle cross-origin
-            const response = await fetch(song.audioUrl);
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${song.title || 'song'}.mp3`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Clean up blob URL
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Download failed:', error);
+    const handleDownload = () => {
+        if (onDownloadFormat) {
+            onDownloadFormat();
         }
         onClose();
     };
@@ -226,7 +210,7 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
             <MenuItem
                 icon={<Download size={14} />}
                 label={t('download')}
-                onClick={onDownload ? () => handleAction(onDownload) : handleDownload}
+                onClick={handleDownload}
             />
             <MenuItem
                 icon={<Share2 size={14} />}
