@@ -268,7 +268,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         cfg_interval_end: params.cfgIntervalEnd || 1.0,
         infer_method: params.inferMethod || 'ode',
         shift: params.shift,
-        // Audio paths — resolve /audio/ URLs to local filesystem paths
+        // Audio paths — resolve to absolute paths for Python backend
         ...(params.sourceAudioUrl ? { src_audio_path: resolveAudioPath(params.sourceAudioUrl) } : {}),
         ...(params.referenceAudioUrl ? { reference_audio_path: resolveAudioPath(params.referenceAudioUrl) } : {}),
         ...(params.trackName ? { track_name: params.trackName } : {}),
