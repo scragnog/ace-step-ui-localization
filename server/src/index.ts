@@ -413,6 +413,16 @@ app.post('/api/shutdown', async (_req, res) => {
       console.log(`[Shutdown] Express PID ${expressPid}`);
       collectAncestors(expressPid).forEach(a => { console.log(`[Shutdown]   ancestor ${a}`); pidsToKill.add(a); });
 
+      // ── 4b. Unpatch checkpoints so shared folders stay clean ──
+      const projectRoot = path.resolve(__dirname, '..', '..', '..', '..');
+      console.log(`[Shutdown] Unpatching checkpoints (project root: ${projectRoot})...`);
+      const unpatchResult = run(`"${projectRoot}\\.venv\\Scripts\\python.exe" "${projectRoot}\\patch_checkpoints.py" --unpatch`);
+      if (unpatchResult) {
+        console.log(`[Shutdown] Unpatch result:\n${unpatchResult}`);
+      } else {
+        console.log('[Shutdown] Unpatch completed (no output)');
+      }
+
       // ── 5. Kill everything ──
       console.log(`[Shutdown] Killing ${pidsToKill.size} processes...`);
       for (const pid of pidsToKill) {

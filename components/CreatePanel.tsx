@@ -209,7 +209,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [taskType, setTaskType] = usePersistedState('ace-taskType', 'text2music');
   const [useAdg, setUseAdg] = usePersistedState('ace-useAdg', false);
   // Guidance Mode: 'apg' (default), 'adg', or 'pag'
-  const [guidanceMode, setGuidanceMode] = usePersistedState<'apg' | 'adg' | 'pag' | 'cfg' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg'>('ace-guidanceMode', 'apg');
+  const [guidanceMode, setGuidanceMode] = usePersistedState<'apg' | 'adg' | 'pag' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg'>('ace-guidanceMode', 'apg');
   // PAG (Perturbed-Attention Guidance) Parameters
   const [usePag, setUsePag] = usePersistedState('ace-usePag', false);
   const [pagStart, setPagStart] = usePersistedState('ace-pagStart', 0.30);

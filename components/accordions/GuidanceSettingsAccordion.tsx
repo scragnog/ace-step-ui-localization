@@ -3,7 +3,7 @@ import { Crosshair, ChevronDown } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
 import { EditableSlider } from '../EditableSlider';
 
-type GuidanceMode = 'apg' | 'adg' | 'pag' | 'cfg' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg';
+type GuidanceMode = 'apg' | 'adg' | 'pag' | 'cfg_pp' | 'dynamic_cfg' | 'rescaled_cfg';
 
 interface GuidanceSettingsAccordionProps {
     isOpen: boolean;
@@ -84,7 +84,6 @@ export const GuidanceSettingsAccordion: React.FC<GuidanceSettingsAccordionProps>
                             <option value="apg">{t('guidanceApg')}</option>
                             <option value="adg">{t('guidanceAdg')}</option>
                             <option value="pag">{t('guidancePag')}</option>
-                            <option value="cfg">{t('guidanceCfg')}</option>
                             <option value="cfg_pp">{t('guidanceCfgPp')}</option>
                             <option value="dynamic_cfg">{t('guidanceDynamic')}</option>
                             <option value="rescaled_cfg">{t('guidanceRescaled')}</option>
@@ -93,7 +92,6 @@ export const GuidanceSettingsAccordion: React.FC<GuidanceSettingsAccordionProps>
                             {guidanceMode === 'apg' && t('guidanceApgDesc')}
                             {guidanceMode === 'adg' && t('guidanceAdgDesc')}
                             {guidanceMode === 'pag' && t('guidancePagDesc')}
-                            {guidanceMode === 'cfg' && t('guidanceCfgDesc')}
                             {guidanceMode === 'cfg_pp' && t('guidanceCfgPpDesc')}
                             {guidanceMode === 'dynamic_cfg' && t('guidanceDynamicDesc')}
                             {guidanceMode === 'rescaled_cfg' && t('guidanceRescaledDesc')}
@@ -130,7 +128,7 @@ export const GuidanceSettingsAccordion: React.FC<GuidanceSettingsAccordionProps>
                                 min={0}
                                 max={1}
                                 step={0.05}
-                                onChange={(e) => onCfgIntervalStartChange(Number(e.target.value))}
+                                onChange={onCfgIntervalStartChange}
                                 formatDisplay={(val) => val.toFixed(2)}
                                 title={t('cfgIntervalStartTooltip')}
                             />
@@ -140,7 +138,7 @@ export const GuidanceSettingsAccordion: React.FC<GuidanceSettingsAccordionProps>
                                 min={0}
                                 max={1}
                                 step={0.05}
-                                onChange={(e) => onCfgIntervalEndChange(Number(e.target.value))}
+                                onChange={onCfgIntervalEndChange}
                                 formatDisplay={(val) => val.toFixed(2)}
                                 title={t('cfgIntervalEndTooltip')}
                             />
