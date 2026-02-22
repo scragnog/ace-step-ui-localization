@@ -271,6 +271,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         // Audio paths — resolve /audio/ URLs to local filesystem paths
         ...(params.sourceAudioUrl ? { src_audio_path: resolveAudioPath(params.sourceAudioUrl) } : {}),
         ...(params.referenceAudioUrl ? { reference_audio_path: resolveAudioPath(params.referenceAudioUrl) } : {}),
+        ...(params.trackName ? { track_name: params.trackName } : {}),
         // PAG (Perturbed-Attention Guidance)
         use_pag: params.usePag || false,
         pag_start: params.pagStart ?? 0.30,
