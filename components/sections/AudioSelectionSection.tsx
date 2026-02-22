@@ -80,27 +80,29 @@ export const AudioSelectionSection: React.FC<AudioSelectionSectionProps> = ({
 
     return (
         <div className="space-y-5">
-            {/* Use Reference Audio Toggle */}
-            <div className="flex items-center justify-between px-2">
-                <div>
-                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wide">{t('useReferenceAudio')}</span>
-                    <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('useReferenceAudioTooltip')}</p>
+            {/* Use Reference Audio Toggle — hidden in extract mode */}
+            {taskType !== 'extract' && (
+                <div className="flex items-center justify-between px-2">
+                    <div>
+                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wide">{t('useReferenceAudio')}</span>
+                        <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('useReferenceAudioTooltip')}</p>
+                    </div>
+                    <button
+                        onClick={() => {
+                            const newValue = !useReferenceAudio;
+                            setUseReferenceAudio(newValue);
+                            if (!newValue && taskType !== 'text2music') {
+                                setAudioTab('source');
+                            } else if (newValue) {
+                                setAudioTab('reference');
+                            }
+                        }}
+                        className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useReferenceAudio ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
+                    >
+                        <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useReferenceAudio ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
                 </div>
-                <button
-                    onClick={() => {
-                        const newValue = !useReferenceAudio;
-                        setUseReferenceAudio(newValue);
-                        if (!newValue && taskType !== 'text2music') {
-                            setAudioTab('source');
-                        } else if (newValue) {
-                            setAudioTab('reference');
-                        }
-                    }}
-                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${useReferenceAudio ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'} cursor-pointer`}
-                >
-                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${useReferenceAudio ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-            </div>
+            )}
 
             {/* Audio Section - Conditionally rendered */}
             {(useReferenceAudio || taskType !== 'text2music') && (
@@ -114,7 +116,7 @@ export const AudioSelectionSection: React.FC<AudioSelectionSectionProps> = ({
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{t('audio')}</span>
                             <div className="flex items-center gap-1 bg-zinc-200/50 dark:bg-black/30 rounded-lg p-0.5">
-                                {useReferenceAudio && (
+                                {useReferenceAudio && taskType !== 'extract' && (
                                     <button
                                         type="button"
                                         onClick={() => setAudioTab('reference')}
@@ -135,7 +137,7 @@ export const AudioSelectionSection: React.FC<AudioSelectionSectionProps> = ({
                                             : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
                                             }`}
                                     >
-                                        {t('cover')}
+                                        {taskType === 'extract' ? t('audio') : t('cover')}
                                     </button>
                                 )}
                             </div>
