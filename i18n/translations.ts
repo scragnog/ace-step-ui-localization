@@ -546,6 +546,10 @@ export const translations = {
     lyricsGuidancePlaceholder: 'Paste lyrics here to help guide vocal extraction accuracy...',
     tracksSelected: 'selected',
     extractTrackTooltipMulti: 'Select one or more stems to extract. Each creates a separate job in the queue.',
+    extractQuality: 'Quality',
+    extractLow: 'Low (Quick)',
+    extractMedium: 'Medium',
+    extractHigh: 'High (Slow)',
 
     // Search Page
     searchSongsPlaceholder: 'Search for songs, playlists, creators, or genres',
@@ -1405,6 +1409,10 @@ export const translations = {
     lyricsGuidancePlaceholder: '在此粘贴歌词以帮助提高人声提取准确性...',
     tracksSelected: '已选择',
     extractTrackTooltipMulti: '选择一个或多个音轨进行提取。每个音轨将创建一个单独的任务。',
+    extractQuality: '质量',
+    extractLow: '低（快速）',
+    extractMedium: '中',
+    extractHigh: '高（慢速）',
 
     // Search Page
     searchSongsPlaceholder: '搜索歌曲、播放列表、创作者或风格',
@@ -2290,6 +2298,10 @@ export const translations = {
     lyricsGuidancePlaceholder: '歌詞を貼り付けてボーカル抽出の精度を向上させます...',
     tracksSelected: '選択済み',
     extractTrackTooltipMulti: '抽出するトラックを選択してください。各トラックは個別のジョブとしてキューに追加されます。',
+    extractQuality: '品質',
+    extractLow: '低（高速）',
+    extractMedium: '中',
+    extractHigh: '高（低速）',
 
     // Search Page
     searchSongsPlaceholder: '曲、プレイリスト、クリエイター、スタイルを検索',
@@ -3161,6 +3173,10 @@ export const translations = {
     lyricsGuidancePlaceholder: '보컬 추출 정확도를 높이기 위해 여기에 가사를 붙여넣으세요...',
     tracksSelected: '선택됨',
     extractTrackTooltipMulti: '추출할 트랙을 선택하세요. 각 트랙은 별도의 작업으로 대기열에 추가됩니다.',
+    extractQuality: '품질',
+    extractLow: '낮음 (빠름)',
+    extractMedium: '중간',
+    extractHigh: '높음 (느림)',
 
     // Search Page
     searchSongsPlaceholder: '곡, 재생목록, 제작자 또는 스타일 검색',

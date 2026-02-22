@@ -1419,7 +1419,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             : lyrics,
           style: taskType === 'extract' ? '' : styleWithGender,
           title: taskType === 'extract'
-            ? `Extract ${currentTrack}`
+            ? `${(currentTrack || 'extract').charAt(0).toUpperCase() + (currentTrack || 'extract').slice(1).replace('_', ' ')}${sourceAudioTitle ? ` - ${sourceAudioTitle}` : ''}`
             : (bulkCount > 1 ? `${title} (${i + 1})` : title),
           ditModel: selectedModel,
           instrumental: taskType === 'extract'
@@ -1834,6 +1834,41 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               setExtractTracks={setExtractTracks}
               isTurboModel={isTurboModel(selectedModel)}
             />
+
+            {/* Extract Quality Presets */}
+            <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden">
+              <div className="px-3 py-2.5 space-y-2">
+                <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                  {t('extractQuality')}
+                </span>
+                <div className="flex gap-1.5">
+                  {([
+                    { key: 'extractLow', steps: 20, method: 'euler' as const, icon: '⚡' },
+                    { key: 'extractMedium', steps: 50, method: 'heun' as const, icon: '⚖️' },
+                    { key: 'extractHigh', steps: 200, method: 'rk4' as const, icon: '💎' },
+                  ] as const).map(({ key, steps, method, icon }) => {
+                    const isActive = inferenceSteps === steps && inferMethod === method && guidanceMode === 'dynamic_cfg';
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setInferenceSteps(steps);
+                          setInferMethod(method);
+                          setGuidanceMode('dynamic_cfg');
+                        }}
+                        className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${isActive
+                          ? 'bg-pink-600 text-white border-pink-500'
+                          : 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
+                          }`}
+                      >
+                        {icon} {t(key)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
 
             {/* Optional lyrics guidance for vocal extraction */}
             {(extractTracks.includes('vocals') || extractTracks.includes('backing_vocals')) && (
