@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain, Crosshair, BarChart3, FileText } from 'lucide-react';
+import { Sparkles, ChevronDown, Settings2, Trash2, Music2, Sliders, Dices, Hash, RefreshCw, Plus, Upload, Play, Pause, Loader2, Brain, Crosshair, BarChart3, FileText, Download } from 'lucide-react';
 import { GenerationParams, Song } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
@@ -1443,6 +1443,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         getLrc,
         scoreScale,
         lmBatchChunkSize,
+        loraPath: loraPath.trim() || undefined,
+        loraScale,
+        advancedAdapters,
+        adapterSlots: advancedAdapters ? adapterSlots : undefined,
         trackName: trackName.trim() || undefined,
         completeTrackClasses: (() => {
           const parsed = completeTrackClasses
@@ -1455,6 +1459,187 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         loraLoaded,
       });
     }
+  };
+
+  const handleExportJson = () => {
+    const data = {
+      model: selectedModel,
+      customMode,
+      songDescription: customMode ? undefined : songDescription,
+      prompt: lyrics,
+      style,
+      title,
+      instrumental,
+      vocalLanguage,
+      vocalGender,
+      bpm,
+      keyScale,
+      timeSignature,
+      duration,
+      inferenceSteps,
+      guidanceScale,
+      batchSize,
+      randomSeed,
+      seed,
+      thinking,
+      audioFormat,
+      inferMethod,
+      shift,
+      lmBackend,
+      lmModel,
+      lmTemperature,
+      lmCfgScale,
+      lmTopK,
+      lmTopP,
+      lmNegativePrompt,
+      referenceAudioUrl,
+      sourceAudioUrl,
+      referenceAudioTitle,
+      sourceAudioTitle,
+      audioCodes,
+      repaintingStart,
+      repaintingEnd,
+      instruction,
+      audioCoverStrength,
+      taskType,
+      guidanceMode,
+      usePag,
+      pagStart,
+      pagEnd,
+      pagScale,
+      cfgIntervalStart,
+      cfgIntervalEnd,
+      customTimesteps,
+      useCotMetas,
+      useCotCaption,
+      useCotLanguage,
+      autogen,
+      constrainedDecodingDebug,
+      allowLmBatch,
+      getScores,
+      getLrc,
+      scoreScale,
+      lmBatchChunkSize,
+      trackName,
+      completeTrackClasses,
+      isFormatCaption,
+      loraPath,
+      loraScale,
+      loraLoaded,
+      advancedAdapters,
+      adapterSlots,
+      adapterFolder,
+      steeringEnabled,
+      steeringLoaded,
+      steeringAlphas
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `acestep_params_${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (json.model !== undefined) setSelectedModel(json.model);
+        if (json.customMode !== undefined) setCustomMode(json.customMode);
+        if (json.songDescription !== undefined) setSongDescription(json.songDescription);
+        if (json.prompt !== undefined) setLyrics(json.prompt);
+        if (json.style !== undefined) setStyle(json.style);
+        if (json.title !== undefined) setTitle(json.title);
+        if (json.instrumental !== undefined) setInstrumental(json.instrumental);
+        if (json.vocalLanguage !== undefined) setVocalLanguage(json.vocalLanguage);
+        if (json.vocalGender !== undefined) setVocalGender(json.vocalGender);
+        if (json.bpm !== undefined) setBpm(json.bpm);
+        if (json.keyScale !== undefined) setKeyScale(json.keyScale);
+        if (json.timeSignature !== undefined) setTimeSignature(json.timeSignature);
+        if (json.duration !== undefined) setDuration(json.duration);
+        if (json.inferenceSteps !== undefined) setInferenceSteps(json.inferenceSteps);
+        if (json.guidanceScale !== undefined) setGuidanceScale(json.guidanceScale);
+        if (json.batchSize !== undefined) setBatchSize(json.batchSize);
+        if (json.randomSeed !== undefined) setRandomSeed(json.randomSeed);
+        if (json.seed !== undefined) setSeed(json.seed);
+        if (json.thinking !== undefined) setThinking(json.thinking);
+        if (json.audioFormat !== undefined) setAudioFormat(json.audioFormat);
+        if (json.inferMethod !== undefined) setInferMethod(json.inferMethod);
+        if (json.shift !== undefined) setShift(json.shift);
+        if (json.lmBackend !== undefined) setLmBackend(json.lmBackend);
+        if (json.lmModel !== undefined) setLmModel(json.lmModel);
+        if (json.lmTemperature !== undefined) setLmTemperature(json.lmTemperature);
+        if (json.lmCfgScale !== undefined) setLmCfgScale(json.lmCfgScale);
+        if (json.lmTopK !== undefined) setLmTopK(json.lmTopK);
+        if (json.lmTopP !== undefined) setLmTopP(json.lmTopP);
+        if (json.lmNegativePrompt !== undefined) setLmNegativePrompt(json.lmNegativePrompt);
+        if (json.referenceAudioUrl !== undefined) setReferenceAudioUrl(json.referenceAudioUrl);
+        if (json.sourceAudioUrl !== undefined) setSourceAudioUrl(json.sourceAudioUrl);
+        if (json.referenceAudioTitle !== undefined) setReferenceAudioTitle(json.referenceAudioTitle);
+        if (json.sourceAudioTitle !== undefined) setSourceAudioTitle(json.sourceAudioTitle);
+        if (json.audioCodes !== undefined) setAudioCodes(json.audioCodes);
+        if (json.repaintingStart !== undefined) setRepaintingStart(json.repaintingStart);
+        if (json.repaintingEnd !== undefined) setRepaintingEnd(json.repaintingEnd);
+        if (json.instruction !== undefined) setInstruction(json.instruction);
+        if (json.audioCoverStrength !== undefined) setAudioCoverStrength(json.audioCoverStrength);
+        if (json.taskType !== undefined) setTaskType(json.taskType);
+        if (json.guidanceMode !== undefined) setGuidanceMode(json.guidanceMode);
+        if (json.usePag !== undefined) setUsePag(json.usePag);
+        if (json.pagStart !== undefined) setPagStart(json.pagStart);
+        if (json.pagEnd !== undefined) setPagEnd(json.pagEnd);
+        if (json.pagScale !== undefined) setPagScale(json.pagScale);
+        if (json.cfgIntervalStart !== undefined) setCfgIntervalStart(json.cfgIntervalStart);
+        if (json.cfgIntervalEnd !== undefined) setCfgIntervalEnd(json.cfgIntervalEnd);
+        if (json.customTimesteps !== undefined) setCustomTimesteps(json.customTimesteps);
+        if (json.useCotMetas !== undefined) setUseCotMetas(json.useCotMetas);
+        if (json.useCotCaption !== undefined) setUseCotCaption(json.useCotCaption);
+        if (json.useCotLanguage !== undefined) setUseCotLanguage(json.useCotLanguage);
+        if (json.autogen !== undefined) setAutogen(json.autogen);
+        if (json.constrainedDecodingDebug !== undefined) setConstrainedDecodingDebug(json.constrainedDecodingDebug);
+        if (json.allowLmBatch !== undefined) setAllowLmBatch(json.allowLmBatch);
+        if (json.getScores !== undefined) setGetScores(json.getScores);
+        if (json.getLrc !== undefined) setGetLrc(json.getLrc);
+        if (json.scoreScale !== undefined) setScoreScale(json.scoreScale);
+        if (json.lmBatchChunkSize !== undefined) setLmBatchChunkSize(json.lmBatchChunkSize);
+        if (json.trackName !== undefined) setTrackName(json.trackName);
+        if (json.completeTrackClasses !== undefined) setCompleteTrackClasses(json.completeTrackClasses);
+        if (json.isFormatCaption !== undefined) setIsFormatCaption(json.isFormatCaption);
+        if (json.loraPath !== undefined) setLoraPath(json.loraPath);
+        if (json.loraScale !== undefined) setLoraScale(json.loraScale);
+        if (json.loraLoaded !== undefined) setLoraLoaded(json.loraLoaded);
+        if (json.advancedAdapters !== undefined) setAdvancedAdapters(json.advancedAdapters);
+        if (json.adapterSlots !== undefined) setAdapterSlots(json.adapterSlots);
+        if (json.adapterFolder !== undefined) setAdapterFolder(json.adapterFolder);
+        if (json.steeringEnabled !== undefined) setSteeringEnabled(json.steeringEnabled);
+        if (json.steeringLoaded !== undefined) setSteeringLoaded(json.steeringLoaded);
+        if (json.steeringAlphas !== undefined) setSteeringAlphas(json.steeringAlphas);
+
+        // Auto-load steering and lora if they were enabled
+        if (json.steeringEnabled && json.steeringLoaded?.length > 0) {
+          setShowSteeringPanel(true);
+        }
+        if (json.loraLoaded && (json.customMode || json.advancedAdapters || json.loraPath)) {
+          setShowLoraPanel(true);
+        }
+      } catch (e) {
+        console.error("Failed to parse imported JSON", e);
+        alert(t('errorImportingJson'));
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so importing the same file again triggers onChange
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -1549,6 +1734,33 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setAudioTab={setAudioTab}
           useReferenceAudio={useReferenceAudio}
         />
+
+        {/* JSON Import/Export Actions */}
+        <div className="flex items-center gap-2 px-1">
+          <input
+            type="file"
+            accept=".json"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleImportJson}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/50 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm group"
+            title="Import Settings from JSON"
+          >
+            <Download size={14} className="group-hover:-translate-y-0.5 transition-transform" />
+            {t('Import')}
+          </button>
+          <button
+            onClick={handleExportJson}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/50 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shadow-sm group"
+            title="Export Settings as JSON"
+          >
+            <Upload size={14} className="group-hover:-translate-y-0.5 transition-transform" />
+            {t('Export')}
+          </button>
+        </div>
 
         {/* SIMPLE MODE */}
         {!customMode && (

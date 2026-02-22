@@ -120,6 +120,7 @@ export interface GenerationParams {
   trackName?: string;
   completeTrackClasses?: string[];
   isFormatCaption?: boolean;
+  loraLoaded?: boolean;
 
   // PAG (Perturbed-Attention Guidance)
   usePag?: boolean;
@@ -131,6 +132,20 @@ export interface GenerationParams {
   steeringEnabled?: boolean;
   steeringLoaded?: string[];
   steeringAlphas?: Record<string, number>;
+
+  // Adapters
+  loraPath?: string;
+  loraScale?: number;
+  advancedAdapters?: boolean;
+  adapterSlots?: Array<{
+    slot: number;
+    name: string;
+    path: string;
+    type: string;
+    scale: number;
+    delta_keys: number;
+    group_scales: { self_attn: number; cross_attn: number; mlp: number };
+  }>;
 }
 
 export interface PlayerState {

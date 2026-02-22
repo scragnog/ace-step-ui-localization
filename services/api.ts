@@ -281,7 +281,7 @@ export interface GenerationParams {
   seed?: number;
   thinking?: boolean;
   audioFormat?: 'mp3' | 'flac';
-  inferMethod?: 'ode' | 'sde';
+  inferMethod?: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4';
   shift?: number;
 
   // LM Parameters
@@ -328,6 +328,25 @@ export interface GenerationParams {
   pagStart?: number;
   pagEnd?: number;
   pagScale?: number;
+
+  // Activation Steering (TADA)
+  steeringEnabled?: boolean;
+  steeringLoaded?: string[];
+  steeringAlphas?: Record<string, number>;
+
+  // Adapters
+  loraPath?: string;
+  loraScale?: number;
+  advancedAdapters?: boolean;
+  adapterSlots?: Array<{
+    slot: number;
+    name: string;
+    path: string;
+    type: string;
+    scale: number;
+    delta_keys: number;
+    group_scales: { self_attn: number; cross_attn: number; mlp: number };
+  }>;
 }
 
 export interface GenerationJob {

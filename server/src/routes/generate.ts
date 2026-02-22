@@ -128,6 +128,12 @@ interface GenerateBody {
   isFormatCaption?: boolean;
   loraLoaded?: boolean;
 
+  // Adapters
+  loraPath?: string;
+  loraScale?: number;
+  advancedAdapters?: boolean;
+  adapterSlots?: any[];
+
   // Activation Steering
   steeringEnabled?: boolean;
   steeringLoaded?: string[];
@@ -188,149 +194,17 @@ router.post('/upload-audio', authMiddleware, audioUpload.single('audio'), async 
 router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   let localJobId: string | null = null;
   try {
-    const {
-      customMode,
-      songDescription,
-      lyrics,
-      style,
-      title,
-      ditModel,
-      instrumental,
-      vocalLanguage,
-      duration,
-      bpm,
-      keyScale,
-      timeSignature,
-      inferenceSteps,
-      guidanceScale,
-      batchSize,
-      randomSeed,
-      seed,
-      thinking,
-      audioFormat,
-      inferMethod,
-      shift,
-      lmTemperature,
-      lmCfgScale,
-      lmTopK,
-      lmTopP,
-      lmNegativePrompt,
-      lmBackend,
-      lmModel,
-      referenceAudioUrl,
-      sourceAudioUrl,
-      referenceAudioTitle,
-      sourceAudioTitle,
-      audioCodes,
-      repaintingStart,
-      repaintingEnd,
-      instruction,
-      audioCoverStrength,
-      taskType,
-      useAdg,
-      guidanceMode,
-      cfgIntervalStart,
-      cfgIntervalEnd,
-      customTimesteps,
-      useCotMetas,
-      useCotCaption,
-      useCotLanguage,
-      autogen,
-      constrainedDecodingDebug,
-      allowLmBatch,
-      getScores,
-      getLrc,
-      scoreScale,
-      lmBatchChunkSize,
-      trackName,
-      completeTrackClasses,
-      isFormatCaption,
-      loraLoaded,
-      usePag,
-      pagStart,
-      pagEnd,
-      pagScale,
-      steeringEnabled,
-      steeringLoaded,
-      steeringAlphas,
-    } = req.body as GenerateBody;
+    const params = req.body as GenerateBody;
 
-    if (!customMode && !songDescription) {
+    if (!params.customMode && !params.songDescription) {
       res.status(400).json({ error: 'Song description required for simple mode' });
       return;
     }
 
-    if (customMode && !style && !lyrics && !referenceAudioUrl) {
+    if (params.customMode && !params.style && !params.lyrics && !params.referenceAudioUrl) {
       res.status(400).json({ error: 'Style, lyrics, or reference audio required for custom mode' });
       return;
     }
-
-    const params = {
-      customMode,
-      songDescription,
-      lyrics,
-      style,
-      title,
-      ditModel,
-      instrumental,
-      vocalLanguage,
-      duration,
-      bpm,
-      keyScale,
-      timeSignature,
-      inferenceSteps,
-      guidanceScale,
-      batchSize,
-      randomSeed,
-      seed,
-      thinking,
-      audioFormat,
-      inferMethod,
-      shift,
-      lmTemperature,
-      lmCfgScale,
-      lmTopK,
-      lmTopP,
-      lmNegativePrompt,
-      lmBackend,
-      lmModel,
-      referenceAudioUrl,
-      sourceAudioUrl,
-      referenceAudioTitle,
-      sourceAudioTitle,
-      audioCodes,
-      repaintingStart,
-      repaintingEnd,
-      instruction,
-      audioCoverStrength,
-      taskType,
-      useAdg,
-      guidanceMode,
-      cfgIntervalStart,
-      cfgIntervalEnd,
-      customTimesteps,
-      useCotMetas,
-      useCotCaption,
-      useCotLanguage,
-      autogen,
-      constrainedDecodingDebug,
-      allowLmBatch,
-      getScores,
-      getLrc,
-      scoreScale,
-      lmBatchChunkSize,
-      trackName,
-      completeTrackClasses,
-      isFormatCaption,
-      loraLoaded,
-      usePag,
-      pagStart,
-      pagEnd,
-      pagScale,
-      steeringEnabled,
-      steeringLoaded,
-      steeringAlphas,
-    };
 
     // Create job record in database
     localJobId = generateUUID();

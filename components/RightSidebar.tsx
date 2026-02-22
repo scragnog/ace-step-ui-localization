@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Song } from '../types';
-import { Heart, Share2, Play, Pause, MoreHorizontal, X, Copy, Wand2, MoreVertical, Download, Repeat, Video, Music, Link as LinkIcon, Sparkles, Globe, Lock, Trash2, Edit3, Layers, Activity, Zap, Settings2, Hash, Clock, Gauge, Radio, Disc, Volume2, SlidersHorizontal, Cpu, Terminal, Music2, Mic2, AudioWaveform } from 'lucide-react';
+import { Heart, Share2, Play, Pause, MoreHorizontal, X, Copy, Wand2, MoreVertical, Download, Repeat, Video, Music, Link as LinkIcon, Sparkles, Globe, Lock, Trash2, Edit3, Layers, Activity, Zap, Settings2, Hash, Clock, Gauge, Radio, Disc, Volume2, SlidersHorizontal, Cpu, Terminal, Music2, Mic2, AudioWaveform, Box } from 'lucide-react';
 import { songsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
@@ -496,7 +496,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all duration-200 cursor-pointer ${copiedStyle ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/15 hover:text-zinc-900 dark:hover:text-white'}`}
                                 title={t('copyAllTags')}
                             >
-                                <Copy size={11} /> 
+                                <Copy size={11} />
                                 {copiedStyle ? t('copied') : t('copy')}
                             </button>
                         </div>
@@ -569,7 +569,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                 }}
                                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all duration-200 cursor-pointer ${copiedLyrics ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-white dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/15 hover:text-zinc-900 dark:hover:text-white border border-zinc-200 dark:border-white/10'}`}
                             >
-                                <Copy size={11} /> 
+                                <Copy size={11} />
                                 {copiedLyrics ? t('copied') : t('copy')}
                             </button>
                         </div>
@@ -648,48 +648,48 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
 
                                     if (gp.ditModel || song.ditModel) {
                                         const modelId = gp.ditModel || song.ditModel || '';
-                                        coreItems.push({ 
-                                            label: t('metaModel'), 
+                                        coreItems.push({
+                                            label: t('metaModel'),
                                             value: getModelShortName(modelId),
                                             icon: <Cpu size={12} />,
                                             gradient: getGradient('model')
                                         });
                                     }
                                     if (gp.lmModel) {
-                                        coreItems.push({ 
-                                            label: t('metaLmModel'), 
+                                        coreItems.push({
+                                            label: t('metaLmModel'),
                                             value: getModelShortName(gp.lmModel),
                                             icon: <Terminal size={12} />,
                                             gradient: getGradient('model')
                                         });
                                     }
                                     if (gp.genres && gp.genres !== 'N/A') {
-                                        coreItems.push({ 
-                                            label: t('metaGenres'), 
+                                        coreItems.push({
+                                            label: t('metaGenres'),
                                             value: gp.genres,
                                             icon: <Music2 size={12} />,
                                             gradient: getGradient('music')
                                         });
                                     }
                                     if (gp.bpm && gp.bpm > 0) {
-                                        coreItems.push({ 
-                                            label: t('metaBpm'), 
+                                        coreItems.push({
+                                            label: t('metaBpm'),
                                             value: String(gp.bpm),
                                             icon: <Activity size={12} />,
                                             gradient: getGradient('timing')
                                         });
                                     }
                                     if (gp.keyScale) {
-                                        coreItems.push({ 
-                                            label: t('metaKey'), 
+                                        coreItems.push({
+                                            label: t('metaKey'),
                                             value: gp.keyScale,
                                             icon: <AudioWaveform size={12} />,
                                             gradient: getGradient('music')
                                         });
                                     }
                                     if (gp.timeSignature) {
-                                        coreItems.push({ 
-                                            label: t('metaTimeSignature'), 
+                                        coreItems.push({
+                                            label: t('metaTimeSignature'),
                                             value: String(gp.timeSignature),
                                             icon: <Clock size={12} />,
                                             gradient: getGradient('timing')
@@ -698,63 +698,63 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                     if (gp.duration != null && gp.duration > 0) {
                                         const mins = Math.floor(gp.duration / 60);
                                         const secs = gp.duration % 60;
-                                        coreItems.push({ 
-                                            label: t('metaDuration'), 
+                                        coreItems.push({
+                                            label: t('metaDuration'),
                                             value: mins > 0 ? `${mins}m ${secs}s` : `${secs}s`,
                                             icon: <Disc size={12} />,
                                             gradient: getGradient('audio')
                                         });
                                     }
                                     if (gp.audioFormat) {
-                                        coreItems.push({ 
-                                            label: t('metaAudioFormat'), 
+                                        coreItems.push({
+                                            label: t('metaAudioFormat'),
                                             value: gp.audioFormat.toUpperCase(),
                                             icon: <Volume2 size={12} />,
                                             gradient: getGradient('audio')
                                         });
                                     }
                                     if (gp.inferenceSteps) {
-                                        coreItems.push({ 
-                                            label: t('metaInferenceSteps'), 
+                                        coreItems.push({
+                                            label: t('metaInferenceSteps'),
                                             value: String(gp.inferenceSteps),
                                             icon: <Gauge size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     }
                                     if (gp.guidanceScale != null) {
-                                        coreItems.push({ 
-                                            label: t('metaCfg'), 
+                                        coreItems.push({
+                                            label: t('metaCfg'),
                                             value: String(gp.guidanceScale),
                                             icon: <Settings2 size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     }
                                     if (gp.seedText != null && String(gp.seedText).length > 0) {
-                                        coreItems.push({ 
-                                            label: t('metaSeed'), 
+                                        coreItems.push({
+                                            label: t('metaSeed'),
                                             value: String(gp.seedText).substring(0, 12) + (String(gp.seedText).length > 12 ? '...' : ''),
                                             icon: <Hash size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     } else if (gp.seed != null && String(gp.seed).length > 0) {
-                                        coreItems.push({ 
-                                            label: t('metaSeed'), 
+                                        coreItems.push({
+                                            label: t('metaSeed'),
                                             value: String(gp.seed),
                                             icon: <Hash size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     }
                                     if (gp.inferMethod) {
-                                        coreItems.push({ 
-                                            label: t('metaInferMethod'), 
+                                        coreItems.push({
+                                            label: t('metaInferMethod'),
                                             value: gp.inferMethod.toUpperCase(),
                                             icon: <Zap size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     }
                                     if (gp.shift != null) {
-                                        coreItems.push({ 
-                                            label: t('metaShift'), 
+                                        coreItems.push({
+                                            label: t('metaShift'),
                                             value: String(gp.shift),
                                             icon: <Radio size={12} />,
                                             gradient: getGradient('settings')
@@ -763,107 +763,148 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
 
                                     // Advanced params
                                     if (gp.lmBackend) {
-                                        moreItems.push({ 
-                                            label: t('lmBackendLabel'), 
+                                        moreItems.push({
+                                            label: t('lmBackendLabel'),
                                             value: String(gp.lmBackend),
                                             icon: <Terminal size={12} />,
                                             gradient: getGradient('model')
                                         });
                                     }
                                     if (gp.thinking != null) {
-                                        moreItems.push({ 
-                                            label: t('thinking'), 
+                                        moreItems.push({
+                                            label: t('thinking'),
                                             value: gp.thinking ? 'ON' : 'OFF',
                                             icon: <Zap size={12} />,
                                             gradient: getGradient('settings')
                                         });
                                     }
-                                    if (gp.useAdg != null) {
-                                        moreItems.push({ 
-                                            label: t('useAdg'), 
-                                            value: gp.useAdg ? 'ON' : 'OFF',
-                                            icon: <Settings2 size={12} />,
-                                            gradient: getGradient('settings')
-                                        });
-                                    }
+
                                     if (gp.batchSize != null) {
-                                        moreItems.push({ 
-                                            label: t('batchSize'), 
+                                        moreItems.push({
+                                            label: t('batchSize'),
                                             value: String(gp.batchSize),
                                             icon: <Layers size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     }
+                                    if (gp.guidanceMode) {
+                                        moreItems.push({
+                                            label: t('guidanceMode'),
+                                            value: String(gp.guidanceMode).toUpperCase(),
+                                            icon: <Settings2 size={12} />,
+                                            gradient: getGradient('settings')
+                                        });
+                                    }
+                                    if (gp.usePag != null && gp.usePag) {
+                                        moreItems.push({
+                                            label: t('usePag'),
+                                            value: `Scale: ${gp.pagScale || 'Default'}`,
+                                            icon: <Settings2 size={12} />,
+                                            gradient: getGradient('settings')
+                                        });
+                                    }
                                     if (gp.allowLmBatch != null) {
-                                        moreItems.push({ 
-                                            label: t('allowLmBatch'), 
+                                        moreItems.push({
+                                            label: t('allowLmBatch'),
                                             value: gp.allowLmBatch ? 'ON' : 'OFF',
                                             icon: <Zap size={12} />,
                                             gradient: getGradient('settings')
                                         });
                                     }
                                     if (gp.useCotMetas != null) {
-                                        moreItems.push({ 
-                                            label: t('useCotMetas'), 
+                                        moreItems.push({
+                                            label: t('useCotMetas'),
                                             value: gp.useCotMetas ? 'ON' : 'OFF',
                                             icon: <Settings2 size={12} />,
                                             gradient: getGradient('settings')
                                         });
                                     }
                                     if (gp.useCotCaption != null) {
-                                        moreItems.push({ 
-                                            label: t('useCotCaption'), 
+                                        moreItems.push({
+                                            label: t('useCotCaption'),
                                             value: gp.useCotCaption ? 'ON' : 'OFF',
                                             icon: <Settings2 size={12} />,
                                             gradient: getGradient('settings')
                                         });
                                     }
                                     if (gp.useCotLanguage != null) {
-                                        moreItems.push({ 
-                                            label: t('useCotLanguage'), 
+                                        moreItems.push({
+                                            label: t('useCotLanguage'),
                                             value: gp.useCotLanguage ? 'ON' : 'OFF',
                                             icon: <Settings2 size={12} />,
                                             gradient: getGradient('settings')
                                         });
                                     }
                                     if (gp.autogen != null) {
-                                        moreItems.push({ 
-                                            label: t('autogen'), 
+                                        moreItems.push({
+                                            label: t('autogen'),
                                             value: gp.autogen ? 'ON' : 'OFF',
                                             icon: <Sparkles size={12} />,
                                             gradient: getGradient('settings')
                                         });
                                     }
                                     if (gp.constrainedDecodingDebug != null) {
-                                        moreItems.push({ 
-                                            label: t('constrainedDecodingDebug'), 
+                                        moreItems.push({
+                                            label: t('constrainedDecodingDebug'),
                                             value: gp.constrainedDecodingDebug ? 'ON' : 'OFF',
                                             icon: <Terminal size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     }
                                     if (gp.isFormatCaption != null) {
-                                        moreItems.push({ 
-                                            label: t('formatCaption'), 
+                                        moreItems.push({
+                                            label: t('formatCaption'),
                                             value: gp.isFormatCaption ? 'ON' : 'OFF',
                                             icon: <Settings2 size={12} />,
                                             gradient: getGradient('settings')
                                         });
                                     }
                                     if (gp.getScores != null) {
-                                        moreItems.push({ 
-                                            label: t('getScores'), 
+                                        moreItems.push({
+                                            label: t('getScores'),
                                             value: gp.getScores ? 'ON' : 'OFF',
                                             icon: <Gauge size={12} />,
                                             gradient: getGradient('tech')
                                         });
                                     }
                                     if (gp.getLrc != null) {
-                                        moreItems.push({ 
-                                            label: t('getLrcLyrics'), 
+                                        moreItems.push({
+                                            label: t('getLrcLyrics'),
                                             value: gp.getLrc ? 'ON' : 'OFF',
                                             icon: <Mic2 size={12} />,
                                             gradient: getGradient('settings')
+                                        });
+                                    }
+
+                                    // Adapters — only show basic LoRA if NOT using advanced multi-adapter
+                                    if (gp.loraLoaded && gp.loraPath && !gp.advancedAdapters) {
+                                        moreItems.push({
+                                            label: 'Basic LoRA',
+                                            value: `${gp.loraPath.split('/').pop()} (Scale: ${gp.loraScale || 1.0})`,
+                                            icon: <Box size={12} />,
+                                            gradient: getGradient('model')
+                                        });
+                                    }
+                                    if (gp.advancedAdapters && Array.isArray(gp.adapterSlots)) {
+                                        gp.adapterSlots.forEach((slot: any, idx: number) => {
+                                            moreItems.push({
+                                                label: `Adapter Slot ${slot.slot}`,
+                                                value: `${slot.name || slot.path.split('/').pop()} (${slot.type || 'unknown'}, Scale: ${slot.scale || 1.0})`,
+                                                icon: <Box size={12} />,
+                                                gradient: getGradient('model')
+                                            });
+                                        });
+                                    }
+
+                                    // Steering
+                                    if (gp.steeringEnabled && gp.steeringAlphas) {
+                                        Object.entries(gp.steeringAlphas).forEach(([concept, alpha]) => {
+                                            moreItems.push({
+                                                label: `Steering Concept`,
+                                                value: `${concept} (Alpha: ${alpha})`,
+                                                icon: <Wand2 size={12} />,
+                                                gradient: getGradient('tech')
+                                            });
                                         });
                                     }
 
@@ -871,8 +912,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                     if (all.length === 0) return null;
 
                                     return all.map((item, idx) => (
-                                        <div 
-                                            key={idx} 
+                                        <div
+                                            key={idx}
                                             className={`group relative flex items-center gap-2 px-3 py-2.5 bg-gradient-to-br ${item.gradient} rounded-xl border hover:shadow-md hover:scale-[1.02] transition-all duration-200 cursor-default`}
                                         >
                                             <div className="flex-shrink-0 w-5 h-5 rounded-md bg-white/60 dark:bg-black/30 flex items-center justify-center">
@@ -882,8 +923,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                                 <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-0.5">
                                                     {item.label}
                                                 </div>
-                                                <div 
-                                                    className="text-xs font-bold text-zinc-800 dark:text-zinc-100 truncate font-mono" 
+                                                <div
+                                                    className="text-xs font-bold text-zinc-800 dark:text-zinc-100 truncate font-mono"
                                                     title={item.value}
                                                 >
                                                     {item.value}
