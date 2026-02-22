@@ -18,17 +18,25 @@ const EXTRACT_TRACKS = [
 ];
 
 interface ExtractTrackSelectorProps {
-    extractTrack: string;
-    setExtractTrack: (val: string) => void;
+    extractTracks: string[];
+    setExtractTracks: (val: string[]) => void;
     isTurboModel?: boolean;
 }
 
 export const ExtractTrackSelector: React.FC<ExtractTrackSelectorProps> = ({
-    extractTrack,
-    setExtractTrack,
+    extractTracks,
+    setExtractTracks,
     isTurboModel = false,
 }) => {
     const { t } = useI18n();
+
+    const toggleTrack = (value: string) => {
+        if (extractTracks.includes(value)) {
+            setExtractTracks(extractTracks.filter(v => v !== value));
+        } else {
+            setExtractTracks([...extractTracks, value]);
+        }
+    };
 
     return (
         <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden">
@@ -37,21 +45,32 @@ export const ExtractTrackSelector: React.FC<ExtractTrackSelectorProps> = ({
                     <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
                         {t('extractTrack')}
                     </span>
-                    <select
-                        value={extractTrack}
-                        onChange={(e) => setExtractTrack(e.target.value)}
-                        className="bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white"
-                    >
-                        <option value="">{t('selectTrackToExtract')}</option>
-                        {EXTRACT_TRACKS.map(({ value, key }) => (
-                            <option key={value} value={value}>
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                        {extractTracks.length > 0
+                            ? `${extractTracks.length} ${t('tracksSelected')}`
+                            : t('selectTrackToExtract')}
+                    </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                    {EXTRACT_TRACKS.map(({ value, key }) => {
+                        const isSelected = extractTracks.includes(value);
+                        return (
+                            <button
+                                key={value}
+                                type="button"
+                                onClick={() => toggleTrack(value)}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${isSelected
+                                        ? 'bg-pink-600 text-white border-pink-500'
+                                        : 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
+                                    }`}
+                            >
                                 {t(key)}
-                            </option>
-                        ))}
-                    </select>
+                            </button>
+                        );
+                    })}
                 </div>
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                    {t('extractTrackTooltip')}
+                    {t('extractTrackTooltipMulti')}
                 </p>
                 {isTurboModel && (
                     <p className="text-[10px] text-amber-500 dark:text-amber-400 font-medium">

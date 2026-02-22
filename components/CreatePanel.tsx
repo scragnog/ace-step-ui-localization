@@ -230,7 +230,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [scoreScale, setScoreScale] = usePersistedState('ace-scoreScale', 0.5);
   const [lmBatchChunkSize, setLmBatchChunkSize] = usePersistedState('ace-lmBatchChunkSize', 8);
   const [trackName, setTrackName] = useState('');
-  const [extractTrack, setExtractTrack] = usePersistedState('ace-extractTrack', 'vocals');
+  const [extractTracks, setExtractTracks] = usePersistedState<string[]>('ace-extractTracks', ['vocals']);
   const [completeTrackClasses, setCompleteTrackClasses] = useState('');
   const [isFormatCaption, setIsFormatCaption] = usePersistedState('ace-isFormatCaption', false);
   const [maxDurationWithLm, setMaxDurationWithLm] = usePersistedState('ace-maxDurationWithLm', 240);
@@ -1391,104 +1391,111 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       return trimmed ? `${trimmed}\n${genderHint}` : genderHint;
     })();
 
-    // Bulk generation: loop bulkCount times
-    for (let i = 0; i < bulkCount; i++) {
-      // Seed handling: first job uses user's seed, rest get random seeds
-      let jobSeed = -1;
-      if (!randomSeed && i === 0) {
-        jobSeed = seed;
-      } else if (!randomSeed && i > 0) {
-        // Subsequent jobs get random seeds for variety
-        jobSeed = Math.floor(Math.random() * 4294967295);
-      }
+    // For extract mode: one job per selected track; for others: single iteration
+    const tracksToExtract = taskType === 'extract' ? (extractTracks.length > 0 ? extractTracks : ['vocals']) : [null as string | null];
 
-      onGenerate({
-        customMode,
-        songDescription: taskType === 'extract' ? undefined : (customMode ? undefined : songDescription),
-        prompt: taskType === 'extract'
-          ? ((extractTrack === 'vocals' || extractTrack === 'backing_vocals') ? lyrics : '')
-          : lyrics,
-        lyrics: taskType === 'extract'
-          ? ((extractTrack === 'vocals' || extractTrack === 'backing_vocals') ? lyrics : '')
-          : lyrics,
-        style: taskType === 'extract' ? '' : styleWithGender,
-        title: taskType === 'extract'
-          ? `Extract ${extractTrack}`
-          : (bulkCount > 1 ? `${title} (${i + 1})` : title),
-        ditModel: selectedModel,
-        instrumental: taskType === 'extract'
-          ? (extractTrack !== 'vocals' && extractTrack !== 'backing_vocals')
-          : instrumental,
-        vocalLanguage,
-        bpm,
-        keyScale,
-        timeSignature,
-        duration,
-        inferenceSteps,
-        guidanceScale,
-        batchSize,
-        randomSeed: randomSeed || i > 0, // Force random for subsequent bulk jobs
-        seed: jobSeed,
-        thinking,
-        audioFormat,
-        inferMethod,
-        lmBackend,
-        lmModel,
-        shift,
-        lmTemperature,
-        lmCfgScale,
-        lmTopK,
-        lmTopP,
-        lmNegativePrompt,
-        steeringEnabled,
-        steeringLoaded,
-        steeringAlphas,
-        referenceAudioUrl: referenceAudioUrl.trim() || undefined,
-        sourceAudioUrl: sourceAudioUrl.trim() || undefined,
-        referenceAudioTitle: referenceAudioTitle.trim() || undefined,
-        sourceAudioTitle: sourceAudioTitle.trim() || undefined,
-        audioCodes: audioCodes.trim() || undefined,
-        repaintingStart,
-        repaintingEnd,
-        instruction: taskType === 'extract' && extractTrack
-          ? `Extract the ${extractTrack.toUpperCase()} track from the audio:`
-          : instruction,
-        audioCoverStrength,
-        taskType,
-        useAdg: guidanceMode === 'adg',
-        guidanceMode,
-        usePag: guidanceMode === 'pag',
-        pagStart: guidanceMode === 'pag' ? pagStart : undefined,
-        pagEnd: guidanceMode === 'pag' ? pagEnd : undefined,
-        pagScale: guidanceMode === 'pag' ? pagScale : undefined,
-        cfgIntervalStart,
-        cfgIntervalEnd,
-        customTimesteps: customTimesteps.trim() || undefined,
-        useCotMetas,
-        useCotCaption,
-        useCotLanguage,
-        autogen,
-        constrainedDecodingDebug,
-        allowLmBatch,
-        getScores,
-        getLrc,
-        scoreScale,
-        lmBatchChunkSize,
-        loraPath: loraPath.trim() || undefined,
-        loraScale,
-        advancedAdapters,
-        adapterSlots: advancedAdapters ? adapterSlots : undefined,
-        trackName: taskType === 'extract' ? (extractTrack || undefined) : (trackName.trim() || undefined),
-        completeTrackClasses: (() => {
-          const parsed = completeTrackClasses
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean);
-          return parsed.length ? parsed : undefined;
-        })(),
-        isFormatCaption,
-        loraLoaded,
-      });
+    // Bulk generation: loop bulkCount times per track
+    for (const currentTrack of tracksToExtract) {
+      for (let i = 0; i < bulkCount; i++) {
+        // Seed handling: first job uses user's seed, rest get random seeds
+        let jobSeed = -1;
+        if (!randomSeed && i === 0 && currentTrack === tracksToExtract[0]) {
+          jobSeed = seed;
+        } else if (!randomSeed) {
+          // Subsequent jobs get random seeds for variety
+          jobSeed = Math.floor(Math.random() * 4294967295);
+        }
+
+        const isVocalTrack = currentTrack === 'vocals' || currentTrack === 'backing_vocals';
+
+        onGenerate({
+          customMode,
+          songDescription: taskType === 'extract' ? undefined : (customMode ? undefined : songDescription),
+          prompt: taskType === 'extract'
+            ? (isVocalTrack ? lyrics : '')
+            : lyrics,
+          lyrics: taskType === 'extract'
+            ? (isVocalTrack ? lyrics : '')
+            : lyrics,
+          style: taskType === 'extract' ? '' : styleWithGender,
+          title: taskType === 'extract'
+            ? `Extract ${currentTrack}`
+            : (bulkCount > 1 ? `${title} (${i + 1})` : title),
+          ditModel: selectedModel,
+          instrumental: taskType === 'extract'
+            ? !isVocalTrack
+            : instrumental,
+          vocalLanguage,
+          bpm,
+          keyScale,
+          timeSignature,
+          duration,
+          inferenceSteps,
+          guidanceScale,
+          batchSize,
+          randomSeed: randomSeed || i > 0 || currentTrack !== tracksToExtract[0],
+          seed: jobSeed,
+          thinking,
+          audioFormat,
+          inferMethod,
+          lmBackend,
+          lmModel,
+          shift,
+          lmTemperature,
+          lmCfgScale,
+          lmTopK,
+          lmTopP,
+          lmNegativePrompt,
+          steeringEnabled,
+          steeringLoaded,
+          steeringAlphas,
+          referenceAudioUrl: referenceAudioUrl.trim() || undefined,
+          sourceAudioUrl: sourceAudioUrl.trim() || undefined,
+          referenceAudioTitle: referenceAudioTitle.trim() || undefined,
+          sourceAudioTitle: sourceAudioTitle.trim() || undefined,
+          audioCodes: audioCodes.trim() || undefined,
+          repaintingStart,
+          repaintingEnd,
+          instruction: taskType === 'extract' && currentTrack
+            ? `Extract the ${currentTrack.toUpperCase()} track from the audio:`
+            : instruction,
+          audioCoverStrength,
+          taskType,
+          useAdg: guidanceMode === 'adg',
+          guidanceMode,
+          usePag: guidanceMode === 'pag',
+          pagStart: guidanceMode === 'pag' ? pagStart : undefined,
+          pagEnd: guidanceMode === 'pag' ? pagEnd : undefined,
+          pagScale: guidanceMode === 'pag' ? pagScale : undefined,
+          cfgIntervalStart,
+          cfgIntervalEnd,
+          customTimesteps: customTimesteps.trim() || undefined,
+          useCotMetas,
+          useCotCaption,
+          useCotLanguage,
+          autogen,
+          constrainedDecodingDebug,
+          allowLmBatch,
+          getScores,
+          getLrc,
+          scoreScale,
+          lmBatchChunkSize,
+          loraPath: loraPath.trim() || undefined,
+          loraScale,
+          advancedAdapters,
+          adapterSlots: advancedAdapters ? adapterSlots : undefined,
+          trackName: taskType === 'extract' ? (currentTrack || undefined) : (trackName.trim() || undefined),
+          completeTrackClasses: (() => {
+            const parsed = completeTrackClasses
+              .split(',')
+              .map((item) => item.trim())
+              .filter(Boolean);
+            return parsed.length ? parsed : undefined;
+          })(),
+          isFormatCaption,
+          loraLoaded,
+        });
+      }
     }
   };
 
@@ -1552,7 +1559,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       scoreScale,
       lmBatchChunkSize,
       trackName,
-      extractTrack,
+      extractTracks,
       completeTrackClasses,
       isFormatCaption,
       loraPath,
@@ -1645,7 +1652,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         if (json.scoreScale !== undefined) setScoreScale(json.scoreScale);
         if (json.lmBatchChunkSize !== undefined) setLmBatchChunkSize(json.lmBatchChunkSize);
         if (json.trackName !== undefined) setTrackName(json.trackName);
-        if (json.extractTrack !== undefined) setExtractTrack(json.extractTrack);
+        if (json.extractTracks !== undefined) setExtractTracks(json.extractTracks);
+        // Backwards compat: old single-value format
+        if (json.extractTrack !== undefined && !json.extractTracks) setExtractTracks([json.extractTrack]);
         if (json.completeTrackClasses !== undefined) setCompleteTrackClasses(json.completeTrackClasses);
         if (json.isFormatCaption !== undefined) setIsFormatCaption(json.isFormatCaption);
         if (json.loraPath !== undefined) setLoraPath(json.loraPath);
@@ -1821,13 +1830,13 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         {taskType === 'extract' && (
           <>
             <ExtractTrackSelector
-              extractTrack={extractTrack}
-              setExtractTrack={setExtractTrack}
+              extractTracks={extractTracks}
+              setExtractTracks={setExtractTracks}
               isTurboModel={isTurboModel(selectedModel)}
             />
 
             {/* Optional lyrics guidance for vocal extraction */}
-            {(extractTrack === 'vocals' || extractTrack === 'backing_vocals') && (
+            {(extractTracks.includes('vocals') || extractTracks.includes('backing_vocals')) && (
               <div>
                 <div className="w-full flex items-center justify-between py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
                   <span>{t('lyricsGuidanceOptional')}</span>
