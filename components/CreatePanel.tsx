@@ -1828,18 +1828,17 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
             {/* Optional lyrics guidance for vocal extraction */}
             {(extractTrack === 'vocals' || extractTrack === 'backing_vocals') && (
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title text-xs">{t('lyricsGuidanceOptional')}</h3>
+              <div>
+                <div className="w-full flex items-center justify-between py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                  <span>{t('lyricsGuidanceOptional')}</span>
                 </div>
-                <div className="p-3">
+                <div className="bg-zinc-50 dark:bg-black/20 rounded-lg border border-zinc-200 dark:border-white/10 overflow-hidden relative flex flex-col transition-colors focus-within:border-pink-500 dark:focus-within:border-pink-500">
                   <textarea
-                    className="form-textarea w-full text-xs"
-                    rows={4}
                     value={lyrics}
                     onChange={(e) => setLyrics(e.target.value)}
                     placeholder={t('lyricsGuidancePlaceholder')}
-                    style={{ resize: 'vertical', minHeight: '60px' }}
+                    className="flex-1 bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none overflow-y-auto"
+                    style={{ minHeight: '100px', maxHeight: '200px' }}
                   />
                 </div>
               </div>
