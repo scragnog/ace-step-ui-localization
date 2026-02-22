@@ -93,4 +93,4 @@ if not defined ACESTEP_NO_BROWSER (
     echo   Skipped — using loading screen instead.
 )
 
-pause
+
