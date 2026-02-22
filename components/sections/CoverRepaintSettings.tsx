@@ -23,7 +23,7 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
 }) => {
     const { t } = useI18n();
 
-    if (taskType === 'text2music') return null;
+    if (taskType === 'text2music' || taskType === 'extract') return null;
 
     return (
         <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">

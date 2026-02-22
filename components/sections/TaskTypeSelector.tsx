@@ -26,7 +26,10 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
                     value={taskType}
                     onChange={(e) => {
                         setTaskType(e.target.value);
-                        if (e.target.value === 'text2music' && audioTab === 'source') {
+                        if (e.target.value === 'extract') {
+                            // Extract always needs source audio
+                            setAudioTab('source');
+                        } else if (e.target.value === 'text2music' && audioTab === 'source') {
                             setAudioTab('reference');
                         } else if (e.target.value !== 'text2music' && !useReferenceAudio) {
                             setAudioTab('source');
@@ -37,6 +40,7 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
                     <option value="text2music">{t('textToMusic')}</option>
                     <option value="cover">{t('coverTask')}</option>
                     <option value="repaint">{t('repaintTask')}</option>
+                    <option value="extract">{t('extractTask')}</option>
                     <option value="audio2audio">{t('audio2audio')}</option>
                 </select>
             </div>

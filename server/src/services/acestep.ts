@@ -191,8 +191,8 @@ async function submitToApi(params: GenerationParams): Promise<{ taskId: string }
     return audioUrl;
   };
 
-  // Guard: cover/audio2audio requires a source or audio codes
-  if ((params.taskType === 'cover' || params.taskType === 'audio2audio') && !params.sourceAudioUrl && !params.audioCodes) {
+  // Guard: cover/audio2audio/extract requires a source or audio codes
+  if ((params.taskType === 'cover' || params.taskType === 'audio2audio' || params.taskType === 'extract') && !params.sourceAudioUrl && !params.audioCodes) {
     throw new Error(`task_type='${params.taskType}' requires a source audio or audio codes`);
   }
 

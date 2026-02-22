@@ -15,6 +15,7 @@ import { MusicParametersSection } from './sections/MusicParametersSection';
 import { CoverRepaintSettings } from './sections/CoverRepaintSettings';
 import { CreatePanelHeader } from './sections/CreatePanelHeader';
 import { TaskTypeSelector } from './sections/TaskTypeSelector';
+import { ExtractTrackSelector } from './sections/ExtractTrackSelector';
 import { SimpleModeSettings } from './sections/SimpleModeSettings';
 import { TrackDetailsAccordion } from './accordions/TrackDetailsAccordion';
 import { AudioLibraryModal } from './sections/AudioLibraryModal';
@@ -229,6 +230,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [scoreScale, setScoreScale] = usePersistedState('ace-scoreScale', 0.5);
   const [lmBatchChunkSize, setLmBatchChunkSize] = usePersistedState('ace-lmBatchChunkSize', 8);
   const [trackName, setTrackName] = useState('');
+  const [extractTrack, setExtractTrack] = usePersistedState('ace-extractTrack', 'vocals');
   const [completeTrackClasses, setCompleteTrackClasses] = useState('');
   const [isFormatCaption, setIsFormatCaption] = usePersistedState('ace-isFormatCaption', false);
   const [maxDurationWithLm, setMaxDurationWithLm] = usePersistedState('ace-maxDurationWithLm', 240);
@@ -1315,6 +1317,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       if (taskType === 'text2music') {
         setTaskType('cover');
       }
+      // Don't override task type when in extract mode
     }
   };
 
@@ -1439,7 +1442,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         audioCodes: audioCodes.trim() || undefined,
         repaintingStart,
         repaintingEnd,
-        instruction,
+        instruction: taskType === 'extract' && extractTrack
+          ? `Extract the ${extractTrack.toUpperCase()} track from the audio:`
+          : instruction,
         audioCoverStrength,
         taskType,
         useAdg: guidanceMode === 'adg',
@@ -1465,7 +1470,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         loraScale,
         advancedAdapters,
         adapterSlots: advancedAdapters ? adapterSlots : undefined,
-        trackName: trackName.trim() || undefined,
+        trackName: taskType === 'extract' ? (extractTrack || undefined) : (trackName.trim() || undefined),
         completeTrackClasses: (() => {
           const parsed = completeTrackClasses
             .split(',')
@@ -1539,6 +1544,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       scoreScale,
       lmBatchChunkSize,
       trackName,
+      extractTrack,
       completeTrackClasses,
       isFormatCaption,
       loraPath,
@@ -1631,6 +1637,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         if (json.scoreScale !== undefined) setScoreScale(json.scoreScale);
         if (json.lmBatchChunkSize !== undefined) setLmBatchChunkSize(json.lmBatchChunkSize);
         if (json.trackName !== undefined) setTrackName(json.trackName);
+        if (json.extractTrack !== undefined) setExtractTrack(json.extractTrack);
         if (json.completeTrackClasses !== undefined) setCompleteTrackClasses(json.completeTrackClasses);
         if (json.isFormatCaption !== undefined) setIsFormatCaption(json.isFormatCaption);
         if (json.loraPath !== undefined) setLoraPath(json.loraPath);
@@ -1780,8 +1787,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           </button>
         </div>
 
-        {/* SIMPLE MODE */}
-        {!customMode && (
+        {/* SIMPLE MODE — hidden in extract mode */}
+        {!customMode && taskType !== 'extract' && (
           <SimpleModeSettings
             songDescription={songDescription}
             setSongDescription={setSongDescription}
@@ -1802,8 +1809,56 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           />
         )}
 
+        {/* EXTRACT TRACK SELECTOR — only in extract mode */}
+        {taskType === 'extract' && (
+          <>
+            <ExtractTrackSelector
+              extractTrack={extractTrack}
+              setExtractTrack={setExtractTrack}
+              isTurboModel={isTurboModel(selectedModel)}
+            />
+            <AudioSelectionSection
+              useReferenceAudio={false}
+              setUseReferenceAudio={setUseReferenceAudio}
+              taskType={taskType}
+              audioTab={'source'}
+              setAudioTab={setAudioTab}
+              referenceAudioUrl={referenceAudioUrl}
+              referenceAudioTitle={referenceAudioTitle}
+              referencePlaying={referencePlaying}
+              toggleAudio={toggleAudio}
+              referenceDuration={referenceDuration}
+              referenceTime={referenceTime}
+              referenceAudioRef={referenceAudioRef}
+              setReferenceAudioUrl={setReferenceAudioUrl}
+              setReferenceAudioTitle={setReferenceAudioTitle}
+              setReferencePlaying={setReferencePlaying}
+              setReferenceTime={setReferenceTime}
+              setReferenceDuration={setReferenceDuration}
+              sourceAudioUrl={sourceAudioUrl}
+              sourceAudioTitle={sourceAudioTitle}
+              sourcePlaying={sourcePlaying}
+              sourceDuration={sourceDuration}
+              sourceTime={sourceTime}
+              sourceAudioRef={sourceAudioRef}
+              setSourceAudioUrl={setSourceAudioUrl}
+              setSourceAudioTitle={setSourceAudioTitle}
+              setSourcePlaying={setSourcePlaying}
+              setSourceTime={setSourceTime}
+              setSourceDuration={setSourceDuration}
+              openAudioModal={openAudioModal}
+              referenceInputRef={referenceInputRef}
+              sourceInputRef={sourceInputRef}
+              handleDrop={handleDrop}
+              handleDragOver={handleDragOver}
+              formatTime={formatTime}
+              getAudioLabel={getAudioLabel}
+            />
+          </>
+        )}
+
         {/* CUSTOM MODE */}
-        {customMode && (
+        {customMode && taskType !== 'extract' && (
           <div className="space-y-5">
             {/* Audio Section - Conditionally rendered */}
 
@@ -1847,8 +1902,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           </div>
         )}
 
-        {/* TRACK DETAILS ACCORDION (Custom mode only) */}
-        {customMode && (
+        {/* TRACK DETAILS ACCORDION (Custom mode only, hidden in extract mode) */}
+        {customMode && taskType !== 'extract' && (
           <TrackDetailsAccordion
             showTrackDetails={showTrackDetails}
             setShowTrackDetails={setShowTrackDetails}
@@ -1905,10 +1960,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           />
         )}
 
-        {/* COMMON SETTINGS (Simple mode only) */}
+        {/* COMMON SETTINGS (Simple mode only, hidden in extract mode) */}
         <div className="space-y-4">
           {/* Instrumental Toggle (Simple Mode) */}
-          {!customMode && (
+          {!customMode && taskType !== 'extract' && (
             <div className="flex items-center justify-between px-1 py-2">
               <div className="flex items-center gap-2">
                 <Music2 size={14} className="text-zinc-500" />
