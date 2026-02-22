@@ -1404,13 +1404,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
       onGenerate({
         customMode,
-        songDescription: customMode ? undefined : songDescription,
-        prompt: lyrics,
-        lyrics,
-        style: styleWithGender,
-        title: bulkCount > 1 ? `${title} (${i + 1})` : title,
+        songDescription: taskType === 'extract' ? undefined : (customMode ? undefined : songDescription),
+        prompt: taskType === 'extract' ? '' : lyrics,
+        lyrics: taskType === 'extract' ? '' : lyrics,
+        style: taskType === 'extract' ? '' : styleWithGender,
+        title: taskType === 'extract'
+          ? `Extract ${extractTrack}`
+          : (bulkCount > 1 ? `${title} (${i + 1})` : title),
         ditModel: selectedModel,
-        instrumental,
+        instrumental: taskType === 'extract' ? true : instrumental,
         vocalLanguage,
         bpm,
         keyScale,
