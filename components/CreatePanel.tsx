@@ -1417,7 +1417,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           lyrics: taskType === 'extract'
             ? (isVocalTrack ? lyrics : '')
             : lyrics,
-          style: taskType === 'extract' ? '' : styleWithGender,
+          style: taskType === 'extract' ? style : styleWithGender,
           title: taskType === 'extract'
             ? `${(currentTrack || 'extract').charAt(0).toUpperCase() + (currentTrack || 'extract').slice(1).replace('_', ' ')}${sourceAudioTitle ? ` - ${sourceAudioTitle}` : ''}`
             : (bulkCount > 1 ? `${title} (${i + 1})` : title),
@@ -1867,6 +1867,22 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Optional style hint for extract */}
+            <div>
+              <div className="w-full flex items-center justify-between py-2 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                <span>{t('extractStyleHint')}</span>
+              </div>
+              <div className="bg-zinc-50 dark:bg-black/20 rounded-lg border border-zinc-200 dark:border-white/10 overflow-hidden relative flex flex-col transition-colors focus-within:border-pink-500 dark:focus-within:border-pink-500">
+                <textarea
+                  value={style}
+                  onChange={(e) => setStyle(e.target.value)}
+                  placeholder={t('extractStyleHintPlaceholder')}
+                  className="flex-1 bg-transparent p-3 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none resize-none overflow-y-auto"
+                  style={{ minHeight: '60px', maxHeight: '120px' }}
+                />
               </div>
             </div>
 

@@ -550,6 +550,8 @@ export const translations = {
     extractLow: 'Low (Quick)',
     extractMedium: 'Medium',
     extractHigh: 'High (Slow)',
+    extractStyleHint: 'Style Hint (Optional)',
+    extractStyleHintPlaceholder: 'e.g. "distorted electric guitar, heavy rock" or "female soprano vocals, jazz"',
 
     // Search Page
     searchSongsPlaceholder: 'Search for songs, playlists, creators, or genres',
@@ -1413,6 +1415,8 @@ export const translations = {
     extractLow: '低（快速）',
     extractMedium: '中',
     extractHigh: '高（慢速）',
+    extractStyleHint: '风格提示（可选）',
+    extractStyleHintPlaceholder: '例如：“失真电吉他，重型摇滚”或“女高音人声，爵士”',
 
     // Search Page
     searchSongsPlaceholder: '搜索歌曲、播放列表、创作者或风格',
@@ -2302,6 +2306,8 @@ export const translations = {
     extractLow: '低（高速）',
     extractMedium: '中',
     extractHigh: '高（低速）',
+    extractStyleHint: 'スタイルヒント（任意）',
+    extractStyleHintPlaceholder: '例: 「ディストーションギター、ヘビーロック」または「女性ソプラノボーカル、ジャズ」',
 
     // Search Page
     searchSongsPlaceholder: '曲、プレイリスト、クリエイター、スタイルを検索',
@@ -3177,6 +3183,8 @@ export const translations = {
     extractLow: '낮음 (빠름)',
     extractMedium: '중간',
     extractHigh: '높음 (느림)',
+    extractStyleHint: '스타일 힌트 (선택사항)',
+    extractStyleHintPlaceholder: '예: "디스토션 전기 기타, 헤비 록" 또는 "여성 소프라노 보컬, 재즈"',
 
     // Search Page
     searchSongsPlaceholder: '곡, 재생목록, 제작자 또는 스타일 검색',
