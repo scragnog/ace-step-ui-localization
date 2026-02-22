@@ -30,7 +30,7 @@ const VOCAL_LANGUAGE_VALUES = [
 ];
 import { useI18n } from '../context/I18nContext';
 import { useAuth } from '../context/AuthContext';
-import { trainingApi, DatasetSample } from '../services/api';
+import { trainingApi, DatasetSample, TrainingStatus } from '../services/api';
 
 interface DisplaySample {
   index: number;
@@ -88,7 +88,11 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
   const [savePath, setSavePath] = useState('./datasets/my_lora_dataset.json');
   const [saveStatus, setSaveStatus] = useState('');
   const [hasLoadedDatasetJson, setHasLoadedDatasetJson] = useState(false);
-  const [preprocessOutputDir, setPreprocessOutputDir] = useState('./datasets/preprocessed_tensors');
+  const [preprocessOutputDir, _setPreprocessOutputDir] = useState('./datasets/preprocessed_tensors');
+  const setPreprocessOutputDir = (v: string) => {
+    _setPreprocessOutputDir(v);
+    setTrainingTensorDir(v);
+  };
   const [preprocessSkipExisting, setPreprocessSkipExisting] = useState<boolean>(() => {
     const v = localStorage.getItem('ace-preprocessSkipExisting');
     return v === '1' || v === 'true';
@@ -150,7 +154,7 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
   const [iframeKey, setIframeKey] = useState(0);
   const [trainingStartTime, setTrainingStartTime] = useState<number | null>(null);
   const [currentEpoch, setCurrentEpoch] = useState(0);
-  const [trainingStatus, setTrainingStatus] = useState<any>(null);
+  const [trainingStatus, setTrainingStatus] = useState<TrainingStatus | null>(null);
 
   const trainingLogRef = useRef('');
   const showTensorboardRef = useRef(false);
@@ -747,6 +751,7 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
 
   const handleStartTraining = async () => {
     if (!token) return;
+    console.log('[Training] Starting training with tensor_dir:', trainingTensorDir, 'adapter:', adapterType);
     setTrainingProgress(t('startingTraining'));
     try {
       let result: any;
@@ -1662,17 +1667,17 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
               {/* Training Progress */}
               {trainingProgress && trainingStatus && (() => {
                 const status = trainingStatus;
-                const currentEpoch = status.current_epoch || 0;
-                const totalEpochs = status.config?.epochs || 1;
-                const currentStep = status.current_step || 0;
+                const currentEpoch = Number(status.current_epoch || 0);
+                const totalEpochs = Math.max(1, Number(status.config?.epochs || 1));
+                const currentStep = Math.max(0, Number(status.current_step || 0));
                 const currentLoss = status.current_loss?.toFixed(4) || 'N/A';
+                const totalSteps = Math.max(0, Number(status.total_steps || 0));
+                const totalStepsLabel = totalSteps > 0 ? totalSteps.toString() : '--';
 
-                // Calculate steps per epoch and total steps
-                const stepsPerEpoch = currentEpoch > 0 ? Math.ceil(currentStep / currentEpoch) : currentStep;
-                const totalSteps = totalEpochs * stepsPerEpoch;
-
-                // Calculate progress percentage
+                // Prefer step-based progress when backend provides total_steps.
                 const epochProgress = (currentEpoch / totalEpochs) * 100;
+                const stepProgress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : null;
+                const progressPercent = stepProgress !== null ? stepProgress : epochProgress;
 
                 // Format elapsed time
                 const elapsed = trainingStartTime ? Math.floor(Date.now() / 1000 - trainingStartTime) : 0;
@@ -1725,7 +1730,7 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
                     <div className="space-y-3">
                       <div className="bg-white/50 dark:bg-zinc-800/50 rounded-lg p-3 flex items-center justify-between text-sm">
                         <span className="text-zinc-700 dark:text-zinc-200 font-medium">
-                          Epoch {currentEpoch}/{totalEpochs} - Step {currentStep}/{totalSteps} - Loss: {currentLoss}
+                          Epoch {currentEpoch}/{totalEpochs} - Step {currentStep}/{totalStepsLabel} - Loss: {currentLoss}
                         </span>
                         <span className="text-xs font-mono text-zinc-500 dark:text-emerald-400 font-semibold">{speedStr}</span>
                       </div>
@@ -1734,11 +1739,11 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
                       <div className="relative w-full h-6 bg-white/30 dark:bg-zinc-800/50 rounded-full overflow-hidden shadow-inner border-2 border-emerald-300 dark:border-emerald-700">
                         <div
                           className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-300 ease-out"
-                          style={{ width: `${Math.min(epochProgress, 100)}%` }}
+                          style={{ width: `${Math.min(progressPercent, 100)}%` }}
                         />
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span className="text-xs font-semibold text-zinc-800 dark:text-white drop-shadow-md">
-                            {epochProgress.toFixed(1)}%
+                            {progressPercent.toFixed(1)}%
                           </span>
                         </div>
                       </div>

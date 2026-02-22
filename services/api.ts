@@ -708,6 +708,7 @@ export interface TrainingStatus {
   is_training: boolean;
   should_stop: boolean;
   current_step?: number;
+  total_steps?: number;
   current_loss?: number;
   current_epoch?: number;
   status?: string;
