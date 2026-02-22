@@ -57,7 +57,8 @@ app.use(helmet({
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
+    // Also allow 'null' origin from file:// pages (loading screen)
+    if (!origin || origin === 'null') return callback(null, true);
     // Allow localhost and 127.0.0.1 on any port in development
     if (config.nodeEnv === 'development') {
       if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
