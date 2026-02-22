@@ -49,39 +49,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ${isOpen ? 'w-[200px]' : 'w-[72px]'}
       `}>
         {/* Logo & Brand */}
-        <div className="px-3 mb-8 flex items-center justify-between">
+        <div className={`mb-8 flex items-center ${isOpen ? 'px-3' : 'justify-center'}`}>
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center cursor-pointer shadow-lg hover:scale-105 transition-transform flex-shrink-0"
-              onClick={() => onNavigate('create')}
-              title={t('aceStepUI')}
+            <button
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform flex-shrink-0"
+              onClick={onToggle}
+              title={isOpen ? t('collapse') : t('aceStepUI')}
             >
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <svg className={`w-5 h-5 text-white transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </div>
+            </button>
             {isOpen && (
               <span className="text-lg font-bold text-zinc-900 dark:text-white whitespace-nowrap">ACE Step</span>
             )}
           </div>
-          {/* Collapse/Expand Button */}
-          {onToggle && (
-            <button
-              onClick={onToggle}
-              className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors flex-shrink-0"
-              title={isOpen ? t('collapseSidebar') : t('expandSidebar')}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                )}
-              </svg>
-            </button>
-          )}
         </div>
 
         <nav className="flex-1 flex flex-col gap-2 w-full px-3">

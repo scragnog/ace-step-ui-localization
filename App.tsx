@@ -23,6 +23,8 @@ import { PlaylistDetail } from './components/PlaylistDetail';
 import { Toast, ToastType } from './components/Toast';
 import { SearchPage } from './components/SearchPage';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import DebugPanel from './components/DebugPanel';
+import { usePersistedState } from './hooks/usePersistedState';
 
 
 type AppErrorBoundaryProps = PropsWithChildren<{}>;
@@ -90,6 +92,12 @@ function AppContent() {
 
   // Responsive
   const { isMobile, isDesktop } = useResponsive();
+
+  // Debug panel state (App.tsx owns it, passes to DebugPanel as props)
+  const [debugPanelOpen, setDebugPanelOpen] = usePersistedState('ace-debugPanelOpen', false);
+
+  // Create panel resizable width (persisted)
+  const [createPanelWidth, setCreatePanelWidth] = usePersistedState('ace-createPanelWidth', 360);
 
   // Auth
   const { user, token, isAuthenticated, isLoading: authLoading, setupUser, logout } = useAuth();
@@ -1575,8 +1583,11 @@ function AppContent() {
       default:
         return (
           <div className="flex h-full overflow-hidden relative w-full bg-zinc-50 dark:bg-suno-panel">
-            {/* Create Panel */}
-            <div className="w-full md:w-[320px] lg:w-[360px] flex-shrink-0 h-full border-r border-zinc-200 dark:border-white/5 relative z-10">
+            {/* Create Panel — resizable */}
+            <div
+              className="w-full md:w-auto flex-shrink-0 h-full border-r border-zinc-200 dark:border-white/5 relative z-10"
+              style={{ width: isDesktop ? createPanelWidth : undefined }}
+            >
               <CreatePanel
                 onGenerate={handleGenerate}
                 isGenerating={isGenerating}
@@ -1586,6 +1597,31 @@ function AppContent() {
                 pendingAudioSelection={pendingAudioSelection}
                 onAudioSelectionApplied={() => setPendingAudioSelection(null)}
               />
+              {/* Resize handle */}
+              <div
+                className="hidden md:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize group z-20 hover:bg-pink-500/20 active:bg-pink-500/30 transition-colors"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const startX = e.clientX;
+                  const startW = createPanelWidth;
+                  const onMove = (ev: MouseEvent) => {
+                    const newW = Math.min(600, Math.max(280, startW + ev.clientX - startX));
+                    setCreatePanelWidth(newW);
+                  };
+                  const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                  };
+                  document.body.style.cursor = 'col-resize';
+                  document.body.style.userSelect = 'none';
+                  document.addEventListener('mousemove', onMove);
+                  document.addEventListener('mouseup', onUp);
+                }}
+              >
+                <div className="absolute top-1/2 -translate-y-1/2 left-0.5 w-0.5 h-8 rounded-full bg-zinc-600 group-hover:bg-pink-400 transition-colors" />
+              </div>
             </div>
 
             {/* Song List */}
@@ -1644,7 +1680,10 @@ function AppContent() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-suno-DEFAULT text-zinc-900 dark:text-white font-sans antialiased selection:bg-pink-500/30 transition-colors duration-300">
+    <div
+      className="flex flex-col h-screen bg-white dark:bg-suno-DEFAULT text-zinc-900 dark:text-white font-sans antialiased selection:bg-pink-500/30 transition-all duration-300"
+      style={{ paddingRight: debugPanelOpen ? 400 : 0 }}
+    >
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           currentView={currentView}
@@ -1807,6 +1846,9 @@ function AppContent() {
         onConfirm={() => confirmDialog?.onConfirm()}
         onCancel={() => setConfirmDialog(null)}
       />
+
+      {/* Debug Panel */}
+      <DebugPanel isOpen={debugPanelOpen} onToggle={() => setDebugPanelOpen(prev => !prev)} />
 
       {/* Shutdown overlay */}
       {isShutdown && (
