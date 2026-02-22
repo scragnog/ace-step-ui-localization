@@ -128,6 +128,11 @@ interface GenerateBody {
   isFormatCaption?: boolean;
   loraLoaded?: boolean;
 
+  // Activation Steering
+  steeringEnabled?: boolean;
+  steeringLoaded?: string[];
+  steeringAlphas?: Record<string, number>;
+
   // PAG (Perturbed-Attention Guidance)
   usePag?: boolean;
   pagStart?: number;
@@ -245,6 +250,9 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       pagStart,
       pagEnd,
       pagScale,
+      steeringEnabled,
+      steeringLoaded,
+      steeringAlphas,
     } = req.body as GenerateBody;
 
     if (!customMode && !songDescription) {
@@ -319,6 +327,9 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       pagStart,
       pagEnd,
       pagScale,
+      steeringEnabled,
+      steeringLoaded,
+      steeringAlphas,
     };
 
     // Create job record in database
@@ -369,6 +380,9 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         pag_end: params.pagEnd ?? 0.80,
         pag_scale: params.pagScale ?? 0.2,
         audio_format: params.audioFormat || 'mp3',
+        steering_enabled: params.steeringEnabled || false,
+        steering_loaded: params.steeringLoaded || [],
+        steering_alphas: params.steeringAlphas || {},
         ...(!params.loraLoaded && params.thinking ? {
           lm_model_path: params.lmModel || undefined,
           lm_backend: params.lmBackend || 'pt',

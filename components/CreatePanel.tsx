@@ -22,6 +22,7 @@ import { CreateButtonFooter } from './sections/CreateButtonFooter';
 
 import AdaptersAccordion from './accordions/AdaptersAccordion';
 import ScoreSystemAccordion from './accordions/ScoreSystemAccordion';
+import { ActivationSteeringSection } from './sections/ActivationSteeringSection';
 
 interface ReferenceTrack {
   id: string;
@@ -255,6 +256,12 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [savedGroupScales, setSavedGroupScales] = usePersistedState<Record<string, { self_attn: number; cross_attn: number; mlp: number }>>('ace-adapterGroupScales', {});
   const [savedOverallScales, setSavedOverallScales] = usePersistedState<Record<string, number>>('ace-adapterOverallScales', {});
   const [adapterLoadingMessage, setAdapterLoadingMessage] = useState<string | null>(null);
+
+  // Activation Steering State
+  const [showSteeringPanel, setShowSteeringPanel] = usePersistedState('ace-showSteeringPanel', false);
+  const [steeringEnabled, setSteeringEnabled] = useState(false);
+  const [steeringLoaded, setSteeringLoaded] = useState<string[]>([]);
+  const [steeringAlphas, setSteeringAlphas] = useState<Record<string, number>>({});
 
   // Model selection
   const [selectedModel, setSelectedModel] = usePersistedState('ace-model', 'acestep-v15-turbo-shift3');
@@ -1346,6 +1353,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
+  const handleSteeringChange = useCallback(
+    (enabled: boolean, loaded: string[], alphas: Record<string, number>) => {
+      setSteeringEnabled(enabled);
+      setSteeringLoaded(loaded);
+      setSteeringAlphas(alphas);
+    },
+    []
+  );
+
   const handleGenerate = () => {
     const styleWithGender = (() => {
       if (!vocalGender) return style;
@@ -1395,6 +1411,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         lmTopK,
         lmTopP,
         lmNegativePrompt,
+        steeringEnabled,
+        steeringLoaded,
+        steeringAlphas,
         referenceAudioUrl: referenceAudioUrl.trim() || undefined,
         sourceAudioUrl: sourceAudioUrl.trim() || undefined,
         referenceAudioTitle: referenceAudioTitle.trim() || undefined,
@@ -1797,6 +1816,14 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onUnloadSlot={handleUnloadSlot}
           onSlotScaleChange={handleSlotScaleChange}
           onSlotGroupScaleChange={handleSlotGroupScaleChange}
+        />
+
+        {/* ACTIVATION STEERING */}
+        <ActivationSteeringSection
+          customMode={customMode}
+          isOpen={showSteeringPanel}
+          onToggle={() => setShowSteeringPanel(!showSteeringPanel)}
+          onSteeringChange={handleSteeringChange}
         />
 
         {/* SCORE SYSTEM */}

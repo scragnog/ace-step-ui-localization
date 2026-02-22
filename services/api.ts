@@ -496,6 +496,51 @@ export const generateApi = {
   }> => api('/api/models/switch', { method: 'POST', body: { model }, token }),
 };
 
+// Activation Steering (TADA) API
+export interface SteeringStatus {
+  enabled: boolean;
+  loaded_concepts: string[];
+  available_concepts: string[];
+  builtin_concepts: string[];
+  config: Record<string, { alpha: number; layers: string; mode: string }>;
+}
+
+export const steeringApi = {
+  getConcepts: (token: string): Promise<SteeringStatus> =>
+    api('/api/steering/concepts', { token }),
+
+  compute: (params: {
+    concept: string;
+    num_steps?: number;
+    num_samples?: number;
+    seed?: number;
+    positive_template?: string;
+    negative_template?: string;
+    custom_base_prompts?: string[];
+  }, token: string): Promise<SteeringStatus & { message: string, filepath: string, elapsed_seconds: number }> =>
+    api('/api/steering/compute', { method: 'POST', body: params, token }),
+
+  load: (concept: string, token: string): Promise<SteeringStatus & { message: string }> =>
+    api('/api/steering/load', { method: 'POST', body: { concept }, token }),
+
+  unload: (concept: string, token: string): Promise<SteeringStatus & { message: string }> =>
+    api('/api/steering/unload', { method: 'POST', body: { concept }, token }),
+
+  config: (params: {
+    concept: string;
+    alpha?: number;
+    layers?: string;
+    timesteps?: string;
+  }, token: string): Promise<SteeringStatus & { message: string }> =>
+    api('/api/steering/config', { method: 'POST', body: params, token }),
+
+  enable: (enabled: boolean, token: string): Promise<SteeringStatus & { message: string }> =>
+    api('/api/steering/enable', { method: 'POST', body: { enabled }, token }),
+
+  delete: (concept: string, token: string): Promise<SteeringStatus & { message: string }> =>
+    api(`/api/steering/concepts/${encodeURIComponent(concept)}`, { method: 'DELETE', token }),
+};
+
 // Users API
 export interface UserProfile extends User {
   bio?: string;

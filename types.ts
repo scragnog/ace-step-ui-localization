@@ -126,6 +126,11 @@ export interface GenerationParams {
   pagStart?: number;
   pagEnd?: number;
   pagScale?: number;
+
+  // Activation Steering (TADA)
+  steeringEnabled?: boolean;
+  steeringLoaded?: string[];
+  steeringAlphas?: Record<string, number>;
 }
 
 export interface PlayerState {

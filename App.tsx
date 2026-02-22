@@ -943,6 +943,9 @@ function AppContent() {
         trackName: params.trackName,
         completeTrackClasses: params.completeTrackClasses,
         isFormatCaption: params.isFormatCaption,
+        steeringEnabled: params.steeringEnabled,
+        steeringLoaded: params.steeringLoaded,
+        steeringAlphas: params.steeringAlphas,
       }, token);
 
       const tempId = `job_${job.jobId}`;

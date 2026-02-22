@@ -25,6 +25,7 @@ import contactRoutes from './routes/contact.js';
 import referenceTrackRoutes from './routes/referenceTrack.js';
 import trainingRoutes from './routes/training.js';
 import loraRoutes from './routes/lora.js';
+import steeringRoutes from './routes/steering.js';
 import modelsRoutes from './routes/models.js';
 import { pool } from './db/pool.js';
 import './db/migrate.js';
@@ -724,6 +725,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/reference-tracks', referenceTrackRoutes);
 app.use('/api/training', trainingRoutes);
 app.use('/api/lora', loraRoutes);
+app.use('/api/steering', steeringRoutes);
 app.use('/api/models', modelsRoutes);
 
 // Error handler
