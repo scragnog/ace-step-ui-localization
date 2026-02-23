@@ -1426,9 +1426,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             ? !isVocalTrack
             : instrumental,
           vocalLanguage,
-          bpm,
-          keyScale,
-          timeSignature,
+          bpm: taskType === 'extract' ? 0 : bpm,
+          keyScale: taskType === 'extract' ? '' : keyScale,
+          timeSignature: taskType === 'extract' ? '' : timeSignature,
           duration,
           inferenceSteps,
           guidanceScale,
