@@ -10,6 +10,8 @@ interface CoverRepaintSettingsProps {
     setCoverNoiseStrength: (val: number) => void;
     tempoScale: number;
     setTempoScale: (val: number) => void;
+    pitchShift: number;
+    setPitchShift: (val: number) => void;
     enableNormalization: boolean;
     setEnableNormalization: (val: boolean) => void;
     normalizationDb: number;
@@ -32,6 +34,8 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
     setCoverNoiseStrength,
     tempoScale,
     setTempoScale,
+    pitchShift,
+    setPitchShift,
     enableNormalization,
     setEnableNormalization,
     normalizationDb,
@@ -84,18 +88,31 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
                         />
                     </div>
 
-                    {/* Tempo Scale */}
-                    <EditableSlider
-                        label={t('tempoScale')}
-                        value={tempoScale}
-                        min={0.5}
-                        max={2.0}
-                        step={0.05}
-                        onChange={setTempoScale}
-                        formatDisplay={(val) => `${val.toFixed(2)}x`}
-                        helpText={t('tempoScaleHelp')}
-                        title={t('tempoScaleTooltip')}
-                    />
+                    {/* Tempo Scale & Pitch Shift side-by-side */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <EditableSlider
+                            label={t('tempoScale')}
+                            value={tempoScale}
+                            min={0.5}
+                            max={2.0}
+                            step={0.05}
+                            onChange={setTempoScale}
+                            formatDisplay={(val) => `${val.toFixed(2)}x`}
+                            helpText={t('tempoScaleHelp')}
+                            title={t('tempoScaleTooltip')}
+                        />
+                        <EditableSlider
+                            label={t('pitchShift')}
+                            value={pitchShift}
+                            min={-12}
+                            max={12}
+                            step={1}
+                            onChange={setPitchShift}
+                            formatDisplay={(val) => val === 0 ? '0' : val > 0 ? `+${val} ♯` : `${val} ♭`}
+                            helpText={t('pitchShiftHelp')}
+                            title={t('pitchShiftTooltip')}
+                        />
+                    </div>
 
                     {/* Repainting Start/End - repaint mode only */}
                     {taskType === 'repaint' && (
