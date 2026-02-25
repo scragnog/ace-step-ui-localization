@@ -208,6 +208,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [instruction, setInstruction] = useState(t('instructionDefault'));
   const [audioCoverStrength, setAudioCoverStrength] = usePersistedState('ace-audioCoverStrength', 1.0);
   const [coverNoiseStrength, setCoverNoiseStrength] = usePersistedState('ace-coverNoiseStrength', 0.15);
+  const [tempoScale, setTempoScale] = usePersistedState('ace-tempoScale', 1.0);
   const [enableNormalization, setEnableNormalization] = usePersistedState('ace-enableNormalization', true);
   const [normalizationDb, setNormalizationDb] = usePersistedState('ace-normalizationDb', -1.0);
   const [latentShift, setLatentShift] = usePersistedState('ace-latentShift', 0.0);
@@ -1465,6 +1466,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             : instruction,
           audioCoverStrength,
           coverNoiseStrength,
+          tempoScale,
           enableNormalization,
           normalizationDb,
           latentShift,
@@ -2086,6 +2088,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setAudioCoverStrength={setAudioCoverStrength}
           coverNoiseStrength={coverNoiseStrength}
           setCoverNoiseStrength={setCoverNoiseStrength}
+          tempoScale={tempoScale}
+          setTempoScale={setTempoScale}
           enableNormalization={enableNormalization}
           setEnableNormalization={setEnableNormalization}
           normalizationDb={normalizationDb}

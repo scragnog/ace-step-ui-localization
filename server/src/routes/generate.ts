@@ -128,6 +128,7 @@ interface GenerateBody {
   instruction?: string;
   audioCoverStrength?: number;
   coverNoiseStrength?: number;
+  tempoScale?: number;
   enableNormalization?: boolean;
   normalizationDb?: number;
   latentShift?: number;
@@ -269,6 +270,9 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         // cover_noise_strength activates cover mode in the backend — only for cover/repaint/a2a.
         cover_noise_strength: (['cover', 'repaint', 'audio2audio'].includes(params.taskType || ''))
           ? (params.coverNoiseStrength ?? 0.0) : 0.0,
+        // tempo_scale: pitch-preserving time-stretch for cover source audio (>1=faster, <1=slower)
+        tempo_scale: (['cover', 'repaint', 'audio2audio'].includes(params.taskType || ''))
+          ? (params.tempoScale ?? 1.0) : 1.0,
         // Latent and normalization controls apply to ALL task types (post-DiT, pre-VAE decode).
         latent_shift: params.latentShift ?? 0.0,
         latent_rescale: params.latentRescale ?? 1.0,

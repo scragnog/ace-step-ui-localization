@@ -8,6 +8,8 @@ interface CoverRepaintSettingsProps {
     setAudioCoverStrength: (val: number) => void;
     coverNoiseStrength: number;
     setCoverNoiseStrength: (val: number) => void;
+    tempoScale: number;
+    setTempoScale: (val: number) => void;
     enableNormalization: boolean;
     setEnableNormalization: (val: boolean) => void;
     normalizationDb: number;
@@ -28,6 +30,8 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
     setAudioCoverStrength,
     coverNoiseStrength,
     setCoverNoiseStrength,
+    tempoScale,
+    setTempoScale,
     enableNormalization,
     setEnableNormalization,
     normalizationDb,
@@ -79,6 +83,19 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
                             title={t('coverNoiseStrengthTooltip')}
                         />
                     </div>
+
+                    {/* Tempo Scale */}
+                    <EditableSlider
+                        label={t('tempoScale')}
+                        value={tempoScale}
+                        min={0.5}
+                        max={2.0}
+                        step={0.05}
+                        onChange={setTempoScale}
+                        formatDisplay={(val) => `${val.toFixed(2)}x`}
+                        helpText={t('tempoScaleHelp')}
+                        title={t('tempoScaleTooltip')}
+                    />
 
                     {/* Repainting Start/End - repaint mode only */}
                     {taskType === 'repaint' && (
