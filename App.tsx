@@ -899,6 +899,7 @@ function AppContent() {
         ...params,
         // Normalize duration: treat 0 or negative as undefined
         duration: params.duration && params.duration > 0 ? params.duration : undefined,
+
       }, token);
 
       const tempId = `job_${job.jobId}`;

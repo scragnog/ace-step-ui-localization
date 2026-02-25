@@ -113,6 +113,24 @@ router.get('/dataset/auto-label-status/:taskId', authMiddleware, async (req: Aut
   }
 });
 
+router.post('/dataset/transcribe', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/dataset/transcribe', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/dataset/transcribe-status', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/dataset/transcribe_status', 'GET');
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/dataset/save', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await proxyToAceStep('/v1/dataset/save', 'POST', req.body);

@@ -159,6 +159,13 @@ async function submitToApi(params: GenerationParams): Promise<{ taskId: string }
   } else if (params.audioCoverStrength !== undefined && params.audioCoverStrength !== 1.0) {
     body.audio_cover_strength = params.audioCoverStrength;
   }
+  if (params.coverNoiseStrength !== undefined && params.coverNoiseStrength > 0) {
+    body.cover_noise_strength = params.coverNoiseStrength;
+  }
+  if (params.enableNormalization !== undefined) body.enable_normalization = params.enableNormalization;
+  if (params.normalizationDb !== undefined) body.normalization_db = params.normalizationDb;
+  if (params.latentShift !== undefined && params.latentShift !== 0) body.latent_shift = params.latentShift;
+  if (params.latentRescale !== undefined && params.latentRescale !== 1.0) body.latent_rescale = params.latentRescale;
   if (params.instruction) body.instruction = params.instruction;
   // LLM and CoT parameters only sent when thinking mode is enabled
   if (params.thinking) {
@@ -405,6 +412,11 @@ export interface GenerationParams {
   repaintingEnd?: number;
   instruction?: string;
   audioCoverStrength?: number;
+  coverNoiseStrength?: number;
+  enableNormalization?: boolean;
+  normalizationDb?: number;
+  latentShift?: number;
+  latentRescale?: number;
   taskType?: string;
   useAdg?: boolean;
   cfgIntervalStart?: number;
@@ -674,6 +686,13 @@ async function processGeneration(
     } else if (params.audioCoverStrength !== undefined && params.audioCoverStrength !== 1.0) {
       args.push('--audio-cover-strength', String(params.audioCoverStrength));
     }
+    if (params.coverNoiseStrength !== undefined && params.coverNoiseStrength > 0) {
+      args.push('--cover-noise-strength', String(params.coverNoiseStrength));
+    }
+    if (params.enableNormalization === false) args.push('--no-enable-normalization');
+    if (params.normalizationDb !== undefined) args.push('--normalization-db', String(params.normalizationDb));
+    if (params.latentShift !== undefined && params.latentShift !== 0) args.push('--latent-shift', String(params.latentShift));
+    if (params.latentRescale !== undefined && params.latentRescale !== 1.0) args.push('--latent-rescale', String(params.latentRescale));
     if (params.instruction) args.push('--instruction', params.instruction);
     if (params.thinking) args.push('--thinking');
     if (params.lmTemperature !== undefined) args.push('--lm-temperature', String(params.lmTemperature));

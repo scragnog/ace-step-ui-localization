@@ -41,6 +41,8 @@ interface DisplaySample {
   bpm: string;
   key: string;
   caption: string;
+  language: string;
+  is_instrumental: boolean;
 }
 
 interface TrainingPanelProps {
@@ -100,7 +102,15 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
   const [preprocessProgress, setPreprocessProgress] = useState('');
   const [preprocessStatus, setPreprocessStatus] = useState<{ current: number; total: number; status: string } | null>(null);
 
-
+  // Transcription State
+  const [transcribeModelPath, setTranscribeModelPath] = useState<string>(() => {
+    return localStorage.getItem('ace-transcribeModelPath') || 'ACE-Step/acestep-transcriber';
+  });
+  const [transcribeForceAll, setTranscribeForceAll] = useState(false);
+  const [returnInstrumentalLyrics, setReturnInstrumentalLyrics] = useState(false);
+  const [transcribeProgress, setTranscribeProgress] = useState('');
+  const [transcribeStatus, setTranscribeStatus] = useState<{ current: number; total: number; status: string } | null>(null);
+  const transcribePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Sample editing
   const [editingSample, setEditingSample] = useState<DatasetSample | null>(null);
@@ -178,6 +188,8 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
       bpm: s.bpm?.toString() || '',
       key: s.keyscale || '',
       caption: s.caption || '',
+      language: s.language || 'unknown',
+      is_instrumental: s.is_instrumental || false,
     }));
   };
 
@@ -304,6 +316,10 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
         clearInterval(labelPollRef.current);
         labelPollRef.current = null;
       }
+      if (transcribePollRef.current) {
+        clearInterval(transcribePollRef.current);
+        transcribePollRef.current = null;
+      }
     };
   }, []);
 
@@ -318,6 +334,14 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
           setLabelProgress(`${status.progress} (${status.current}/${status.total})`);
           setLabelStatus({ current: status.current, total: status.total, status: 'running' });
 
+          // Restore current sample list from backend (includes already-labeled samples)
+          try {
+            const currentSamples = await trainingApi.getSamples(token);
+            if (currentSamples?.samples) {
+              setAudioFiles(transformSamples(currentSamples.samples));
+            }
+          } catch { /* ignore */ }
+
           if (labelPollRef.current) {
             clearInterval(labelPollRef.current);
           }
@@ -326,12 +350,21 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
             try {
               const s = await trainingApi.getAutoLabelStatusLatest(token);
               setLabelProgress(`${s.progress} (${s.current}/${s.total})`);
+
+              if (s.last_updated_sample && s.last_updated_index !== null && s.last_updated_index !== undefined) {
+                const idx = Number(s.last_updated_index);
+                if (!editingSample || editingSample.index !== idx) {
+                  const updated = transformOneSample({ ...s.last_updated_sample, index: idx });
+                  setAudioFiles((prev) => prev.map((it) => (it.index === idx ? updated : it)));
+                }
+              }
+
               if (s.status === 'completed') {
                 clearInterval(pollInterval);
                 labelPollRef.current = null;
                 if (s.result) {
                   setLabelProgress(s.result.message || 'Labeling completed');
-                  setAudioFiles(transformSamples(s.result.samples || []));
+                  setAudioFiles((prev) => mergeSamplesPreserveEditing(prev, s.result?.samples || []));
                 }
                 setLabelStatus(null);
               } else if (s.status === 'failed') {
@@ -358,6 +391,76 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
     };
 
     checkInitialAutoLabelStatus();
+  }, [token]);
+
+  // Check transcribe status on mount to restore state after refresh
+  useEffect(() => {
+    if (!token) return;
+
+    const checkInitialTranscribeStatus = async () => {
+      try {
+        const status = await trainingApi.getTranscribeStatus(token);
+        if (status.status === 'running') {
+          setTranscribeProgress(status.progress || 'Transcribing...');
+          setTranscribeStatus({ current: status.current || 0, total: status.total || 1, status: 'running' });
+
+          // Restore current sample list from backend (includes already-transcribed samples)
+          try {
+            const currentSamples = await trainingApi.getSamples(token);
+            if (currentSamples?.samples) {
+              setAudioFiles(transformSamples(currentSamples.samples));
+            }
+          } catch { /* ignore */ }
+
+          if (transcribePollRef.current) {
+            clearInterval(transcribePollRef.current);
+          }
+
+          const pollInterval = setInterval(async () => {
+            try {
+              const s = await trainingApi.getTranscribeStatus(token);
+              setTranscribeProgress(s.progress || '');
+
+              if (s.last_updated_sample && s.last_updated_index !== null && s.last_updated_index !== undefined) {
+                const idx = Number(s.last_updated_index);
+                if (!editingSample || editingSample.index !== idx) {
+                  const updated = transformOneSample({ ...s.last_updated_sample, index: idx });
+                  setAudioFiles((prev) => prev.map((it) => (it.index === idx ? updated : it)));
+                }
+              }
+
+              if (s.status === 'completed') {
+                clearInterval(pollInterval);
+                transcribePollRef.current = null;
+                setTranscribeStatus(null);
+                const updatedSamples = await trainingApi.getSamples(token);
+                if (updatedSamples?.samples) {
+                  setAudioFiles(transformSamples(updatedSamples.samples));
+                }
+              } else if (s.status === 'failed') {
+                clearInterval(pollInterval);
+                transcribePollRef.current = null;
+                setTranscribeProgress(`${t('error')}: ${s.error || 'Unknown error'}`);
+                setTranscribeStatus(null);
+              } else if (s.status === 'running') {
+                setTranscribeStatus({ current: s.current || 0, total: s.total || 1, status: 'running' });
+              }
+            } catch (e: any) {
+              clearInterval(pollInterval);
+              transcribePollRef.current = null;
+              setTranscribeProgress(`${t('error')}: ${e?.message || 'Failed to check status'}`);
+              setTranscribeStatus(null);
+            }
+          }, 2000);
+
+          transcribePollRef.current = pollInterval;
+        }
+      } catch (error) {
+        // ignore
+      }
+    };
+
+    checkInitialTranscribeStatus();
   }, [token]);
 
   // Poll training status when training is active
@@ -652,6 +755,76 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
     }
   };
 
+  const handleTranscribeLyrics = async () => {
+    if (!token) return;
+    if (!transcribeForceAll && allInstrumental) {
+      setTranscribeProgress(t('transcribeAllInstrumentalWarning'));
+      return;
+    }
+    setTranscribeProgress(t('transcribing'));
+    setTranscribeStatus({ current: 0, total: 0, status: 'running' });
+
+    try {
+      const result = await trainingApi.transcribeLyrics({
+        model_path: transcribeModelPath || 'ACE-Step/acestep-transcriber',
+        force_all: transcribeForceAll,
+        return_instrumental_lyrics: returnInstrumentalLyrics,
+      }, token);
+
+      if (!result || !result.task_id) {
+        setTranscribeProgress('Failed to start transcription');
+        setTranscribeStatus(null);
+        return;
+      }
+
+      setTranscribeProgress(`${result.message || 'Starting'} (0/${result.total || 0})`);
+      setTranscribeStatus({ current: 0, total: result.total || 0, status: 'running' });
+
+      if (transcribePollRef.current) clearInterval(transcribePollRef.current);
+      transcribePollRef.current = setInterval(async () => {
+        try {
+          const status = await trainingApi.getTranscribeStatus(token);
+          if (!status) return;
+
+          setTranscribeProgress(status.progress || '');
+          setTranscribeStatus({ current: status.current || 0, total: status.total || 1, status: status.status });
+
+          if (status.last_updated_sample && status.last_updated_index !== null && status.last_updated_index !== undefined) {
+            const idx = Number(status.last_updated_index);
+            if (!editingSample || editingSample.index !== idx) {
+              const updated = transformOneSample({ ...status.last_updated_sample, index: idx });
+              setAudioFiles((prev) => prev.map((it) => (it.index === idx ? updated : it)));
+            }
+          }
+
+          if (status.status === 'completed') {
+            if (transcribePollRef.current) {
+              clearInterval(transcribePollRef.current);
+              transcribePollRef.current = null;
+            }
+            const updatedSamples = await trainingApi.getSamples(token);
+            if (updatedSamples?.samples) {
+              setAudioFiles(transformSamples(updatedSamples.samples));
+            }
+            setTranscribeStatus(null);
+          } else if (status.status === 'failed') {
+            if (transcribePollRef.current) {
+              clearInterval(transcribePollRef.current);
+              transcribePollRef.current = null;
+            }
+            setTranscribeProgress(`${t('error')}: ${status.error || 'Unknown error'}`);
+            setTranscribeStatus(null);
+          }
+        } catch {
+          // polling error, ignore
+        }
+      }, 2000);
+    } catch (error: any) {
+      setTranscribeProgress(`${t('error')}: ${error?.message || 'Transcription failed'}`);
+      setTranscribeStatus(null);
+    }
+  };
+
   const handleSaveDataset = async () => {
     if (!token) return;
     setSaveStatus(t('savingDataset'));
@@ -933,6 +1106,7 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
                         <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">{t('filename')}</th>
                         <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">{t('duration')}</th>
                         <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">{t('labeled')}</th>
+                        <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">{t('language')}</th>
                         <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">{t('bpm')}</th>
                         <th className="px-4 py-3 text-left font-medium text-zinc-700 dark:text-zinc-300">{t('key')}</th>
                       </tr>
@@ -958,6 +1132,15 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
                             }`}>
                               {file.labeled}
                             </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {file.is_instrumental ? (
+                              <span className="px-2 py-1 rounded text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">Instrumental</span>
+                            ) : file.language && file.language !== 'unknown' ? (
+                              <span className="px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">{file.language.toUpperCase()}</span>
+                            ) : (
+                              <span className="text-zinc-400 dark:text-zinc-600 text-xs">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{file.bpm}</td>
                           <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{file.key}</td>
@@ -1177,6 +1360,108 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
                 </div>
               )}
             </div>
+            </div>
+
+            {/* Transcribe Lyrics */}
+            <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/30 dark:to-emerald-950/30 rounded-xl p-4 space-y-3 border-2 border-teal-200 dark:border-teal-800 shadow-md">
+              <h3 className="text-base font-semibold text-zinc-900 dark:text-white">🎤 {t('transcribeLyrics')}</h3>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                {t('transcribeLyricsDescription')}
+              </p>
+              <div>
+                <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">{t('transcribeLyricsModelPath')}</label>
+                <input
+                  type="text"
+                  value={transcribeModelPath}
+                  onChange={(e) => {
+                    setTranscribeModelPath(e.target.value);
+                    localStorage.setItem('ace-transcribeModelPath', e.target.value);
+                  }}
+                  placeholder={t('transcribeLyricsModelPathPlaceholder')}
+                  className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-lg text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={transcribeForceAll}
+                      onChange={(e) => setTranscribeForceAll(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <div className="w-5 h-5 bg-gradient-to-br from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 border-2 border-zinc-200 dark:border-zinc-600 rounded-md peer-checked:bg-gradient-to-br peer-checked:from-teal-500 peer-checked:to-emerald-500 peer-checked:border-teal-500 transition-all duration-200 group-hover:border-teal-300 dark:group-hover:border-teal-500/50 shadow-sm" />
+                    <svg className="absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">{t('forceTranscribeAll')}</span>
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={returnInstrumentalLyrics}
+                      onChange={(e) => setReturnInstrumentalLyrics(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <div className="w-5 h-5 bg-gradient-to-br from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 border-2 border-zinc-200 dark:border-zinc-600 rounded-md peer-checked:bg-gradient-to-br peer-checked:from-teal-500 peer-checked:to-emerald-500 peer-checked:border-teal-500 transition-all duration-200 group-hover:border-teal-300 dark:group-hover:border-teal-500/50 shadow-sm" />
+                    <svg className="absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">{t('returnInstrumentalLyrics')}</span>
+                </label>
+              </div>
+              <button
+                onClick={handleTranscribeLyrics}
+                disabled={transcribeStatus?.status === 'running'}
+                className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
+                  transcribeStatus?.status === 'running'
+                    ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl'
+                }`}
+              >
+                <Music size={18} />
+                {transcribeStatus?.status === 'running' ? t('transcribing') : t('startTranscribe')}
+              </button>
+
+              {transcribeProgress && transcribeStatus && transcribeStatus.status === 'running' && (() => {
+                const current = transcribeStatus.current || 0;
+                const total = transcribeStatus.total || 1;
+                const progressPercent = (current / total) * 100;
+
+                return (
+                  <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/30 dark:to-emerald-950/30 rounded-lg p-4 border-2 border-teal-200 dark:border-teal-800 space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-zinc-700 dark:text-zinc-200 font-medium">
+                        🎤 {transcribeProgress}
+                      </span>
+                      <span className="text-xs font-mono text-teal-600 dark:text-teal-400 font-semibold">
+                        {progressPercent.toFixed(1)}%
+                      </span>
+                    </div>
+
+                    <div className="relative w-full h-4 bg-white/30 dark:bg-zinc-800/50 rounded-full overflow-hidden shadow-inner border border-teal-300 dark:border-teal-700">
+                      <div
+                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-300 ease-out"
+                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white drop-shadow-md">
+                        {current}/{total}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {transcribeProgress && (!transcribeStatus || transcribeStatus.status !== 'running') && (
+                <div className="bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-950/30 dark:to-emerald-950/30 rounded-lg p-3 text-sm text-zinc-700 dark:text-zinc-300 border-2 border-teal-200 dark:border-teal-800">
+                  {transcribeProgress}
+                </div>
+              )}
             </div>
 
             {/* Save & Preprocess */}

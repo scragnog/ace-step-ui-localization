@@ -101,6 +101,11 @@ export interface GenerationParams {
   repaintingEnd?: number;
   instruction?: string;
   audioCoverStrength?: number;
+  coverNoiseStrength?: number;
+  enableNormalization?: boolean;
+  normalizationDb?: number;
+  latentShift?: number;
+  latentRescale?: number;
   taskType?: string;
   useAdg?: boolean;
   guidanceMode?: string;

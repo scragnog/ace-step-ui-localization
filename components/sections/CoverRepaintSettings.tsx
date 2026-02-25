@@ -6,6 +6,16 @@ interface CoverRepaintSettingsProps {
     taskType: string;
     audioCoverStrength: number;
     setAudioCoverStrength: (val: number) => void;
+    coverNoiseStrength: number;
+    setCoverNoiseStrength: (val: number) => void;
+    enableNormalization: boolean;
+    setEnableNormalization: (val: boolean) => void;
+    normalizationDb: number;
+    setNormalizationDb: (val: number) => void;
+    latentShift: number;
+    setLatentShift: (val: number) => void;
+    latentRescale: number;
+    setLatentRescale: (val: number) => void;
     repaintingStart: number;
     setRepaintingStart: (val: number) => void;
     repaintingEnd: number;
@@ -16,6 +26,16 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
     taskType,
     audioCoverStrength,
     setAudioCoverStrength,
+    coverNoiseStrength,
+    setCoverNoiseStrength,
+    enableNormalization,
+    setEnableNormalization,
+    normalizationDb,
+    setNormalizationDb,
+    latentShift,
+    setLatentShift,
+    latentRescale,
+    setLatentRescale,
     repaintingStart,
     setRepaintingStart,
     repaintingEnd,
@@ -31,18 +51,79 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
                 {taskType === 'repaint' ? t('repaintSettings') : t('coverSettings')}
             </h3>
 
-            {/* Audio Cover Strength */}
-            <EditableSlider
-                label={t('audioCoverStrength')}
-                value={audioCoverStrength}
-                min={0}
-                max={1}
-                step={0.05}
-                onChange={setAudioCoverStrength}
-                formatDisplay={(val) => val.toFixed(2)}
-                helpText={t('audioCoverStrengthHelp')}
-                title={t('audioCoverStrengthTooltip')}
-            />
+            {/* Audio Cover Strength & Cover Noise Strength side-by-side */}
+            <div className="grid grid-cols-2 gap-3">
+                <EditableSlider
+                    label={t('audioCoverStrength')}
+                    value={audioCoverStrength}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    onChange={setAudioCoverStrength}
+                    formatDisplay={(val) => val.toFixed(2)}
+                    helpText={t('audioCoverStrengthHelp')}
+                    title={t('audioCoverStrengthTooltip')}
+                />
+                <EditableSlider
+                    label={t('coverNoiseStrength')}
+                    value={coverNoiseStrength}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onChange={setCoverNoiseStrength}
+                    formatDisplay={(val) => val.toFixed(2)}
+                    title={t('coverNoiseStrengthTooltip')}
+                />
+            </div>
+
+            {/* Normalization toggle */}
+            <div className="flex items-center justify-between py-1">
+                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('enableNormalizationTooltip')}>{t('enableNormalization')}</span>
+                <button
+                    onClick={() => setEnableNormalization(!enableNormalization)}
+                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${enableNormalization ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'}`}
+                >
+                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${enableNormalization ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+            </div>
+
+            {/* Normalization dB - only shown when normalization is enabled */}
+            {enableNormalization && (
+                <EditableSlider
+                    label={t('normalizationDb')}
+                    value={normalizationDb}
+                    min={-10}
+                    max={0}
+                    step={0.1}
+                    onChange={setNormalizationDb}
+                    formatDisplay={(val) => `${val.toFixed(1)} dB`}
+                    title={t('normalizationDbTooltip')}
+                />
+            )}
+
+            {/* Latent Shift & Latent Rescale side-by-side */}
+            <div className="grid grid-cols-2 gap-3">
+                <EditableSlider
+                    label={t('latentShift')}
+                    value={latentShift}
+                    min={-0.2}
+                    max={0.2}
+                    step={0.01}
+                    onChange={setLatentShift}
+                    formatDisplay={(val) => val.toFixed(2)}
+                    title={t('latentShiftTooltip')}
+                />
+                <EditableSlider
+                    label={t('latentRescale')}
+                    value={latentRescale}
+                    min={0.5}
+                    max={1.5}
+                    step={0.01}
+                    onChange={setLatentRescale}
+                    formatDisplay={(val) => val.toFixed(2)}
+                    title={t('latentRescaleTooltip')}
+                />
+            </div>
 
             {/* Repainting Start/End - repaint mode only */}
             {taskType === 'repaint' && (

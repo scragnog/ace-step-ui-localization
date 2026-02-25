@@ -303,6 +303,11 @@ export interface GenerationParams {
   repaintingEnd?: number;
   instruction?: string;
   audioCoverStrength?: number;
+  coverNoiseStrength?: number;
+  enableNormalization?: boolean;
+  normalizationDb?: number;
+  latentShift?: number;
+  latentRescale?: number;
   taskType?: string;
   useAdg?: boolean;
   cfgIntervalStart?: number;
@@ -893,6 +898,34 @@ export const trainingApi = {
     };
     error?: string;
   }> => api('/api/training/dataset/preprocess-status', { method: 'GET', token }),
+
+  transcribeLyrics: (params: {
+    model_path?: string;
+    force_all?: boolean;
+    return_instrumental_lyrics?: boolean;
+  }, token: string): Promise<{
+    task_id: string;
+    message: string;
+    total: number;
+  }> => api('/api/training/dataset/transcribe', { method: 'POST', body: params, token }),
+
+  getTranscribeStatus: (token: string): Promise<{
+    task_id: string | null;
+    status: 'idle' | 'running' | 'completed' | 'failed';
+    progress: string;
+    current: number;
+    total: number;
+    save_path?: string;
+    last_updated_index?: number | null;
+    last_updated_sample?: any;
+    result?: {
+      message: string;
+      transcribed: number;
+      instrumental: number;
+      errors: number;
+    };
+    error?: string;
+  }> => api('/api/training/dataset/transcribe-status', { method: 'GET', token }),
 
   getSamples: (token: string): Promise<{
     dataset_name: string;

@@ -207,6 +207,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [repaintingEnd, setRepaintingEnd] = useState(-1);
   const [instruction, setInstruction] = useState(t('instructionDefault'));
   const [audioCoverStrength, setAudioCoverStrength] = usePersistedState('ace-audioCoverStrength', 1.0);
+  const [coverNoiseStrength, setCoverNoiseStrength] = usePersistedState('ace-coverNoiseStrength', 0.15);
+  const [enableNormalization, setEnableNormalization] = usePersistedState('ace-enableNormalization', true);
+  const [normalizationDb, setNormalizationDb] = usePersistedState('ace-normalizationDb', -1.0);
+  const [latentShift, setLatentShift] = usePersistedState('ace-latentShift', 0.0);
+  const [latentRescale, setLatentRescale] = usePersistedState('ace-latentRescale', 1.0);
   const [taskType, setTaskType] = usePersistedState('ace-taskType', 'text2music');
   const [useAdg, setUseAdg] = usePersistedState('ace-useAdg', false);
   // Guidance Mode: 'apg' (default), 'adg', or 'pag'
@@ -1460,6 +1465,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             ? `Extract the ${currentTrack.toUpperCase()} track from the audio:`
             : instruction,
           audioCoverStrength,
+          coverNoiseStrength,
+          enableNormalization,
+          normalizationDb,
+          latentShift,
+          latentRescale,
           taskType,
           useAdg: guidanceMode === 'adg',
           guidanceMode,
@@ -1632,6 +1642,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         if (json.repaintingEnd !== undefined) setRepaintingEnd(json.repaintingEnd);
         if (json.instruction !== undefined) setInstruction(json.instruction);
         if (json.audioCoverStrength !== undefined) setAudioCoverStrength(json.audioCoverStrength);
+        if (json.coverNoiseStrength !== undefined) setCoverNoiseStrength(json.coverNoiseStrength);
+        if (json.enableNormalization !== undefined) setEnableNormalization(json.enableNormalization);
+        if (json.normalizationDb !== undefined) setNormalizationDb(json.normalizationDb);
+        if (json.latentShift !== undefined) setLatentShift(json.latentShift);
+        if (json.latentRescale !== undefined) setLatentRescale(json.latentRescale);
         if (json.taskType !== undefined) setTaskType(json.taskType);
         if (json.guidanceMode !== undefined) setGuidanceMode(json.guidanceMode);
         if (json.usePag !== undefined) setUsePag(json.usePag);
@@ -2070,6 +2085,16 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           taskType={taskType}
           audioCoverStrength={audioCoverStrength}
           setAudioCoverStrength={setAudioCoverStrength}
+          coverNoiseStrength={coverNoiseStrength}
+          setCoverNoiseStrength={setCoverNoiseStrength}
+          enableNormalization={enableNormalization}
+          setEnableNormalization={setEnableNormalization}
+          normalizationDb={normalizationDb}
+          setNormalizationDb={setNormalizationDb}
+          latentShift={latentShift}
+          setLatentShift={setLatentShift}
+          latentRescale={latentRescale}
+          setLatentRescale={setLatentRescale}
           repaintingStart={repaintingStart}
           setRepaintingStart={setRepaintingStart}
           repaintingEnd={repaintingEnd}

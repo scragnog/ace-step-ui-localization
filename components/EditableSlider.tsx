@@ -9,6 +9,7 @@ interface EditableSliderProps {
   onChange: (value: number) => void;
   formatDisplay?: (value: number) => string;
   helpText?: string;
+  title?: string;
   autoLabel?: string;
 }
 

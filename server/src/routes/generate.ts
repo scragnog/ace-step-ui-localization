@@ -127,6 +127,11 @@ interface GenerateBody {
   repaintingEnd?: number;
   instruction?: string;
   audioCoverStrength?: number;
+  coverNoiseStrength?: number;
+  enableNormalization?: boolean;
+  normalizationDb?: number;
+  latentShift?: number;
+  latentRescale?: number;
   taskType?: string;
   useAdg?: boolean;
   guidanceMode?: string;
@@ -261,6 +266,11 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         repainting_end: params.repaintingEnd,
         instruction: params.instruction,
         audio_cover_strength: params.audioCoverStrength || 1.0,
+        cover_noise_strength: params.coverNoiseStrength ?? 0.15,
+        enable_normalization: params.enableNormalization !== false,
+        normalization_db: params.normalizationDb ?? -1.0,
+        latent_shift: params.latentShift ?? 0.0,
+        latent_rescale: params.latentRescale ?? 1.0,
         task_type: params.taskType || 'text2music',
         use_adg: params.loraLoaded ? false : (params.useAdg || false),
         guidance_mode: params.guidanceMode || '',
