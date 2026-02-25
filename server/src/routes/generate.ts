@@ -249,7 +249,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
       body: JSON.stringify({
         prompt: params.customMode ? params.style : (params.songDescription || params.style),
         lyrics: params.instrumental ? '' : (params.lyrics || ''),
-        thinking: params.loraLoaded ? false : (params.thinking || false),
+        thinking: params.thinking || false,
         dit_model: params.ditModel,
         bpm: params.bpm,
         key_scale: params.keyScale,

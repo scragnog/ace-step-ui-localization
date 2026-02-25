@@ -508,10 +508,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     previousModelRef.current = selectedModel;
   }, [selectedModel, loraLoaded]);
 
-  // Auto-disable thinking and guidance modes when LoRA is loaded
+  // Auto-disable advanced guidance modes when LoRA is loaded (technical limitation)
   useEffect(() => {
     if (loraLoaded) {
-      if (thinking) setThinking(false);
       if (guidanceMode !== 'apg') {
         setGuidanceMode('apg');
         setUseAdg(false);
