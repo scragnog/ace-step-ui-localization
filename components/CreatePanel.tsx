@@ -1476,8 +1476,25 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             ? !isVocalTrack
             : instrumental,
           vocalLanguage,
-          bpm: taskType === 'extract' ? 0 : bpm,
-          keyScale: taskType === 'extract' ? '' : keyScale,
+          bpm: taskType === 'extract' ? 0 : (() => {
+            // When source audio was analyzed and tempo is scaled, send effective BPM
+            // so the model's conditioning matches the transformed audio waveform
+            if (detectedBpm && tempoScale !== 1.0) return Math.round(detectedBpm * tempoScale);
+            return bpm;
+          })(),
+          keyScale: taskType === 'extract' ? '' : (() => {
+            // When source audio was analyzed and pitch is shifted, send transposed key
+            if (detectedKey && pitchShift !== 0) {
+              const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+              const parts = detectedKey.split(' ');
+              const idx = CHROMATIC.indexOf(parts[0]);
+              if (idx !== -1) {
+                const newIdx = ((idx + pitchShift) % 12 + 12) % 12;
+                return `${CHROMATIC[newIdx]}${parts.length > 1 ? ' ' + parts.slice(1).join(' ') : ''}`;
+              }
+            }
+            return keyScale;
+          })(),
           timeSignature: taskType === 'extract' ? '' : timeSignature,
           duration,
           inferenceSteps,
