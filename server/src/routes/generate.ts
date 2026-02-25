@@ -266,11 +266,19 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         repainting_end: params.repaintingEnd,
         instruction: params.instruction,
         audio_cover_strength: params.audioCoverStrength || 1.0,
-        cover_noise_strength: params.coverNoiseStrength ?? 0.15,
+        // Cover-specific params: only apply for cover/repaint/a2a tasks. 
+        // For text2music/extract, force safe defaults to prevent cover mode activation.
+        ...((['cover', 'repaint', 'audio2audio'].includes(params.taskType || '')) ? {
+          cover_noise_strength: params.coverNoiseStrength ?? 0.0,
+          latent_shift: params.latentShift ?? 0.0,
+          latent_rescale: params.latentRescale ?? 1.0,
+        } : {
+          cover_noise_strength: 0.0,
+          latent_shift: 0.0,
+          latent_rescale: 1.0,
+        }),
         enable_normalization: params.enableNormalization !== false,
         normalization_db: params.normalizationDb ?? -1.0,
-        latent_shift: params.latentShift ?? 0.0,
-        latent_rescale: params.latentRescale ?? 1.0,
         task_type: params.taskType || 'text2music',
         use_adg: params.loraLoaded ? false : (params.useAdg || false),
         guidance_mode: params.guidanceMode || '',
