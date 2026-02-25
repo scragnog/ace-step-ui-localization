@@ -202,6 +202,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [sourceAudioUrl, setSourceAudioUrl] = useState('');
   const [referenceAudioTitle, setReferenceAudioTitle] = useState('');
   const [sourceAudioTitle, setSourceAudioTitle] = useState('');
+
+  // Source audio analysis state (Essentia BPM/key detection)
+  const [detectedBpm, setDetectedBpm] = useState<number | null>(null);
+  const [detectedKey, setDetectedKey] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [audioCodes, setAudioCodes] = useState('');
   const [repaintingStart, setRepaintingStart] = useState(0);
   const [repaintingEnd, setRepaintingEnd] = useState(-1);
@@ -1389,6 +1394,45 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     []
   );
 
+  // Clear detected BPM/key when source audio changes
+  React.useEffect(() => {
+    setDetectedBpm(null);
+    setDetectedKey(null);
+  }, [sourceAudioUrl]);
+
+  // Analyze source audio with Essentia (BPM & key detection)
+  const handleAnalyzeSource = async () => {
+    if (!sourceAudioUrl || isAnalyzing) return;
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioUrl: sourceAudioUrl }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('[Analyze] Failed:', err.error || res.statusText);
+        return;
+      }
+      const data = await res.json();
+      if (data.bpm && data.bpm > 0) {
+        setDetectedBpm(data.bpm);
+        setBpm(data.bpm);
+      }
+      if (data.key) {
+        const keyStr = `${data.key} ${data.scale || ''}`.trim();
+        setDetectedKey(keyStr);
+        setKeyScale(keyStr);
+      }
+      console.log(`[Analyze] Detected BPM: ${data.bpm}, Key: ${data.key} ${data.scale}`);
+    } catch (err) {
+      console.error('[Analyze] Error:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleGenerate = () => {
     const styleWithGender = (() => {
       if (!vocalGender) return style;
@@ -1957,6 +2001,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               handleDragOver={handleDragOver}
               formatTime={formatTime}
               getAudioLabel={getAudioLabel}
+              onAnalyzeSource={handleAnalyzeSource}
+              isAnalyzing={isAnalyzing}
             />
           </>
         )}
@@ -2002,6 +2048,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               handleDragOver={handleDragOver}
               formatTime={formatTime}
               getAudioLabel={getAudioLabel}
+              onAnalyzeSource={handleAnalyzeSource}
+              isAnalyzing={isAnalyzing}
             />
           </div>
         )}
@@ -2061,6 +2109,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             setTimeSignature={setTimeSignature}
             duration={duration}
             setDuration={setDuration}
+            detectedBpm={detectedBpm}
+            detectedKey={detectedKey}
           />
         )}
 
@@ -2094,6 +2144,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setTempoScale={setTempoScale}
           pitchShift={pitchShift}
           setPitchShift={setPitchShift}
+          detectedBpm={detectedBpm}
+          detectedKey={detectedKey}
           enableNormalization={enableNormalization}
           setEnableNormalization={setEnableNormalization}
           normalizationDb={normalizationDb}

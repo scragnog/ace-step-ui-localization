@@ -12,6 +12,8 @@ interface CoverRepaintSettingsProps {
     setTempoScale: (val: number) => void;
     pitchShift: number;
     setPitchShift: (val: number) => void;
+    detectedBpm: number | null;
+    detectedKey: string | null;
     enableNormalization: boolean;
     setEnableNormalization: (val: boolean) => void;
     normalizationDb: number;
@@ -36,6 +38,8 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
     setTempoScale,
     pitchShift,
     setPitchShift,
+    detectedBpm,
+    detectedKey,
     enableNormalization,
     setEnableNormalization,
     normalizationDb,
@@ -52,6 +56,19 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
     const { t } = useI18n();
 
     const isCoverMode = taskType !== 'text2music' && taskType !== 'extract';
+
+    // Chromatic key transposition
+    const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const transposeKey = (keyStr: string, semitones: number): string => {
+        if (!keyStr || semitones === 0) return keyStr;
+        const parts = keyStr.split(' ');
+        const note = parts[0];
+        const scale = parts.slice(1).join(' ');
+        const idx = CHROMATIC.indexOf(note);
+        if (idx === -1) return keyStr;
+        const newIdx = ((idx + semitones) % 12 + 12) % 12;
+        return `${CHROMATIC[newIdx]}${scale ? ' ' + scale : ''}`;
+    };
 
     return (
         <>
@@ -113,6 +130,26 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
                             title={t('pitchShiftTooltip')}
                         />
                     </div>
+
+                    {/* Source Analysis Info — show detected + computed output */}
+                    {detectedBpm !== null && detectedKey !== null && (
+                        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 px-3 py-2 text-[11px] space-y-1">
+                            <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                                </svg>
+                                {t('detectedFromSource')}: {detectedBpm} BPM, {detectedKey}
+                            </div>
+                            {(tempoScale !== 1.0 || pitchShift !== 0) && (
+                                <div className="text-emerald-600 dark:text-emerald-500">
+                                    → {t('outputBpm')}: {Math.round(detectedBpm * tempoScale)} BPM
+                                    {pitchShift !== 0 && (
+                                        <span className="ml-2">| {t('outputKey')}: {transposeKey(detectedKey, pitchShift)}</span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Repainting Start/End - repaint mode only */}
                     {taskType === 'repaint' && (

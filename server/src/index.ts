@@ -28,6 +28,7 @@ import loraRoutes from './routes/lora.js';
 import steeringRoutes from './routes/steering.js';
 import modelsRoutes from './routes/models.js';
 import systemRoutes from './routes/system.js';
+import analyzeRoutes from './routes/analyze.js';
 import { pool } from './db/pool.js';
 import './db/migrate.js';
 
@@ -740,6 +741,7 @@ app.use('/api/lora', loraRoutes);
 app.use('/api/steering', steeringRoutes);
 app.use('/api/models', modelsRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/analyze', analyzeRoutes);
 
 // Error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
