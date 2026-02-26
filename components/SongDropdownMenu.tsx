@@ -9,9 +9,11 @@ import {
     ListPlus,
     Download,
     Trash2,
-    Share2
+    Share2,
+    Sparkles
 } from 'lucide-react';
 import { openStemSplitter } from './StemSplitterModal';
+import { openAudioEnhancer } from './AudioEnhancerModal';
 
 interface SongDropdownMenuProps {
     song: Song;
@@ -169,6 +171,17 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
                 icon={<Layers size={14} />}
                 label={t('extractStems')}
                 onClick={onExtractStems ? () => handleAction(onExtractStems) : handleExtractStems}
+            />
+            <MenuItem
+                icon={<Sparkles size={14} />}
+                label={t('enhanceAudio')}
+                onClick={() => {
+                    if (song.audioUrl) {
+                        openAudioEnhancer(song.audioUrl, song.title);
+                    }
+                    onClose();
+                }}
+                disabled={!song.audioUrl}
             />
             {onReusePrompt && (
                 <MenuItem

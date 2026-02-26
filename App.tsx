@@ -22,6 +22,7 @@ import { List } from 'lucide-react';
 import { PlaylistDetail } from './components/PlaylistDetail';
 import { Toast, ToastType } from './components/Toast';
 import { StemSplitterModal } from './components/StemSplitterModal';
+import { AudioEnhancerModal } from './components/AudioEnhancerModal';
 import { SearchPage } from './components/SearchPage';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import DebugPanel from './components/DebugPanel';
@@ -1815,6 +1816,7 @@ function AppContent() {
         onNavigateToProfile={handleNavigateToProfile}
       />
       <StemSplitterModal />
+      <AudioEnhancerModal />
 
       {/* Mobile Details Modal */}
       {showMobileDetails && selectedSong && (
