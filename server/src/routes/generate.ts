@@ -259,7 +259,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         audio_duration: params.duration,
         vocal_language: params.vocalLanguage || 'en',
         inference_steps: params.inferenceSteps || 8,
-        guidance_scale: params.guidanceScale || 7.0,
+        guidance_scale: params.guidanceScale || 10.0,
         use_random_seed: params.randomSeed !== false,
         seed: params.seed || -1,
         batch_size: params.batchSize || 1,
@@ -267,10 +267,8 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         repainting_start: params.repaintingStart || 0.0,
         repainting_end: params.repaintingEnd,
         instruction: params.instruction,
-        audio_cover_strength: params.audioCoverStrength || 1.0,
-        // cover_noise_strength activates cover mode in the backend — only for cover/repaint/a2a.
-        cover_noise_strength: (['cover', 'repaint', 'audio2audio'].includes(params.taskType || ''))
-          ? (params.coverNoiseStrength ?? 0.0) : 0.0,
+        audio_cover_strength: ['repaint', 'extract', 'lego'].includes(params.taskType || '') ? 0.0 : (params.audioCoverStrength ?? 1.0),
+        cover_noise_strength: params.taskType === 'cover' ? (params.coverNoiseStrength ?? 0.0) : 0.0,
         // tempo_scale: pitch-preserving time-stretch for cover source audio (>1=faster, <1=slower)
         tempo_scale: (['cover', 'repaint', 'audio2audio'].includes(params.taskType || ''))
           ? (params.tempoScale ?? 1.0) : 1.0,
@@ -293,6 +291,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         ...(params.sourceAudioUrl ? { src_audio_path: resolveAudioPath(params.sourceAudioUrl) } : {}),
         ...(params.referenceAudioUrl ? { reference_audio_path: resolveAudioPath(params.referenceAudioUrl) } : {}),
         ...(params.trackName ? { track_name: params.trackName } : {}),
+        ...(params.completeTrackClasses?.length ? { track_classes: params.completeTrackClasses } : {}),
         // PAG (Perturbed-Attention Guidance)
         use_pag: params.usePag || false,
         pag_start: params.pagStart ?? 0.30,
@@ -305,14 +304,15 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         // Always send LM model selection (enables hot-switching regardless of thinking mode)
         lm_model_path: params.lmModel || undefined,
         lm_backend: params.lmBackend || 'pt',
+        use_cot_caption: (!params.loraLoaded && params.thinking) ? (params.useCotCaption !== false) : false,
+        use_cot_language: (!params.loraLoaded && params.thinking) ? (params.useCotLanguage !== false) : false,
+        use_cot_metas: false,
         ...(!params.loraLoaded && params.thinking ? {
           lm_temperature: params.lmTemperature,
           lm_cfg_scale: params.lmCfgScale,
           lm_top_k: params.lmTopK,
           lm_top_p: params.lmTopP,
           lm_negative_prompt: params.lmNegativePrompt,
-          use_cot_caption: params.useCotCaption !== false,
-          use_cot_language: params.useCotLanguage !== false,
         } : {}),
       }),
     });
