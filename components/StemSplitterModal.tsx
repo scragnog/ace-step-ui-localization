@@ -1,0 +1,405 @@
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
+import { X, Download, Play, Pause, Layers, Mic2, Drum, Guitar, Piano, Music, Loader2 } from 'lucide-react';
+
+// ---- Types ----
+
+interface StemResult {
+    id: string;
+    stem_type: string;
+    file_path: string;
+    file_name: string;
+    duration: number;
+}
+
+interface StemSplitterModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    audioUrl: string;
+    songTitle?: string;
+}
+
+// ---- Constants ----
+
+const PYTHON_API = (() => {
+    if (typeof window !== 'undefined') {
+        // In dev (port 3000), Python is on 8001. In prod, it's relative.
+        const host = window.location.hostname;
+        return `http://${host}:8001`;
+    }
+    return 'http://localhost:8001';
+})();
+
+const MODES = [
+    { id: 'vocals', label: 'Vocals Only', desc: 'Best quality vocal isolation (BS-RoFormer)', stems: 2 },
+    { id: 'multi-4', label: '4-Stem', desc: 'Vocals, Drums, Bass, Other', stems: 4 },
+    { id: 'multi-6', label: '6-Stem', desc: 'Vocals, Drums, Bass, Guitar, Piano, Other', stems: 6 },
+    { id: 'two-pass', label: 'Two-Pass (Best)', desc: 'RoFormer vocals + Demucs 6-stem instrumentals', stems: 7 },
+];
+
+const STEM_ICONS: Record<string, string> = {
+    vocals: '🎤',
+    drums: '🥁',
+    bass: '🎸',
+    guitar: '🎸',
+    piano: '🎹',
+    instrumental: '🎵',
+    other: '🎵',
+};
+
+const STEM_COLORS: Record<string, string> = {
+    vocals: 'from-pink-500/20 to-rose-500/20 border-pink-500/30',
+    drums: 'from-amber-500/20 to-orange-500/20 border-amber-500/30',
+    bass: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30',
+    guitar: 'from-blue-500/20 to-indigo-500/20 border-blue-500/30',
+    piano: 'from-purple-500/20 to-violet-500/20 border-purple-500/30',
+    instrumental: 'from-cyan-500/20 to-sky-500/20 border-cyan-500/30',
+    other: 'from-zinc-500/20 to-slate-500/20 border-zinc-500/30',
+};
+
+// ---- Stem Audio Player ----
+
+const StemPlayer: React.FC<{
+    stem: StemResult;
+    jobId: string;
+}> = ({ stem, jobId }) => {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [progress, setProgress] = useState(0);
+
+    const audioUrl = `${PYTHON_API}/v1/stems/${jobId}/download/${encodeURIComponent(stem.stem_type)}`;
+
+    const togglePlay = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    const handleDownload = async () => {
+        try {
+            const resp = await fetch(audioUrl);
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = stem.file_name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Download failed:', err);
+        }
+    };
+
+    const colorClass = STEM_COLORS[stem.stem_type] || STEM_COLORS.other;
+    const icon = STEM_ICONS[stem.stem_type] || '🎵';
+
+    return (
+        <div className={`flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-r ${colorClass} transition-all hover:shadow-md`}>
+            <audio
+                ref={audioRef}
+                src={audioUrl}
+                preload="none"
+                onTimeUpdate={() => {
+                    if (audioRef.current && audioRef.current.duration) {
+                        setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+                    }
+                }}
+                onEnded={() => { setIsPlaying(false); setProgress(0); }}
+            />
+            <button
+                onClick={togglePlay}
+                className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm hover:scale-105 transition-transform flex-shrink-0"
+            >
+                {isPlaying
+                    ? <Pause size={16} className="text-zinc-900 dark:text-white" fill="currentColor" />
+                    : <Play size={16} className="text-zinc-900 dark:text-white ml-0.5" fill="currentColor" />
+                }
+            </button>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <span className="text-lg">{icon}</span>
+                    <span className="text-sm font-bold text-zinc-900 dark:text-white capitalize">{stem.stem_type}</span>
+                </div>
+                <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full mt-1.5">
+                    <div
+                        className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all"
+                        style={{ width: `${progress}%` }}
+                    />
+                </div>
+            </div>
+            <button
+                onClick={handleDownload}
+                className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-shrink-0"
+                title="Download stem"
+            >
+                <Download size={16} className="text-zinc-700 dark:text-zinc-300" />
+            </button>
+        </div>
+    );
+};
+
+// ---- Main Modal ----
+
+export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
+    isOpen,
+    onClose,
+    audioUrl,
+    songTitle,
+}) => {
+    const [mode, setMode] = useState('two-pass');
+    const [status, setStatus] = useState<'idle' | 'running' | 'complete' | 'error'>('idle');
+    const [progress, setProgress] = useState(0);
+    const [message, setMessage] = useState('');
+    const [stems, setStems] = useState<StemResult[]>([]);
+    const [jobId, setJobId] = useState('');
+    const [error, setError] = useState('');
+    const [available, setAvailable] = useState<boolean | null>(null);
+    const eventSourceRef = useRef<EventSource | null>(null);
+
+    // Check availability on mount
+    useEffect(() => {
+        if (!isOpen) return;
+        fetch(`${PYTHON_API}/v1/stems/available`)
+            .then(r => r.json())
+            .then(data => setAvailable(data.available))
+            .catch(() => setAvailable(false));
+    }, [isOpen]);
+
+    // Cleanup SSE on unmount
+    useEffect(() => {
+        return () => {
+            eventSourceRef.current?.close();
+        };
+    }, []);
+
+    // Reset state when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setStatus('idle');
+            setProgress(0);
+            setMessage('');
+            setStems([]);
+            setJobId('');
+            setError('');
+        }
+    }, [isOpen]);
+
+    const resolveAudioPath = (): string => {
+        // If it's a relative URL like /v1/audio?path=..., extract the path param
+        if (audioUrl.includes('/v1/audio?path=')) {
+            const url = new URL(audioUrl, window.location.origin);
+            return decodeURIComponent(url.searchParams.get('path') || audioUrl);
+        }
+        // If it's an absolute file path, use as-is
+        if (audioUrl.match(/^[A-Z]:\\/i) || audioUrl.startsWith('/')) {
+            return audioUrl;
+        }
+        // Relative server path
+        return audioUrl;
+    };
+
+    const startSeparation = async () => {
+        setStatus('running');
+        setProgress(0);
+        setMessage('Starting…');
+        setError('');
+        setStems([]);
+
+        try {
+            const audioPath = resolveAudioPath();
+            const resp = await fetch(`${PYTHON_API}/v1/stems/separate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audio_path: audioPath, mode }),
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({ detail: resp.statusText }));
+                throw new Error(errData.detail || `Server error ${resp.status}`);
+            }
+
+            const { job_id } = await resp.json();
+            setJobId(job_id);
+
+            // Start SSE polling
+            const es = new EventSource(`${PYTHON_API}/v1/stems/${job_id}/progress`);
+            eventSourceRef.current = es;
+
+            es.onmessage = (evt) => {
+                try {
+                    const data = JSON.parse(evt.data);
+                    if (data.type === 'progress') {
+                        setProgress(data.percent);
+                        setMessage(data.message || '');
+                    } else if (data.type === 'complete') {
+                        setStatus('complete');
+                        setStems(data.stems || []);
+                        setProgress(1);
+                        setMessage('Done!');
+                        es.close();
+                    } else if (data.type === 'error') {
+                        setStatus('error');
+                        setError(data.message || 'Unknown error');
+                        es.close();
+                    }
+                } catch { /* ignore parse errors */ }
+            };
+
+            es.onerror = () => {
+                // SSE connection lost — poll one final time
+                es.close();
+                setTimeout(async () => {
+                    try {
+                        const r = await fetch(`${PYTHON_API}/v1/stems/${job_id}/progress`);
+                        const reader = r.body?.getReader();
+                        if (!reader) return;
+                        // Just check if job finished
+                    } catch { /* ignore */ }
+                }, 1000);
+            };
+        } catch (err) {
+            setStatus('error');
+            setError(err instanceof Error ? err.message : 'Failed to start separation');
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const modalContent = (
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 dark:bg-black/80 backdrop-blur-sm p-4"
+            onClick={(e) => e.target === e.currentTarget && onClose()}
+        >
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-white/10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
+                            <Layers size={20} className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Extract Stems</h2>
+                            {songTitle && <p className="text-xs text-zinc-500 truncate max-w-[200px]">{songTitle}</p>}
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-lg transition-colors">
+                        <X size={20} className="text-zinc-500" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                    {/* Availability check */}
+                    {available === false && (
+                        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-sm text-red-700 dark:text-red-300">
+                            <strong>audio-separator not installed.</strong> Run{' '}
+                            <code className="bg-red-100 dark:bg-red-500/20 px-1.5 py-0.5 rounded text-xs">
+                                python install_audio_separator.py
+                            </code>{' '}
+                            from the project root to install it.
+                        </div>
+                    )}
+
+                    {/* Mode selector */}
+                    {status === 'idle' && (
+                        <div className="space-y-3">
+                            <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                                Separation Mode
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {MODES.map((m) => (
+                                    <button
+                                        key={m.id}
+                                        onClick={() => setMode(m.id)}
+                                        className={`p-3 rounded-xl border text-left transition-all ${mode === m.id
+                                                ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 ring-1 ring-violet-500/50'
+                                                : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20'
+                                            }`}
+                                    >
+                                        <div className="text-sm font-bold text-zinc-900 dark:text-white">{m.label}</div>
+                                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{m.desc}</div>
+                                        <div className="text-[10px] text-violet-600 dark:text-violet-400 font-mono mt-1">{m.stems} stems</div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Progress */}
+                    {status === 'running' && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <Loader2 size={20} className="text-violet-500 animate-spin" />
+                                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{message}</span>
+                            </div>
+                            <div className="w-full h-3 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                                    style={{ width: `${Math.max(progress * 100, 2)}%` }}
+                                />
+                            </div>
+                            <p className="text-xs text-zinc-500 text-center font-mono">{(progress * 100).toFixed(0)}%</p>
+                        </div>
+                    )}
+
+                    {/* Error */}
+                    {status === 'error' && (
+                        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
+                            <p className="text-sm font-medium text-red-700 dark:text-red-300">Separation failed</p>
+                            <p className="text-xs text-red-500 dark:text-red-400 mt-1">{error}</p>
+                            <button
+                                onClick={() => setStatus('idle')}
+                                className="mt-3 px-4 py-1.5 text-xs font-bold rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-500/30 transition-colors"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Results */}
+                    {status === 'complete' && stems.length > 0 && (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                                    {stems.length} Stems Extracted
+                                </span>
+                                <button
+                                    onClick={() => setStatus('idle')}
+                                    className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline"
+                                >
+                                    Extract Again
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {stems.map((stem) => (
+                                    <StemPlayer key={stem.id} stem={stem} jobId={jobId} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                {status === 'idle' && (
+                    <div className="px-6 py-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
+                        <button
+                            onClick={startSeparation}
+                            disabled={available === false}
+                            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Extract Stems
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    return ReactDOM.createPortal(modalContent, document.body);
+};

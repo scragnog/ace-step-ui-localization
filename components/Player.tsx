@@ -6,6 +6,7 @@ import { useResponsive } from '../context/ResponsiveContext';
 import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
 import { ShareModal } from './ShareModal';
+import { StemSplitterModal } from './StemSplitterModal';
 import { AlbumCover } from './AlbumCover';
 import { WaveformVisualizer } from './WaveformVisualizer';
 
@@ -71,6 +72,7 @@ export const Player: React.FC<PlayerProps> = ({
     const [showDropdown, setShowDropdown] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [stemModalOpen, setStemModalOpen] = useState(false);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const speedMenuRef = useRef<HTMLDivElement>(null);
 
@@ -157,13 +159,7 @@ export const Player: React.FC<PlayerProps> = ({
 
     const handleExtractAudio = () => {
         if (!currentSong?.audioUrl) return;
-        const baseUrl = window.location.port === '3000'
-            ? `${window.location.protocol}//${window.location.hostname}:3001`
-            : window.location.origin;
-        const audioUrl = currentSong.audioUrl.startsWith('http')
-            ? currentSong.audioUrl
-            : `${baseUrl}${currentSong.audioUrl}`;
-        window.open(`${baseUrl}/demucs-web/?audioUrl=${encodeURIComponent(audioUrl)}`, '_blank');
+        setStemModalOpen(true);
     };
 
     if (isMobile) {
@@ -515,9 +511,8 @@ export const Player: React.FC<PlayerProps> = ({
                                                         onPlaybackRateChange(rate);
                                                         setShowSpeedMenu(false);
                                                     }}
-                                                    className={`w-full px-3 py-1.5 text-left text-xs font-mono hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors ${
-                                                        playbackRate === rate ? 'text-pink-600 dark:text-pink-500 font-bold' : 'text-zinc-700 dark:text-zinc-300'
-                                                    }`}
+                                                    className={`w-full px-3 py-1.5 text-left text-xs font-mono hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors ${playbackRate === rate ? 'text-pink-600 dark:text-pink-500 font-bold' : 'text-zinc-700 dark:text-zinc-300'
+                                                        }`}
                                                 >
                                                     {rate === 1.0 ? t('normalSpeed') : `${rate}x`}
                                                 </button>
@@ -680,7 +675,7 @@ export const Player: React.FC<PlayerProps> = ({
         <div className="h-20 lg:h-24 bg-white dark:bg-black/95 backdrop-blur border-t border-zinc-200 dark:border-white/10 flex flex-col z-50 transition-colors duration-300 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-none">
 
             {/* Progress Bar with Waveform Overlay */}
-            <div 
+            <div
                 ref={progressBarRef}
                 className="relative w-full h-10 lg:h-12 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 cursor-pointer group border-y border-zinc-200/50 dark:border-white/5"
                 onClick={(e) => handleSeekInteraction(e, progressBarRef)}
@@ -695,7 +690,7 @@ export const Player: React.FC<PlayerProps> = ({
                         onSeek={onSeek}
                     />
                 </div>
-                
+
                 {/* Playhead line - follows exact progress */}
                 <div
                     className="absolute top-0 bottom-0 w-0.5 bg-zinc-800 dark:bg-white shadow-[0_0_6px_rgba(244,63,94,0.6)] z-20"
@@ -790,9 +785,8 @@ export const Player: React.FC<PlayerProps> = ({
                                             onPlaybackRateChange(rate);
                                             setShowSpeedMenu(false);
                                         }}
-                                        className={`w-full px-3 py-1.5 text-left text-xs font-mono hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors ${
-                                            playbackRate === rate ? 'text-pink-600 dark:text-pink-500 font-bold' : 'text-zinc-700 dark:text-zinc-300'
-                                        }`}
+                                        className={`w-full px-3 py-1.5 text-left text-xs font-mono hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors ${playbackRate === rate ? 'text-pink-600 dark:text-pink-500 font-bold' : 'text-zinc-700 dark:text-zinc-300'
+                                            }`}
                                     >
                                         {rate === 1.0 ? t('normalSpeed') : `${rate}x`}
                                     </button>
@@ -882,6 +876,12 @@ export const Player: React.FC<PlayerProps> = ({
                 isOpen={shareModalOpen}
                 onClose={() => setShareModalOpen(false)}
                 song={currentSong}
+            />
+            <StemSplitterModal
+                isOpen={stemModalOpen}
+                onClose={() => setStemModalOpen(false)}
+                audioUrl={currentSong.audioUrl || ''}
+                songTitle={currentSong.title}
             />
         </div>
     );
