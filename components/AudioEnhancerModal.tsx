@@ -223,9 +223,11 @@ export const AudioEnhancerModal: React.FC = () => {
 
     // Preview player
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const enhancedAudioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [previewSource, setPreviewSource] = useState<'original' | 'enhanced'>('enhanced');
     const animRef = useRef<number>(0);
 
     // Register global open function
@@ -267,19 +269,23 @@ export const AudioEnhancerModal: React.FC = () => {
     // Preview player animation frame
     useEffect(() => {
         const tick = () => {
-            const el = audioRef.current;
-            if (el && isPlaying) setCurrentTime(el.currentTime);
+            const activeAudio = previewSource === 'enhanced' ? enhancedAudioRef.current : audioRef.current;
+            if (activeAudio && isPlaying) setCurrentTime(activeAudio.currentTime);
             animRef.current = requestAnimationFrame(tick);
         };
         animRef.current = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(animRef.current);
-    }, [isPlaying]);
+    }, [isPlaying, previewSource]);
 
     const onClose = useCallback(() => {
         eventSourceRef.current?.close();
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current = null;
+        }
+        if (enhancedAudioRef.current) {
+            enhancedAudioRef.current.pause();
+            enhancedAudioRef.current = null;
         }
         setIsPlaying(false);
         setIsOpen(false);
@@ -405,22 +411,48 @@ export const AudioEnhancerModal: React.FC = () => {
 
     const togglePreview = () => {
         if (!jobId) return;
-        const url = `${PYTHON_API}/v1/audio/enhance/${jobId}/download`;
+
+        const enhancedUrl = `${PYTHON_API}/v1/audio/enhance/${jobId}/download`;
+        // Original uses the audioUrl prop directly
+        const originalUrl = audioUrl;
+
+        // Lazy-create enhanced audio element
+        if (!enhancedAudioRef.current) {
+            enhancedAudioRef.current = new Audio(enhancedUrl);
+            enhancedAudioRef.current.crossOrigin = 'anonymous';
+            enhancedAudioRef.current.onloadedmetadata = () => {
+                setDuration(enhancedAudioRef.current?.duration || 0);
+            };
+            enhancedAudioRef.current.onended = () => {
+                setIsPlaying(false);
+                setCurrentTime(0);
+            };
+        }
+
+        // Lazy-create original audio element
         if (!audioRef.current) {
-            audioRef.current = new Audio(url);
+            audioRef.current = new Audio(originalUrl);
+            audioRef.current.crossOrigin = 'anonymous';
             audioRef.current.onloadedmetadata = () => {
-                setDuration(audioRef.current?.duration || 0);
+                if (!enhancedAudioRef.current?.duration) {
+                    setDuration(audioRef.current?.duration || 0);
+                }
             };
             audioRef.current.onended = () => {
                 setIsPlaying(false);
                 setCurrentTime(0);
             };
         }
+
+        const activeAudio = previewSource === 'enhanced' ? enhancedAudioRef.current : audioRef.current;
+        const inactiveAudio = previewSource === 'enhanced' ? audioRef.current : enhancedAudioRef.current;
+
         if (isPlaying) {
-            audioRef.current.pause();
+            activeAudio.pause();
             setIsPlaying(false);
         } else {
-            audioRef.current.play();
+            inactiveAudio.pause();
+            activeAudio.play().catch(err => console.error('Playback failed:', err));
             setIsPlaying(true);
         }
     };
@@ -470,8 +502,8 @@ export const AudioEnhancerModal: React.FC = () => {
                                             key={p.id}
                                             onClick={() => applyPreset(p.id)}
                                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedPreset === p.id
-                                                    ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white shadow-lg scale-105'
-                                                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                                ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white shadow-lg scale-105'
+                                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                                                 }`}
                                         >
                                             <span className="mr-1">{p.icon}</span> {p.label}
@@ -498,8 +530,8 @@ export const AudioEnhancerModal: React.FC = () => {
                                     <button
                                         onClick={() => setUseStemSeparation(false)}
                                         className={`px-3 py-1.5 text-xs font-bold transition-colors ${!useStemSeparation
-                                                ? 'bg-violet-500 text-white'
-                                                : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                                            ? 'bg-violet-500 text-white'
+                                            : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
                                             }`}
                                     >
                                         Simple
@@ -508,8 +540,8 @@ export const AudioEnhancerModal: React.FC = () => {
                                         onClick={() => setUseStemSeparation(true)}
                                         disabled={!demucsAvailable}
                                         className={`px-3 py-1.5 text-xs font-bold transition-colors ${useStemSeparation
-                                                ? 'bg-violet-500 text-white'
-                                                : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                                            ? 'bg-violet-500 text-white'
+                                            : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
                                             } ${!demucsAvailable ? 'opacity-40 cursor-not-allowed' : ''}`}
                                         title={!demucsAvailable ? 'Demucs not installed' : 'Uses AI stem separation for targeted enhancement'}
                                     >
@@ -593,7 +625,49 @@ export const AudioEnhancerModal: React.FC = () => {
                                 <span className="text-sm font-bold">Enhancement Complete!</span>
                             </div>
 
-                            {/* Preview player */}
+                            {/* A/B Toggle */}
+                            <div className="flex items-center justify-center gap-1">
+                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider mr-2">Compare</span>
+                                <div className="flex rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10">
+                                    <button
+                                        onClick={() => {
+                                            setPreviewSource('original');
+                                            // If playing, switch source seamlessly
+                                            if (isPlaying && audioRef.current && enhancedAudioRef.current) {
+                                                const t = enhancedAudioRef.current.currentTime;
+                                                enhancedAudioRef.current.pause();
+                                                audioRef.current.currentTime = t;
+                                                audioRef.current.play();
+                                            }
+                                        }}
+                                        className={`px-3 py-1.5 text-xs font-bold transition-colors ${previewSource === 'original'
+                                            ? 'bg-zinc-600 text-white'
+                                            : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                                            }`}
+                                    >
+                                        Original
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setPreviewSource('enhanced');
+                                            if (isPlaying && audioRef.current && enhancedAudioRef.current) {
+                                                const t = audioRef.current.currentTime;
+                                                audioRef.current.pause();
+                                                enhancedAudioRef.current.currentTime = t;
+                                                enhancedAudioRef.current.play();
+                                            }
+                                        }}
+                                        className={`px-3 py-1.5 text-xs font-bold transition-colors ${previewSource === 'enhanced'
+                                            ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white'
+                                            : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                                            }`}
+                                    >
+                                        ✨ Enhanced
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Player */}
                             <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10">
                                 <button
                                     onClick={togglePreview}
@@ -609,8 +683,9 @@ export const AudioEnhancerModal: React.FC = () => {
                                         onClick={(e) => {
                                             const rect = e.currentTarget.getBoundingClientRect();
                                             const pct = (e.clientX - rect.left) / rect.width;
-                                            if (audioRef.current) {
-                                                audioRef.current.currentTime = pct * duration;
+                                            const activeAudio = previewSource === 'enhanced' ? enhancedAudioRef.current : audioRef.current;
+                                            if (activeAudio) {
+                                                activeAudio.currentTime = pct * duration;
                                                 setCurrentTime(pct * duration);
                                             }
                                         }}
@@ -622,6 +697,9 @@ export const AudioEnhancerModal: React.FC = () => {
                                     </div>
                                     <div className="flex justify-between mt-1">
                                         <span className="text-[10px] text-zinc-500 font-mono">{formatTime(currentTime)}</span>
+                                        <span className="text-[10px] text-zinc-400 font-mono italic">
+                                            {previewSource === 'enhanced' ? '✨ Enhanced' : 'Original'}
+                                        </span>
                                         <span className="text-[10px] text-zinc-500 font-mono">{formatTime(duration)}</span>
                                     </div>
                                 </div>
