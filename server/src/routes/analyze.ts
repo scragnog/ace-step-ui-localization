@@ -57,12 +57,35 @@ router.post('/', async (req: Request, res: Response) => {
     // Create temp output file for Essentia
     const tmpFile = path.join(os.tmpdir(), `essentia_${Date.now()}.json`);
 
+    // Essentia supports wav, mp3, flac natively. Convert anything else via ffmpeg.
+    const SUPPORTED_EXTS = ['.wav', '.mp3', '.flac', '.aiff', '.aif'];
+    const ext = path.extname(audioPath).toLowerCase();
+    let inputPath = audioPath;
+    let tmpWav: string | null = null;
+
+    if (!SUPPORTED_EXTS.includes(ext)) {
+        tmpWav = path.join(os.tmpdir(), `essentia_input_${Date.now()}.wav`);
+        console.log(`[analyze] Converting ${ext} to WAV via ffmpeg...`);
+        try {
+            await new Promise<void>((resolve, reject) => {
+                execFile('ffmpeg', ['-y', '-i', audioPath, '-ar', '44100', '-ac', '2', tmpWav!],
+                    { timeout: 60_000 },
+                    (error) => error ? reject(error) : resolve()
+                );
+            });
+            inputPath = tmpWav;
+        } catch (ffErr: any) {
+            console.error('[analyze] ffmpeg conversion failed:', ffErr.message);
+            return res.status(500).json({ error: `Format conversion failed: ${ffErr.message}` });
+        }
+    }
+
     try {
         // Run Essentia CLI
         const result = await new Promise<string>((resolve, reject) => {
             execFile(
                 ESSENTIA_BIN,
-                [audioPath, tmpFile],
+                [inputPath, tmpFile],
                 { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 },
                 (error, _stdout, stderr) => {
                     // Essentia writes info to stderr even on success — check if output file exists
@@ -85,15 +108,17 @@ router.post('/', async (req: Request, res: Response) => {
         const key = keyData.key ?? '';
         const scale = keyData.scale ?? '';
 
-        // Cleanup temp file
+        // Cleanup temp files
         fs.unlink(tmpFile).catch(() => { });
+        if (tmpWav) fs.unlink(tmpWav).catch(() => { });
 
         console.log(`[analyze] BPM: ${bpm}, Key: ${key} ${scale} (from ${path.basename(audioPath)})`);
 
         return res.json({ bpm, key, scale });
     } catch (err: any) {
-        // Cleanup temp file on error
+        // Cleanup temp files on error
         fs.unlink(tmpFile).catch(() => { });
+        if (tmpWav) fs.unlink(tmpWav).catch(() => { });
         console.error('[analyze] Essentia failed:', err.message || err);
         return res.status(500).json({ error: `Analysis failed: ${err.message || 'Unknown error'}` });
     }
