@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Music, SlidersHorizontal } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
 import { EditableSlider } from '../EditableSlider';
 
@@ -91,17 +91,17 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
         <>
             {/* COVER / REPAINT CONTROLS — accordion */}
             {showCoverSection && (
-                <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden">
+                <div>
                     <button
                         type="button"
                         onClick={() => setShowCoverSettings(!showCoverSettings)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors"
+                        className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showCoverSettings ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
                     >
-                        <span>{coverTitle}</span>
-                        <ChevronDown size={14} className={`text-pink-500 chevron-icon ${showCoverSettings ? 'rotated' : ''}`} />
+                        <span className="flex items-center gap-2"><Music size={16} className="text-pink-500" />{coverTitle}</span>
+                        <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showCoverSettings ? 'rotated' : ''}`} />
                     </button>
                     {showCoverSettings && (
-                        <div className="px-4 pb-4 space-y-4">
+                        <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
                             {/* Audio Cover Strength & Cover Noise Strength side-by-side */}
                             {showCoverStrength && (
                                 <div className={`grid ${showCoverNoise ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
@@ -213,17 +213,17 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
             )}
 
             {/* OUTPUT PROCESSING — accordion, visible for ALL task types */}
-            <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden">
+            <div>
                 <button
                     type="button"
                     onClick={() => setShowOutputProcessing(!showOutputProcessing)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors"
+                    className={`w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-suno-card border border-zinc-200 dark:border-white/5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors ${showOutputProcessing ? 'rounded-t-xl rounded-b-none border-b-0' : 'rounded-xl'}`}
                 >
-                    <span>{t('outputProcessing')}</span>
-                    <ChevronDown size={14} className={`text-pink-500 chevron-icon ${showOutputProcessing ? 'rotated' : ''}`} />
+                    <span className="flex items-center gap-2"><SlidersHorizontal size={16} className="text-pink-500" />{t('outputProcessing')}</span>
+                    <ChevronDown size={18} className={`text-pink-500 chevron-icon ${showOutputProcessing ? 'rotated' : ''}`} />
                 </button>
                 {showOutputProcessing && (
-                    <div className="px-4 pb-4 space-y-4">
+                    <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
                         {/* Normalization toggle */}
                         <div className="flex items-center justify-between py-1">
                             <div>
