@@ -175,6 +175,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [showLyricsSub, setShowLyricsSub] = usePersistedState('ace-showLyricsSub', true);
   const [showStyleSub, setShowStyleSub] = usePersistedState('ace-showStyleSub', true);
   const [showMusicParamsSub, setShowMusicParamsSub] = usePersistedState('ace-showMusicParamsSub', false);
+  const [showCoverSettings, setShowCoverSettings] = usePersistedState('ace-showCoverSettings', true);
+  const [showOutputProcessing, setShowOutputProcessing] = usePersistedState('ace-showOutputProcessing', false);
   const [duration, setDuration] = usePersistedState('ace-duration', -1);
   const [batchSize, setBatchSize] = usePersistedState('ace-batchSize', 1);
   const [bulkCount, setBulkCount] = usePersistedState('ace-bulkCount', 1);
@@ -2189,6 +2191,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setRepaintingStart={setRepaintingStart}
           repaintingEnd={repaintingEnd}
           setRepaintingEnd={setRepaintingEnd}
+          showCoverSettings={showCoverSettings}
+          setShowCoverSettings={setShowCoverSettings}
+          showOutputProcessing={showOutputProcessing}
+          setShowOutputProcessing={setShowOutputProcessing}
         />
 
         {/* GENERATION SETTINGS */}

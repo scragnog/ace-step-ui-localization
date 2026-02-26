@@ -15,6 +15,17 @@ const isBaseModel = (modelId: string): boolean => {
     return modelId.includes('base');
 };
 
+// Task type descriptions
+const TASK_DESCRIPTIONS: Record<string, string> = {
+    text2music: 'taskDescText2music',
+    cover: 'taskDescCover',
+    repaint: 'taskDescRepaint',
+    extract: 'taskDescExtract',
+    lego: 'taskDescLego',
+    complete: 'taskDescComplete',
+    audio2audio: 'taskDescAudio2audio',
+};
+
 export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
     taskType,
     setTaskType,
@@ -24,6 +35,8 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
     selectedModel
 }) => {
     const { t } = useI18n();
+
+    const descKey = TASK_DESCRIPTIONS[taskType] || TASK_DESCRIPTIONS.text2music;
 
     return (
         <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden">
@@ -52,6 +65,9 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
                     <option value="complete" disabled={!isBaseModel(selectedModel)}>{t('completeTask')}{!isBaseModel(selectedModel) ? ` (${t('requiresBaseModel')})` : ''}</option>
                     <option value="audio2audio">{t('audio2audio')}</option>
                 </select>
+            </div>
+            <div className="px-3 pb-2.5 -mt-0.5">
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 leading-snug">{t(descKey)}</p>
             </div>
         </div>
     );
