@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Download, Play, Pause, Layers, Loader2 } from 'lucide-react';
+import { X, Download, Play, Pause, Layers, Loader2, Volume2, VolumeX } from 'lucide-react';
 
 // ---- Types ----
 
@@ -63,70 +63,234 @@ const STEM_COLORS: Record<string, string> = {
     other: 'from-zinc-500/20 to-slate-500/20 border-zinc-500/30',
 };
 
-// ---- Stem Audio Player ----
+const STEM_ACCENT: Record<string, string> = {
+    vocals: 'bg-pink-500', drums: 'bg-amber-500', bass: 'bg-emerald-500',
+    guitar: 'bg-blue-500', piano: 'bg-purple-500', instrumental: 'bg-cyan-500',
+    other: 'bg-zinc-500',
+};
 
-const StemPlayer: React.FC<{ stem: StemResult; jobId: string }> = ({ stem, jobId }) => {
-    const audioRef = useRef<HTMLAudioElement>(null);
+// ---- Stem Mixer (multi-track synchronized player) ----
+
+const formatTime = (s: number) => {
+    if (!isFinite(s) || s < 0) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+};
+
+const StemMixer: React.FC<{ stems: StemResult[]; jobId: string }> = ({ stems, jobId }) => {
+    const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volumes, setVolumes] = useState<number[]>(() => stems.map(() => 1));
+    const [muted, setMuted] = useState<boolean[]>(() => stems.map(() => false));
+    const [solo, setSolo] = useState<string | null>(null);
+    const [loaded, setLoaded] = useState(0);
+    const animRef = useRef<number>(0);
 
-    const audioUrl = `${PYTHON_API}/v1/stems/${jobId}/download/${encodeURIComponent(stem.stem_type)}`;
+    // Build audio URLs
+    const audioUrls = stems.map(s =>
+        `${PYTHON_API}/v1/stems/${jobId}/download/${encodeURIComponent(s.stem_type)}`
+    );
 
-    const togglePlay = () => {
-        if (!audioRef.current) return;
-        if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); }
-        setIsPlaying(!isPlaying);
+    // Sync time display via requestAnimationFrame
+    useEffect(() => {
+        const tick = () => {
+            const master = audioRefs.current[0];
+            if (master && isPlaying) {
+                setCurrentTime(master.currentTime);
+            }
+            animRef.current = requestAnimationFrame(tick);
+        };
+        animRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animRef.current);
+    }, [isPlaying]);
+
+    // Update volumes/mutes reactively
+    useEffect(() => {
+        audioRefs.current.forEach((el, i) => {
+            if (!el) return;
+            const isMuted = muted[i] || (solo !== null && stems[i].stem_type !== solo);
+            el.volume = isMuted ? 0 : volumes[i];
+        });
+    }, [volumes, muted, solo, stems]);
+
+    const onLoadedMetadata = (i: number) => {
+        const el = audioRefs.current[i];
+        if (el && el.duration > duration) setDuration(el.duration);
+        setLoaded(prev => prev + 1);
     };
 
-    const handleDownload = async () => {
+    const playAll = () => {
+        audioRefs.current.forEach(el => el?.play());
+        setIsPlaying(true);
+    };
+
+    const pauseAll = () => {
+        audioRefs.current.forEach(el => el?.pause());
+        setIsPlaying(false);
+    };
+
+    const togglePlay = () => (isPlaying ? pauseAll : playAll)();
+
+    const seekTo = (pct: number) => {
+        const t = pct * duration;
+        audioRefs.current.forEach(el => { if (el) el.currentTime = t; });
+        setCurrentTime(t);
+    };
+
+    const onEnded = () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        audioRefs.current.forEach(el => { if (el) el.currentTime = 0; });
+    };
+
+    const toggleMute = (i: number) => {
+        setMuted(prev => { const n = [...prev]; n[i] = !n[i]; return n; });
+    };
+
+    const toggleSolo = (stemType: string) => {
+        setSolo(prev => prev === stemType ? null : stemType);
+    };
+
+    const setVolume = (i: number, v: number) => {
+        setVolumes(prev => { const n = [...prev]; n[i] = v; return n; });
+    };
+
+    const downloadStem = async (stem: StemResult) => {
         try {
-            const resp = await fetch(audioUrl);
+            const url = `${PYTHON_API}/v1/stems/${jobId}/download/${encodeURIComponent(stem.stem_type)}`;
+            const resp = await fetch(url);
             const blob = await resp.blob();
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
+            a.href = URL.createObjectURL(blob);
             a.download = stem.file_name;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            URL.revokeObjectURL(url);
         } catch (err) { console.error('Download failed:', err); }
     };
 
-    const colorClass = STEM_COLORS[stem.stem_type] || STEM_COLORS.other;
-    const icon = STEM_ICONS[stem.stem_type] || '🎵';
+    const allLoaded = loaded >= stems.length;
+    const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     return (
-        <div className={`flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-r ${colorClass} transition-all hover:shadow-md`}>
-            <audio
-                ref={audioRef}
-                src={audioUrl}
-                preload="none"
-                onTimeUpdate={() => {
-                    if (audioRef.current && audioRef.current.duration)
-                        setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-                }}
-                onEnded={() => { setIsPlaying(false); setProgress(0); }}
-            />
-            <button onClick={togglePlay}
-                className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm hover:scale-105 transition-transform flex-shrink-0">
-                {isPlaying
-                    ? <Pause size={16} className="text-zinc-900 dark:text-white" fill="currentColor" />
-                    : <Play size={16} className="text-zinc-900 dark:text-white ml-0.5" fill="currentColor" />}
-            </button>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <span className="text-lg">{icon}</span>
-                    <span className="text-sm font-bold text-zinc-900 dark:text-white capitalize">{stem.stem_type}</span>
-                </div>
-                <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full mt-1.5">
-                    <div className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all" style={{ width: `${progress}%` }} />
+        <div className="space-y-3">
+            {/* Hidden audio elements */}
+            {stems.map((stem, i) => (
+                <audio
+                    key={stem.id}
+                    ref={el => { audioRefs.current[i] = el; }}
+                    src={audioUrls[i]}
+                    preload="auto"
+                    onLoadedMetadata={() => onLoadedMetadata(i)}
+                    onEnded={i === 0 ? onEnded : undefined}
+                />
+            ))}
+
+            {/* Master transport */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10">
+                <button
+                    onClick={togglePlay}
+                    disabled={!allLoaded}
+                    className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform disabled:opacity-40 flex-shrink-0"
+                >
+                    {isPlaying
+                        ? <Pause size={18} className="text-white" fill="white" />
+                        : <Play size={18} className="text-white ml-0.5" fill="white" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                    <div
+                        className="w-full h-2 bg-zinc-300 dark:bg-zinc-700 rounded-full cursor-pointer relative group"
+                        onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            seekTo((e.clientX - rect.left) / rect.width);
+                        }}
+                    >
+                        <div
+                            className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-[width] duration-100"
+                            style={{ width: `${progressPct}%` }}
+                        />
+                        <div
+                            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md border-2 border-violet-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ left: `${progressPct}%`, marginLeft: '-6px' }}
+                        />
+                    </div>
+                    <div className="flex justify-between mt-1">
+                        <span className="text-[10px] text-zinc-500 font-mono">{formatTime(currentTime)}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono">{formatTime(duration)}</span>
+                    </div>
                 </div>
             </div>
-            <button onClick={handleDownload}
-                className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-shrink-0" title="Download stem">
-                <Download size={16} className="text-zinc-700 dark:text-zinc-300" />
-            </button>
+
+            {/* Per-stem mixer channels */}
+            {stems.map((stem, i) => {
+                const colorClass = STEM_COLORS[stem.stem_type] || STEM_COLORS.other;
+                const accentClass = STEM_ACCENT[stem.stem_type] || STEM_ACCENT.other;
+                const icon = STEM_ICONS[stem.stem_type] || '🎵';
+                const isMuted = muted[i] || (solo !== null && stem.stem_type !== solo);
+                const isSoloed = solo === stem.stem_type;
+
+                return (
+                    <div key={stem.id}
+                        className={`flex items-center gap-2.5 p-2.5 rounded-xl border bg-gradient-to-r ${colorClass} transition-all ${isMuted && !isSoloed ? 'opacity-40' : ''}`}
+                    >
+                        {/* Stem info */}
+                        <div className="flex items-center gap-1.5 w-24 flex-shrink-0">
+                            <span className="text-base">{icon}</span>
+                            <span className="text-xs font-bold text-zinc-900 dark:text-white capitalize truncate">{stem.stem_type}</span>
+                        </div>
+
+                        {/* Volume slider */}
+                        <div className="flex-1 flex items-center gap-2">
+                            <div className={`w-1.5 h-6 rounded-full ${accentClass} flex-shrink-0`} />
+                            <input
+                                type="range"
+                                min={0} max={1} step={0.01}
+                                value={volumes[i]}
+                                onChange={(e) => setVolume(i, parseFloat(e.target.value))}
+                                className="flex-1 h-1.5 accent-violet-500 cursor-pointer"
+                            />
+                        </div>
+
+                        {/* Mute button */}
+                        <button
+                            onClick={() => toggleMute(i)}
+                            className={`p-1.5 rounded-lg text-xs font-bold transition-colors ${muted[i]
+                                ? 'bg-red-500/20 text-red-500'
+                                : 'hover:bg-black/10 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400'
+                                }`}
+                            title={muted[i] ? 'Unmute' : 'Mute'}
+                        >
+                            {muted[i]
+                                ? <VolumeX size={14} />
+                                : <Volume2 size={14} />}
+                        </button>
+
+                        {/* Solo button */}
+                        <button
+                            onClick={() => toggleSolo(stem.stem_type)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors ${isSoloed
+                                ? 'bg-amber-500/30 text-amber-500 ring-1 ring-amber-500/50'
+                                : 'hover:bg-black/10 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400'
+                                }`}
+                            title={isSoloed ? 'Unsolo' : 'Solo'}
+                        >
+                            S
+                        </button>
+
+                        {/* Download */}
+                        <button
+                            onClick={() => downloadStem(stem)}
+                            className="p-1.5 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-shrink-0"
+                            title="Download stem"
+                        >
+                            <Download size={14} className="text-zinc-600 dark:text-zinc-400" />
+                        </button>
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -293,8 +457,8 @@ export const StemSplitterModal: React.FC = () => {
                                 {MODES.map((m) => (
                                     <button key={m.id} onClick={() => setMode(m.id)}
                                         className={`p-3 rounded-xl border text-left transition-all ${mode === m.id
-                                                ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 ring-1 ring-violet-500/50'
-                                                : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20'
+                                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 ring-1 ring-violet-500/50'
+                                            : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20'
                                             }`}>
                                         <div className="text-sm font-bold text-zinc-900 dark:text-white">{m.label}</div>
                                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{m.desc}</div>
@@ -341,11 +505,7 @@ export const StemSplitterModal: React.FC = () => {
                                     Extract Again
                                 </button>
                             </div>
-                            <div className="space-y-2">
-                                {stems.map((stem) => (
-                                    <StemPlayer key={stem.id} stem={stem} jobId={jobId} />
-                                ))}
-                            </div>
+                            <StemMixer stems={stems} jobId={jobId} />
                         </div>
                     )}
                 </div>
