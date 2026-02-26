@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Song } from '../types';
 import { useI18n } from '../context/I18nContext';
 import {
@@ -11,7 +11,7 @@ import {
     Trash2,
     Share2
 } from 'lucide-react';
-import { StemSplitterModal } from './StemSplitterModal';
+import { openStemSplitter } from './StemSplitterModal';
 
 interface SongDropdownMenuProps {
     song: Song;
@@ -80,7 +80,6 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
 }) => {
     const { t } = useI18n();
     const menuRef = useRef<HTMLDivElement>(null);
-    const [stemModalOpen, setStemModalOpen] = useState(false);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -126,7 +125,7 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
 
     const handleExtractStems = () => {
         if (!song.audioUrl) return;
-        setStemModalOpen(true);
+        openStemSplitter(song.audioUrl, song.title);
         onClose();
     };
 
@@ -146,94 +145,86 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
         : 'animate-in fade-in slide-in-from-top-2';
 
     return (
-        <>
-            <div
-                ref={menuRef}
-                className={`absolute ${positionClasses} ${directionClasses} w-52
-                    bg-zinc-900 rounded-xl shadow-2xl border border-white/10 py-1.5 z-50
-                    ${animationClasses} duration-150`}
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Creative Actions */}
+        <div
+            ref={menuRef}
+            className={`absolute ${positionClasses} ${directionClasses} w-52
+                bg-zinc-900 rounded-xl shadow-2xl border border-white/10 py-1.5 z-50
+                ${animationClasses} duration-150`}
+            onClick={(e) => e.stopPropagation()}
+        >
+            {/* Creative Actions */}
+            <MenuItem
+                icon={<Video size={14} />}
+                label={t('createVideo')}
+                onClick={() => handleAction(onCreateVideo)}
+            />
+            {isOwner && (
                 <MenuItem
-                    icon={<Video size={14} />}
-                    label={t('createVideo')}
-                    onClick={() => handleAction(onCreateVideo)}
+                    icon={<Edit3 size={14} />}
+                    label={t('editAudio')}
+                    onClick={onEditAudio ? () => handleAction(onEditAudio) : handleEditAudio}
                 />
-                {isOwner && (
-                    <MenuItem
-                        icon={<Edit3 size={14} />}
-                        label={t('editAudio')}
-                        onClick={onEditAudio ? () => handleAction(onEditAudio) : handleEditAudio}
-                    />
-                )}
+            )}
+            <MenuItem
+                icon={<Layers size={14} />}
+                label={t('extractStems')}
+                onClick={onExtractStems ? () => handleAction(onExtractStems) : handleExtractStems}
+            />
+            {onReusePrompt && (
+                <MenuItem
+                    icon={<Repeat size={14} />}
+                    label={t('reusePrompt')}
+                    onClick={() => handleAction(onReusePrompt)}
+                />
+            )}
+            {onUseAsReference && (
                 <MenuItem
                     icon={<Layers size={14} />}
-                    label={t('extractStems')}
-                    onClick={onExtractStems ? () => handleAction(onExtractStems) : handleExtractStems}
+                    label={t('useAsReference')}
+                    onClick={() => handleAction(onUseAsReference)}
+                    disabled={!song.audioUrl}
                 />
-                {onReusePrompt && (
-                    <MenuItem
-                        icon={<Repeat size={14} />}
-                        label={t('reusePrompt')}
-                        onClick={() => handleAction(onReusePrompt)}
-                    />
-                )}
-                {onUseAsReference && (
-                    <MenuItem
-                        icon={<Layers size={14} />}
-                        label={t('useAsReference')}
-                        onClick={() => handleAction(onUseAsReference)}
-                        disabled={!song.audioUrl}
-                    />
-                )}
-                {onCoverSong && (
-                    <MenuItem
-                        icon={<Layers size={14} />}
-                        label={t('coverSong')}
-                        onClick={() => handleAction(onCoverSong)}
-                        disabled={!song.audioUrl}
-                    />
-                )}
-
-                <MenuDivider />
-
-                {/* Library Actions */}
+            )}
+            {onCoverSong && (
                 <MenuItem
-                    icon={<ListPlus size={14} />}
-                    label={t('addToPlaylist')}
-                    onClick={() => handleAction(onAddToPlaylist)}
+                    icon={<Layers size={14} />}
+                    label={t('coverSong')}
+                    onClick={() => handleAction(onCoverSong)}
+                    disabled={!song.audioUrl}
                 />
-                <MenuItem
-                    icon={<Download size={14} />}
-                    label={t('download')}
-                    onClick={handleDownload}
-                />
-                <MenuItem
-                    icon={<Share2 size={14} />}
-                    label={t('share')}
-                    onClick={() => handleAction(onShare)}
-                />
+            )}
 
-                {/* Owner-only Actions */}
-                {isOwner && (
-                    <>
-                        <MenuDivider />
-                        <MenuItem
-                            icon={<Trash2 size={14} />}
-                            label={t('deleteSong')}
-                            onClick={() => handleAction(onDelete)}
-                            danger
-                        />
-                    </>
-                )}
-            </div>
-            <StemSplitterModal
-                isOpen={stemModalOpen}
-                onClose={() => setStemModalOpen(false)}
-                audioUrl={song.audioUrl || ''}
-                songTitle={song.title}
+            <MenuDivider />
+
+            {/* Library Actions */}
+            <MenuItem
+                icon={<ListPlus size={14} />}
+                label={t('addToPlaylist')}
+                onClick={() => handleAction(onAddToPlaylist)}
             />
-        </>
+            <MenuItem
+                icon={<Download size={14} />}
+                label={t('download')}
+                onClick={handleDownload}
+            />
+            <MenuItem
+                icon={<Share2 size={14} />}
+                label={t('share')}
+                onClick={() => handleAction(onShare)}
+            />
+
+            {/* Owner-only Actions */}
+            {isOwner && (
+                <>
+                    <MenuDivider />
+                    <MenuItem
+                        icon={<Trash2 size={14} />}
+                        label={t('deleteSong')}
+                        onClick={() => handleAction(onDelete)}
+                        danger
+                    />
+                </>
+            )}
+        </div>
     );
 };

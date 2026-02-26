@@ -6,7 +6,7 @@ import { useResponsive } from '../context/ResponsiveContext';
 import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
 import { ShareModal } from './ShareModal';
-import { StemSplitterModal } from './StemSplitterModal';
+import { openStemSplitter } from './StemSplitterModal';
 import { AlbumCover } from './AlbumCover';
 import { WaveformVisualizer } from './WaveformVisualizer';
 
@@ -72,7 +72,6 @@ export const Player: React.FC<PlayerProps> = ({
     const [showDropdown, setShowDropdown] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [shareModalOpen, setShareModalOpen] = useState(false);
-    const [stemModalOpen, setStemModalOpen] = useState(false);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const speedMenuRef = useRef<HTMLDivElement>(null);
 
@@ -159,7 +158,7 @@ export const Player: React.FC<PlayerProps> = ({
 
     const handleExtractAudio = () => {
         if (!currentSong?.audioUrl) return;
-        setStemModalOpen(true);
+        openStemSplitter(currentSong.audioUrl, currentSong.title);
     };
 
     if (isMobile) {
@@ -876,12 +875,6 @@ export const Player: React.FC<PlayerProps> = ({
                 isOpen={shareModalOpen}
                 onClose={() => setShareModalOpen(false)}
                 song={currentSong}
-            />
-            <StemSplitterModal
-                isOpen={stemModalOpen}
-                onClose={() => setStemModalOpen(false)}
-                audioUrl={currentSong.audioUrl || ''}
-                songTitle={currentSong.title}
             />
         </div>
     );

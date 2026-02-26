@@ -21,6 +21,7 @@ import { I18nProvider, useI18n } from './context/I18nContext';
 import { List } from 'lucide-react';
 import { PlaylistDetail } from './components/PlaylistDetail';
 import { Toast, ToastType } from './components/Toast';
+import { StemSplitterModal } from './components/StemSplitterModal';
 import { SearchPage } from './components/SearchPage';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import DebugPanel from './components/DebugPanel';
@@ -1813,6 +1814,7 @@ function AppContent() {
         onToggleTheme={toggleTheme}
         onNavigateToProfile={handleNavigateToProfile}
       />
+      <StemSplitterModal />
 
       {/* Mobile Details Modal */}
       {showMobileDetails && selectedSong && (

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Download, Play, Pause, Layers, Mic2, Drum, Guitar, Piano, Music, Loader2 } from 'lucide-react';
+import { X, Download, Play, Pause, Layers, Loader2 } from 'lucide-react';
 
 // ---- Types ----
 
@@ -12,22 +12,33 @@ interface StemResult {
     duration: number;
 }
 
-interface StemSplitterModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    audioUrl: string;
-    songTitle?: string;
+// ---- Global open hook ----
+// This lets any component trigger the modal without prop-drilling or lifecycle issues.
+
+type OpenFn = (audioUrl: string, songTitle: string) => void;
+let _globalOpen: OpenFn | null = null;
+
+/** Call from anywhere to open the stem splitter modal. */
+export function openStemSplitter(audioUrl: string, songTitle?: string) {
+    _globalOpen?.(audioUrl, songTitle || 'Untitled');
 }
 
 // ---- Constants ----
 
 const PYTHON_API = (() => {
     if (typeof window !== 'undefined') {
-        // In dev (port 3000), Python is on 8001. In prod, it's relative.
         const host = window.location.hostname;
         return `http://${host}:8001`;
     }
     return 'http://localhost:8001';
+})();
+
+const EXPRESS_API = (() => {
+    if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        return `http://${host}:3001`;
+    }
+    return 'http://localhost:3001';
 })();
 
 const MODES = [
@@ -38,13 +49,8 @@ const MODES = [
 ];
 
 const STEM_ICONS: Record<string, string> = {
-    vocals: '🎤',
-    drums: '🥁',
-    bass: '🎸',
-    guitar: '🎸',
-    piano: '🎹',
-    instrumental: '🎵',
-    other: '🎵',
+    vocals: '🎤', drums: '🥁', bass: '🎸', guitar: '🎸',
+    piano: '🎹', instrumental: '🎵', other: '🎵',
 };
 
 const STEM_COLORS: Record<string, string> = {
@@ -59,10 +65,7 @@ const STEM_COLORS: Record<string, string> = {
 
 // ---- Stem Audio Player ----
 
-const StemPlayer: React.FC<{
-    stem: StemResult;
-    jobId: string;
-}> = ({ stem, jobId }) => {
+const StemPlayer: React.FC<{ stem: StemResult; jobId: string }> = ({ stem, jobId }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -71,11 +74,7 @@ const StemPlayer: React.FC<{
 
     const togglePlay = () => {
         if (!audioRef.current) return;
-        if (isPlaying) {
-            audioRef.current.pause();
-        } else {
-            audioRef.current.play();
-        }
+        if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); }
         setIsPlaying(!isPlaying);
     };
 
@@ -91,9 +90,7 @@ const StemPlayer: React.FC<{
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error('Download failed:', err);
-        }
+        } catch (err) { console.error('Download failed:', err); }
     };
 
     const colorClass = STEM_COLORS[stem.stem_type] || STEM_COLORS.other;
@@ -106,20 +103,16 @@ const StemPlayer: React.FC<{
                 src={audioUrl}
                 preload="none"
                 onTimeUpdate={() => {
-                    if (audioRef.current && audioRef.current.duration) {
+                    if (audioRef.current && audioRef.current.duration)
                         setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-                    }
                 }}
                 onEnded={() => { setIsPlaying(false); setProgress(0); }}
             />
-            <button
-                onClick={togglePlay}
-                className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm hover:scale-105 transition-transform flex-shrink-0"
-            >
+            <button onClick={togglePlay}
+                className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-sm hover:scale-105 transition-transform flex-shrink-0">
                 {isPlaying
                     ? <Pause size={16} className="text-zinc-900 dark:text-white" fill="currentColor" />
-                    : <Play size={16} className="text-zinc-900 dark:text-white ml-0.5" fill="currentColor" />
-                }
+                    : <Play size={16} className="text-zinc-900 dark:text-white ml-0.5" fill="currentColor" />}
             </button>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -127,31 +120,23 @@ const StemPlayer: React.FC<{
                     <span className="text-sm font-bold text-zinc-900 dark:text-white capitalize">{stem.stem_type}</span>
                 </div>
                 <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full mt-1.5">
-                    <div
-                        className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all"
-                        style={{ width: `${progress}%` }}
-                    />
+                    <div className="h-full bg-zinc-900 dark:bg-white rounded-full transition-all" style={{ width: `${progress}%` }} />
                 </div>
             </div>
-            <button
-                onClick={handleDownload}
-                className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-shrink-0"
-                title="Download stem"
-            >
+            <button onClick={handleDownload}
+                className="p-2 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex-shrink-0" title="Download stem">
                 <Download size={16} className="text-zinc-700 dark:text-zinc-300" />
             </button>
         </div>
     );
 };
 
-// ---- Main Modal ----
+// ---- Main Modal (self-managing — render once in App.tsx) ----
 
-export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
-    isOpen,
-    onClose,
-    audioUrl,
-    songTitle,
-}) => {
+export const StemSplitterModal: React.FC = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [audioUrl, setAudioUrl] = useState('');
+    const [songTitle, setSongTitle] = useState('');
     const [mode, setMode] = useState('two-pass');
     const [status, setStatus] = useState<'idle' | 'running' | 'complete' | 'error'>('idle');
     const [progress, setProgress] = useState(0);
@@ -162,7 +147,23 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
     const [available, setAvailable] = useState<boolean | null>(null);
     const eventSourceRef = useRef<EventSource | null>(null);
 
-    // Check availability on mount
+    // Register global open function
+    useEffect(() => {
+        _globalOpen = (url: string, title: string) => {
+            setAudioUrl(url);
+            setSongTitle(title);
+            setStatus('idle');
+            setProgress(0);
+            setMessage('');
+            setStems([]);
+            setJobId('');
+            setError('');
+            setIsOpen(true);
+        };
+        return () => { _globalOpen = null; };
+    }, []);
+
+    // Check availability when modal opens
     useEffect(() => {
         if (!isOpen) return;
         fetch(`${PYTHON_API}/v1/stems/available`)
@@ -173,34 +174,24 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
 
     // Cleanup SSE on unmount
     useEffect(() => {
-        return () => {
-            eventSourceRef.current?.close();
-        };
+        return () => { eventSourceRef.current?.close(); };
     }, []);
 
-    // Reset state when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setStatus('idle');
-            setProgress(0);
-            setMessage('');
-            setStems([]);
-            setJobId('');
-            setError('');
-        }
-    }, [isOpen]);
+    const onClose = useCallback(() => {
+        eventSourceRef.current?.close();
+        setIsOpen(false);
+    }, []);
 
     const resolveAudioPath = (): string => {
-        // If it's a relative URL like /v1/audio?path=..., extract the path param
+        // Express URL: /audio/songId/fileId.flac → pass as-is, Python API will resolve
+        // Python API URL: /v1/audio?path=xxx → extract path param
         if (audioUrl.includes('/v1/audio?path=')) {
-            const url = new URL(audioUrl, window.location.origin);
-            return decodeURIComponent(url.searchParams.get('path') || audioUrl);
+            try {
+                const url = new URL(audioUrl, window.location.origin);
+                return decodeURIComponent(url.searchParams.get('path') || audioUrl);
+            } catch { /* fall through */ }
         }
-        // If it's an absolute file path, use as-is
-        if (audioUrl.match(/^[A-Z]:\\/i) || audioUrl.startsWith('/')) {
-            return audioUrl;
-        }
-        // Relative server path
+        // Relative URL (e.g. /audio/...) or absolute path — pass as-is
         return audioUrl;
     };
 
@@ -227,7 +218,7 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
             const { job_id } = await resp.json();
             setJobId(job_id);
 
-            // Start SSE polling
+            // SSE progress stream
             const es = new EventSource(`${PYTHON_API}/v1/stems/${job_id}/progress`);
             eventSourceRef.current = es;
 
@@ -251,18 +242,7 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
                 } catch { /* ignore parse errors */ }
             };
 
-            es.onerror = () => {
-                // SSE connection lost — poll one final time
-                es.close();
-                setTimeout(async () => {
-                    try {
-                        const r = await fetch(`${PYTHON_API}/v1/stems/${job_id}/progress`);
-                        const reader = r.body?.getReader();
-                        if (!reader) return;
-                        // Just check if job finished
-                    } catch { /* ignore */ }
-                }, 1000);
-            };
+            es.onerror = () => { es.close(); };
         } catch (err) {
             setStatus('error');
             setError(err instanceof Error ? err.message : 'Failed to start separation');
@@ -295,18 +275,15 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-5">
-                    {/* Availability check */}
                     {available === false && (
                         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-sm text-red-700 dark:text-red-300">
                             <strong>audio-separator not installed.</strong> Run{' '}
                             <code className="bg-red-100 dark:bg-red-500/20 px-1.5 py-0.5 rounded text-xs">
                                 python install_audio_separator.py
-                            </code>{' '}
-                            from the project root to install it.
+                            </code>{' '}from the project root.
                         </div>
                     )}
 
-                    {/* Mode selector */}
                     {status === 'idle' && (
                         <div className="space-y-3">
                             <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
@@ -314,14 +291,11 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                                 {MODES.map((m) => (
-                                    <button
-                                        key={m.id}
-                                        onClick={() => setMode(m.id)}
+                                    <button key={m.id} onClick={() => setMode(m.id)}
                                         className={`p-3 rounded-xl border text-left transition-all ${mode === m.id
                                                 ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 ring-1 ring-violet-500/50'
                                                 : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20'
-                                            }`}
-                                    >
+                                            }`}>
                                         <div className="text-sm font-bold text-zinc-900 dark:text-white">{m.label}</div>
                                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{m.desc}</div>
                                         <div className="text-[10px] text-violet-600 dark:text-violet-400 font-mono mt-1">{m.stems} stems</div>
@@ -331,7 +305,6 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
                         </div>
                     )}
 
-                    {/* Progress */}
                     {status === 'running' && (
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
@@ -339,40 +312,32 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
                                 <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{message}</span>
                             </div>
                             <div className="w-full h-3 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
-                                    style={{ width: `${Math.max(progress * 100, 2)}%` }}
-                                />
+                                <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                                    style={{ width: `${Math.max(progress * 100, 2)}%` }} />
                             </div>
                             <p className="text-xs text-zinc-500 text-center font-mono">{(progress * 100).toFixed(0)}%</p>
                         </div>
                     )}
 
-                    {/* Error */}
                     {status === 'error' && (
                         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
                             <p className="text-sm font-medium text-red-700 dark:text-red-300">Separation failed</p>
                             <p className="text-xs text-red-500 dark:text-red-400 mt-1">{error}</p>
-                            <button
-                                onClick={() => setStatus('idle')}
-                                className="mt-3 px-4 py-1.5 text-xs font-bold rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-500/30 transition-colors"
-                            >
+                            <button onClick={() => setStatus('idle')}
+                                className="mt-3 px-4 py-1.5 text-xs font-bold rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-500/30 transition-colors">
                                 Try Again
                             </button>
                         </div>
                     )}
 
-                    {/* Results */}
                     {status === 'complete' && stems.length > 0 && (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                                     {stems.length} Stems Extracted
                                 </span>
-                                <button
-                                    onClick={() => setStatus('idle')}
-                                    className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline"
-                                >
+                                <button onClick={() => setStatus('idle')}
+                                    className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline">
                                     Extract Again
                                 </button>
                             </div>
@@ -385,14 +350,10 @@ export const StemSplitterModal: React.FC<StemSplitterModalProps> = ({
                     )}
                 </div>
 
-                {/* Footer */}
                 {status === 'idle' && (
                     <div className="px-6 py-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
-                        <button
-                            onClick={startSeparation}
-                            disabled={available === false}
-                            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <button onClick={startSeparation} disabled={available === false}
+                            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                             Extract Stems
                         </button>
                     </div>
