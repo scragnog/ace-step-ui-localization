@@ -55,7 +55,13 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
 }) => {
     const { t } = useI18n();
 
-    const isCoverMode = taskType !== 'text2music' && taskType !== 'extract';
+    // Show cover/repaint section for tasks that use source audio controls
+    // (not text2music and not complete — complete uses source audio but no cover controls)
+    const showCoverSection = !['text2music', 'complete'].includes(taskType);
+    const showCoverStrength = !['repaint', 'extract', 'lego'].includes(taskType);
+    const showCoverNoise = taskType === 'cover';
+    const showTempoAndPitch = ['cover', 'repaint', 'audio2audio'].includes(taskType);
+    const showRepaintingRange = ['repaint', 'lego'].includes(taskType);
 
     // Chromatic key transposition
     const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -73,86 +79,72 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
     return (
         <>
             {/* COVER / REPAINT CONTROLS — only for cover/repaint/a2a */}
-            {isCoverMode && (
+            {showCoverSection && (
                 <div className="bg-white dark:bg-suno-card rounded-xl border border-zinc-200 dark:border-white/5 p-4 space-y-4">
                     <h3 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
-                        {taskType === 'repaint' ? t('repaintSettings') : t('coverSettings')}
+                        {taskType === 'repaint' ? t('repaintSettings') : taskType === 'lego' ? t('legoTask') : t('coverSettings')}
                     </h3>
 
                     {/* Audio Cover Strength & Cover Noise Strength side-by-side */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <EditableSlider
-                            label={t('audioCoverStrength')}
-                            value={audioCoverStrength}
-                            min={0}
-                            max={1}
-                            step={0.05}
-                            onChange={setAudioCoverStrength}
-                            formatDisplay={(val) => val.toFixed(2)}
-                            helpText={t('audioCoverStrengthHelp')}
-                            title={t('audioCoverStrengthTooltip')}
-                        />
-                        <EditableSlider
-                            label={t('coverNoiseStrength')}
-                            value={coverNoiseStrength}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            onChange={setCoverNoiseStrength}
-                            formatDisplay={(val) => val.toFixed(2)}
-                            helpText={t('coverNoiseStrengthHelp')}
-                            title={t('coverNoiseStrengthTooltip')}
-                        />
-                    </div>
-
-                    {/* Tempo Scale & Pitch Shift side-by-side */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <EditableSlider
-                            label={t('tempoScale')}
-                            value={tempoScale}
-                            min={0.5}
-                            max={2.0}
-                            step={0.05}
-                            onChange={setTempoScale}
-                            formatDisplay={(val) => `${val.toFixed(2)}x`}
-                            helpText={t('tempoScaleHelp')}
-                            title={t('tempoScaleTooltip')}
-                        />
-                        <EditableSlider
-                            label={t('pitchShift')}
-                            value={pitchShift}
-                            min={-12}
-                            max={12}
-                            step={1}
-                            onChange={setPitchShift}
-                            formatDisplay={(val) => val === 0 ? '0' : val > 0 ? `+${val} ♯` : `${val} ♭`}
-                            helpText={t('pitchShiftHelp')}
-                            title={t('pitchShiftTooltip')}
-                        />
-                    </div>
-
-                    {/* Source Analysis Info — show detected + computed output */}
-                    {detectedBpm !== null && detectedKey !== null && (
-                        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 px-3 py-2 text-[11px] space-y-1">
-                            <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
-                                </svg>
-                                {t('detectedFromSource')}: {detectedBpm} BPM, {detectedKey}
-                            </div>
-                            {(tempoScale !== 1.0 || pitchShift !== 0) && (
-                                <div className="text-emerald-600 dark:text-emerald-500">
-                                    → {t('outputBpm')}: {Math.round(detectedBpm * tempoScale)} BPM
-                                    {pitchShift !== 0 && (
-                                        <span className="ml-2">| {t('outputKey')}: {transposeKey(detectedKey, pitchShift)}</span>
-                                    )}
-                                </div>
+                    {showCoverStrength && (
+                        <div className={`grid ${showCoverNoise ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                            <EditableSlider
+                                label={t('audioCoverStrength')}
+                                value={audioCoverStrength}
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                onChange={setAudioCoverStrength}
+                                formatDisplay={(val) => val.toFixed(2)}
+                                helpText={t('audioCoverStrengthHelp')}
+                                title={t('audioCoverStrengthTooltip')}
+                            />
+                            {showCoverNoise && (
+                                <EditableSlider
+                                    label={t('coverNoiseStrength')}
+                                    value={coverNoiseStrength}
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    onChange={setCoverNoiseStrength}
+                                    formatDisplay={(val) => val.toFixed(2)}
+                                    helpText={t('coverNoiseStrengthHelp')}
+                                    title={t('coverNoiseStrengthTooltip')}
+                                />
                             )}
                         </div>
                     )}
 
-                    {/* Repainting Start/End - repaint mode only */}
-                    {taskType === 'repaint' && (
+                    {/* Tempo Scale & Pitch Shift — only for cover/repaint/a2a */}
+                    {showTempoAndPitch && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <EditableSlider
+                                label={t('tempoScale')}
+                                value={tempoScale}
+                                min={0.5}
+                                max={2.0}
+                                step={0.05}
+                                onChange={setTempoScale}
+                                formatDisplay={(val) => `${val.toFixed(2)}x`}
+                                helpText={t('tempoScaleHelp')}
+                                title={t('tempoScaleTooltip')}
+                            />
+                            <EditableSlider
+                                label={t('pitchShift')}
+                                value={pitchShift}
+                                min={-12}
+                                max={12}
+                                step={1}
+                                onChange={setPitchShift}
+                                formatDisplay={(val) => val === 0 ? '0' : val > 0 ? `+${val} ♯` : `${val} ♭`}
+                                helpText={t('pitchShiftHelp')}
+                                title={t('pitchShiftTooltip')}
+                            />
+                        </div>
+                    )}
+
+                    {/* Repainting Start/End — repaint and lego modes */}
+                    {showRepaintingRange && (
                         <>
                             <EditableSlider
                                 label={t('repaintingStart')}

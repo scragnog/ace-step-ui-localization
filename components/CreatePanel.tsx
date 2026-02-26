@@ -331,6 +331,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     return modelId.includes('turbo');
   };
 
+  // Check if model is a pure base model (only base supports extract/lego/complete)
+  const isBaseModel = (modelId: string): boolean => {
+    return modelId.includes('base');
+  };
+
+  const isBaseOnlyTask = (task: string): boolean => {
+    return ['extract', 'lego', 'complete'].includes(task);
+  };
+
   // Genre selection state (cascading)
   // Two-level genre cascade states
   const [showGenreDropdown, setShowGenreDropdown] = useState(false);
@@ -511,6 +520,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   useEffect(() => {
     if (previousModelRef.current !== selectedModel && loraLoaded) {
       void handleLoraUnload();
+    }
+    // Fall back to text2music if switching to a non-base model while on a base-only task
+    if (previousModelRef.current !== selectedModel && !isBaseModel(selectedModel) && isBaseOnlyTask(taskType)) {
+      setTaskType('text2music');
     }
     previousModelRef.current = selectedModel;
   }, [selectedModel, loraLoaded]);
@@ -1854,6 +1867,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           audioTab={audioTab}
           setAudioTab={setAudioTab}
           useReferenceAudio={useReferenceAudio}
+          selectedModel={selectedModel}
         />
 
         {/* JSON Import/Export Actions */}
