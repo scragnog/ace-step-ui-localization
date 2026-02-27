@@ -193,6 +193,23 @@ function AppContent() {
   // Fullscreen Visualizer State
   const [showFullscreenVisualizer, setShowFullscreenVisualizer] = useState(false);
 
+  // Visualizer songlist background setting
+  const [showVisualizerBg, setShowVisualizerBg] = useState(() => localStorage.getItem('visualizer_songlist_bg') === 'true');
+
+  // Listen for storage changes (when setting is toggled in SettingsModal)
+  useEffect(() => {
+    const handleStorage = () => {
+      setShowVisualizerBg(localStorage.getItem('visualizer_songlist_bg') === 'true');
+    };
+    window.addEventListener('storage', handleStorage);
+    // Also poll on interval to catch same-tab changes
+    const interval = setInterval(handleStorage, 500);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Audio Analysis
   const { connect: connectAudioAnalysis } = useAudioAnalysis();
 
@@ -1667,6 +1684,7 @@ function AppContent() {
                 onCoverUpload={handleCoverUpload}
                 onSongUpdate={handleSongUpdate}
                 onDeleteUpload={handleDeleteReferenceTrack}
+                showVisualizerBg={showVisualizerBg}
               />
             </div>
 

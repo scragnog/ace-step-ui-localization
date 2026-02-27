@@ -7,6 +7,7 @@ import { SongDropdownMenu } from './SongDropdownMenu';
 import { ShareModal } from './ShareModal';
 import { AlbumCover } from './AlbumCover';
 import { songsApi } from '../services/api';
+import { LiveVisualizer } from './LiveVisualizer';
 
 interface SongListProps {
     songs: Song[];
@@ -33,6 +34,7 @@ interface SongListProps {
     onCoverUpload?: (track: { audio_url: string; filename: string }) => void;
     onDownloadFormat?: (song: Song) => void;
     onDeleteUpload?: (trackId: string) => void;
+    showVisualizerBg?: boolean;
 }
 
 // ... existing code ...
@@ -113,7 +115,8 @@ export const SongList: React.FC<SongListProps> = ({
     onUseUploadAsReference,
     onCoverUpload,
     onDownloadFormat,
-    onDeleteUpload
+    onDeleteUpload,
+    showVisualizerBg
 }) => {
     const { user } = useAuth();
     const { t } = useI18n();
@@ -245,8 +248,19 @@ export const SongList: React.FC<SongListProps> = ({
     const selectedSongs = selectableSongs.filter(song => selectedIds.has(song.id));
 
     return (
-        <div className="flex-1 bg-white dark:bg-black h-full overflow-y-auto custom-scrollbar p-6 pb-32 transition-colors duration-300">
-            <div className="max-w-5xl mx-auto w-full"> {/* Container constraint */}
+        <div className="relative flex-1 bg-white dark:bg-black h-full overflow-y-auto custom-scrollbar p-6 pb-32 transition-colors duration-300">
+            {/* Background Visualizer — dimmed, behind content */}
+            {showVisualizerBg && isPlaying && (
+                <div className="absolute inset-0 z-0 pointer-events-none">
+                    <LiveVisualizer
+                        isPlaying={true}
+                        className="w-full h-full"
+                        dimmed={true}
+                        showControls={false}
+                    />
+                </div>
+            )}
+            <div className="relative z-[1] max-w-5xl mx-auto w-full"> {/* Container constraint */}
 
                 {/* Header */}
                 <div className="flex flex-col gap-6 mb-8">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github, Save } from 'lucide-react';
+import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github, Save, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { EditProfileModal } from './EditProfileModal';
@@ -18,6 +18,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
     const { t, language, setLanguage } = useI18n();
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [persistEnabled, setPersistEnabled] = useState(isPersistenceEnabled);
+    const [visualizerBg, setVisualizerBg] = useState(() => localStorage.getItem('visualizer_songlist_bg') === 'true');
 
     if (!isOpen || !user) {
         if (isEditProfileOpen && user) {
@@ -156,6 +157,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                         }`}
                                 >
                                     {t('dark')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Visualizer Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-zinc-900 dark:text-white">
+                            <Activity size={20} />
+                            <h3 className="font-semibold">Visualizer</h3>
+                        </div>
+                        <div className="pl-7 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-zinc-900 dark:text-white font-medium">Song list background</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Show a dimmed visualizer behind tracks while music plays</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const next = !visualizerBg;
+                                        setVisualizerBg(next);
+                                        localStorage.setItem('visualizer_songlist_bg', String(next));
+                                    }}
+                                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${visualizerBg ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${visualizerBg ? 'translate-x-5' : 'translate-x-0'}`} />
                                 </button>
                             </div>
                         </div>
