@@ -26,14 +26,14 @@ interface AudioAnalysisProviderProps {
 
 export const AudioAnalysisProvider: React.FC<AudioAnalysisProviderProps> = ({ children }) => {
     const audioContextRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
     const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
     const connectedElementRef = useRef<HTMLAudioElement | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
 
     const connect = useCallback((audioElement: HTMLAudioElement) => {
         // Already connected to this element — skip
-        if (connectedElementRef.current === audioElement && analyserRef.current) {
+        if (connectedElementRef.current === audioElement && analyserNode) {
             return;
         }
 
@@ -57,7 +57,7 @@ export const AudioAnalysisProvider: React.FC<AudioAnalysisProviderProps> = ({ ch
             // Create analyser
             const analyser = audioCtx.createAnalyser();
             analyser.fftSize = 2048;
-            analyserRef.current = analyser;
+            setAnalyserNode(analyser);
 
             // Connect: element → source → analyser → destination
             // createMediaElementSource can only be called once per element
@@ -83,7 +83,7 @@ export const AudioAnalysisProvider: React.FC<AudioAnalysisProviderProps> = ({ ch
     return (
         <AudioAnalysisContext.Provider value={{
             connect,
-            analyserNode: analyserRef.current,
+            analyserNode,
             isConnected,
         }}>
             {children}

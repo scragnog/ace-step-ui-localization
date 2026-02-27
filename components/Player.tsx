@@ -97,7 +97,7 @@ export const Player: React.FC<PlayerProps> = ({
                 ? smoothBass + (bass - smoothBass) * 0.4   // fast attack
                 : smoothBass + (bass - smoothBass) * 0.08; // slow release
 
-            const scale = 1 + smoothBass * 0.12; // max 1.12x
+            const scale = 1 + smoothBass * 0.3; // max 1.3x
             if (waveformContainerRef.current) {
                 waveformContainerRef.current.style.transform = `scaleY(${scale})`;
             }
@@ -713,7 +713,7 @@ export const Player: React.FC<PlayerProps> = ({
             {/* Progress Bar with Waveform Overlay */}
             <div
                 ref={progressBarRef}
-                className="relative w-full h-10 lg:h-12 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 cursor-pointer group border-y border-zinc-200/50 dark:border-white/5"
+                className="relative w-full h-10 lg:h-12 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 cursor-pointer group border-y border-zinc-200/50 dark:border-white/5 overflow-visible"
                 onClick={(e) => handleSeekInteraction(e, progressBarRef)}
             >
                 {/* Waveform - rendered behind, with bass bounce */}
