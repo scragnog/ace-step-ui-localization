@@ -27,6 +27,8 @@ import { SearchPage } from './components/SearchPage';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import DebugPanel from './components/DebugPanel';
 import { usePersistedState } from './hooks/usePersistedState';
+import { AudioAnalysisProvider, useAudioAnalysis } from './context/AudioAnalysisContext';
+import { FullscreenVisualizer } from './components/FullscreenVisualizer';
 
 
 type AppErrorBoundaryProps = PropsWithChildren<{}>;
@@ -187,6 +189,12 @@ function AppContent() {
 
   // Mobile Details Modal State
   const [showMobileDetails, setShowMobileDetails] = useState(false);
+
+  // Fullscreen Visualizer State
+  const [showFullscreenVisualizer, setShowFullscreenVisualizer] = useState(false);
+
+  // Audio Analysis
+  const { connect: connectAudioAnalysis } = useAudioAnalysis();
 
   // Toast State
   const [toast, setToast] = useState<{ message: string; type: ToastType; isVisible: boolean }>({
@@ -695,6 +703,8 @@ function AppContent() {
     if (currentSongIdRef.current !== currentSong.id) {
       currentSongIdRef.current = currentSong.id;
       audio.src = currentSong.audioUrl;
+      // Connect audio analysis on first play
+      connectAudioAnalysis(audio);
       audio.load();
       if (isPlaying) playAudio();
     } else {
@@ -1674,6 +1684,9 @@ function AppContent() {
                   isLiked={selectedSong ? likedSongIds.has(selectedSong.id) : false}
                   onToggleLike={toggleLike}
                   onDelete={handleDeleteSong}
+                  isPlaying={isPlaying && currentSong?.id === selectedSong?.id}
+                  currentSong={currentSong}
+                  onFullscreenVisualizer={() => setShowFullscreenVisualizer(true)}
                 />
               </div>
             )}
@@ -1817,6 +1830,18 @@ function AppContent() {
       />
       <StemSplitterModal />
       <AudioEnhancerModal />
+      <FullscreenVisualizer
+        isOpen={showFullscreenVisualizer}
+        onClose={() => setShowFullscreenVisualizer(false)}
+        song={currentSong}
+        isPlaying={isPlaying}
+        currentTime={currentTime}
+        duration={duration}
+        onTogglePlay={togglePlay}
+        onNext={playNext}
+        onPrevious={playPrevious}
+        onSeek={handleSeek}
+      />
 
       {/* Mobile Details Modal */}
       {showMobileDetails && selectedSong && (
@@ -1837,6 +1862,9 @@ function AppContent() {
               isLiked={selectedSong ? likedSongIds.has(selectedSong.id) : false}
               onToggleLike={toggleLike}
               onDelete={handleDeleteSong}
+              isPlaying={isPlaying && currentSong?.id === selectedSong?.id}
+              currentSong={currentSong}
+              onFullscreenVisualizer={() => setShowFullscreenVisualizer(true)}
             />
           </div>
         </div>
@@ -1870,9 +1898,11 @@ function AppContent() {
 export default function App() {
   return (
     <I18nProvider>
-      <AppErrorBoundary>
-        <AppContent />
-      </AppErrorBoundary>
+      <AudioAnalysisProvider>
+        <AppErrorBoundary>
+          <AppContent />
+        </AppErrorBoundary>
+      </AudioAnalysisProvider>
     </I18nProvider>
   );
 }

@@ -8,6 +8,7 @@ import { SongDropdownMenu } from './SongDropdownMenu';
 import { ShareModal } from './ShareModal';
 import { openStemSplitter } from './StemSplitterModal';
 import { AlbumCover } from './AlbumCover';
+import { LiveVisualizer } from './LiveVisualizer';
 
 interface RightSidebarProps {
     song: Song | null;
@@ -24,9 +25,10 @@ interface RightSidebarProps {
     onPlay?: (song: Song) => void;
     isPlaying?: boolean;
     currentSong?: Song | null;
+    onFullscreenVisualizer?: () => void;
 }
 
-export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpenVideo, onReuse, onSongUpdate, onNavigateToProfile, onNavigateToSong, isLiked, onToggleLike, onDelete, onAddToPlaylist, onPlay, isPlaying, currentSong }) => {
+export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpenVideo, onReuse, onSongUpdate, onNavigateToProfile, onNavigateToSong, isLiked, onToggleLike, onDelete, onAddToPlaylist, onPlay, isPlaying, currentSong, onFullscreenVisualizer }) => {
     const { token, user } = useAuth();
     const { t } = useI18n();
     const [showMenu, setShowMenu] = useState(false);
@@ -144,37 +146,49 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="p-5 pb-24 lg:pb-32 space-y-6">
 
-                    {/* Cover Art */}
+                    {/* Cover Art / Live Visualizer */}
                     <div
                         className="group relative aspect-square w-full rounded-xl overflow-hidden shadow-2xl bg-zinc-200 dark:bg-zinc-800 ring-1 ring-black/5 dark:ring-white/10 cursor-pointer"
                         onClick={() => onPlay?.(song)}
                     >
-                        {song.coverUrl ? (
-                            <img src={song.coverUrl} alt={song.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                        ) : null}
-                        {!song.coverUrl && <AlbumCover seed={song.id || song.title} size="full" className="w-full h-full" />}
+                        {/* Live Visualizer — shown when this song is playing */}
+                        {isPlaying && currentSong?.id === song.id ? (
+                            <div className="absolute inset-0 z-[1] animate-in fade-in duration-500">
+                                <LiveVisualizer
+                                    isPlaying={true}
+                                    className="w-full h-full"
+                                    showControls={true}
+                                    onFullscreen={onFullscreenVisualizer}
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                {song.coverUrl ? (
+                                    <img src={song.coverUrl} alt={song.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                ) : null}
+                                {!song.coverUrl && <AlbumCover seed={song.id || song.title} size="full" className="w-full h-full" />}
+                            </>
+                        )}
 
                         {/* Overlay Gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 z-[2] pointer-events-none"></div>
 
-                        {/* Play Button Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onPlay?.(song);
-                                }}
-                                className="w-16 h-16 rounded-full bg-white/95 dark:bg-white text-black flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
-                            >
-                                {isPlaying && currentSong?.id === song.id ? (
-                                    <Pause size={28} fill="currentColor" />
-                                ) : (
+                        {/* Play Button Overlay — only when not visualizing */}
+                        {!(isPlaying && currentSong?.id === song.id) && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[3]">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onPlay?.(song);
+                                    }}
+                                    className="w-16 h-16 rounded-full bg-white/95 dark:bg-white text-black flex items-center justify-center shadow-2xl hover:scale-110 transition-transform"
+                                >
                                     <Play size={28} fill="currentColor" className="ml-1" />
-                                )}
-                            </button>
-                        </div>
+                                </button>
+                            </div>
+                        )}
 
-                        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-[3]">
                             <div className="flex items-center gap-2 text-white">
                                 <Play size={16} fill="currentColor" />
                                 <span className="text-xs font-bold font-mono">{song.viewCount || 0}</span>
