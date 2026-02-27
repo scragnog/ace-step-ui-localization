@@ -65,6 +65,8 @@ interface TrackDetailsAccordionProps {
     setTimeSignature: (val: string) => void;
     duration: number;
     setDuration: (val: number) => void;
+    detectedBpm?: number | null;
+    detectedKey?: string | null;
 }
 
 export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
@@ -75,7 +77,8 @@ export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
     title, setTitle,
     showLyricsSub, setShowLyricsSub, lyrics, setLyrics, lyricsRef, lyricsHeight, startResizing, isFormattingLyrics,
     showStyleSub, setShowStyleSub, style, setStyle, refreshMusicTags, isFormattingStyle, handleFormat, styleRef, styleHeight, startResizingStyle, genreDropdownRef, showGenreDropdown, setShowGenreDropdown, selectedMainGenre, setSelectedMainGenre, selectedSubGenre, setSelectedSubGenre, getSubGenreCount, genreSearch, setGenreSearch, filteredCombinedGenres, subGenreDropdownRef, showSubGenreDropdown, setShowSubGenreDropdown, filteredSubGenres, musicTags,
-    bpm, setBpm, keyScale, setKeyScale, timeSignature, setTimeSignature, duration, setDuration
+    bpm, setBpm, keyScale, setKeyScale, timeSignature, setTimeSignature, duration, setDuration,
+    detectedBpm, detectedKey,
 }) => {
     const { t } = useI18n();
 
@@ -167,6 +170,7 @@ export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
                         startResizing={startResizing}
                         isFormattingLyrics={isFormattingLyrics}
                         handleFormat={handleFormat}
+                        duration={duration > 0 ? duration : undefined}
                     />
 
                     <StyleSection
@@ -196,6 +200,9 @@ export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
                         setShowSubGenreDropdown={setShowSubGenreDropdown}
                         filteredSubGenres={filteredSubGenres}
                         musicTags={musicTags}
+                        bpm={bpm}
+                        keyScale={keyScale}
+                        timeSignature={timeSignature}
                     />
 
                     <MusicParametersSection
@@ -207,6 +214,8 @@ export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
                         setTimeSignature={setTimeSignature}
                         duration={duration}
                         setDuration={setDuration}
+                        detectedBpm={detectedBpm}
+                        detectedKey={detectedKey}
                     />
 
                 </div>

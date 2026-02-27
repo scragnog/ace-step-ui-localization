@@ -29,6 +29,10 @@ interface StyleSectionProps {
     setShowSubGenreDropdown: (val: boolean) => void;
     filteredSubGenres: string[];
     musicTags: string[];
+    /** Optional song parameters for the combined prompt preview */
+    bpm?: number;
+    keyScale?: string;
+    timeSignature?: string;
 }
 
 export const StyleSection: React.FC<StyleSectionProps> = ({
@@ -57,7 +61,10 @@ export const StyleSection: React.FC<StyleSectionProps> = ({
     showSubGenreDropdown,
     setShowSubGenreDropdown,
     filteredSubGenres,
-    musicTags
+    musicTags,
+    bpm,
+    keyScale,
+    timeSignature,
 }) => {
     const { t } = useI18n();
 
@@ -300,6 +307,25 @@ export const StyleSection: React.FC<StyleSectionProps> = ({
                             </button>
                         ))}
                     </div>
+
+                    {/* Combined Prompt Preview */}
+                    {(() => {
+                        const parts: string[] = [];
+                        if (style.trim()) parts.push(style.trim());
+                        const songParams: string[] = [];
+                        if (keyScale) songParams.push(keyScale);
+                        if (bpm && bpm > 0) songParams.push(`${bpm} BPM`);
+                        if (timeSignature) songParams.push(timeSignature);
+                        if (songParams.length > 0) parts.push(songParams.join(', '));
+                        const preview = parts.join(' · ');
+                        if (!preview) return null;
+                        return (
+                            <div className="bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 space-y-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Style prompt</p>
+                                <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed break-words">{preview}</p>
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
         </div>
