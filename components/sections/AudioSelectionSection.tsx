@@ -95,9 +95,17 @@ export const AudioSelectionSection: React.FC<AudioSelectionSectionProps> = ({
                         onClick={() => {
                             const newValue = !useReferenceAudio;
                             setUseReferenceAudio(newValue);
-                            if (!newValue && taskType !== 'text2music') {
-                                setAudioTab('source');
-                            } else if (newValue) {
+                            if (!newValue) {
+                                // Clear reference audio so it won't be sent in generation requests
+                                setReferenceAudioUrl('');
+                                setReferenceAudioTitle('');
+                                setReferencePlaying(false);
+                                setReferenceTime(0);
+                                setReferenceDuration(0);
+                                if (taskType !== 'text2music') {
+                                    setAudioTab('source');
+                                }
+                            } else {
                                 setAudioTab('reference');
                             }
                         }}
@@ -261,8 +269,8 @@ export const AudioSelectionSection: React.FC<AudioSelectionSectionProps> = ({
                                         disabled={isAnalyzing}
                                         title={t('analyzeSource')}
                                         className={`p-1.5 rounded-full transition-colors ${isAnalyzing
-                                                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 cursor-wait'
-                                                : 'hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300'
+                                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 cursor-wait'
+                                            : 'hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300'
                                             }`}
                                     >
                                         {isAnalyzing ? (
