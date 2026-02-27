@@ -1014,6 +1014,20 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     prevIsGeneratingRef.current = isGenerating;
   }, [isGenerating, refreshModels]);
 
+  // Ctrl+Enter / Cmd+Enter keyboard shortcut to trigger Generate from anywhere in the UI
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!isGenerating && isAuthenticated) {
+          handleGenerate();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isGenerating, isAuthenticated]);
+
   const activeMaxDuration = thinking ? maxDurationWithLm : maxDurationWithoutLm;
 
   useEffect(() => {
