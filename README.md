@@ -116,6 +116,7 @@
 | **Library Management** | Browse, search, and organize all your tracks |
 | **Likes & Playlists** | Organize favorites into custom playlists |
 | **Real-time Progress** | Live generation progress with queue position |
+| **Live Visualizer** | 10 audio-reactive presets, fullscreen mode, preset picker |
 | **LAN Access** | Use from any device on your local network |
 
 ### 🛠️ Built-in Tools
@@ -124,6 +125,7 @@
 | **Audio Editor** | Trim, fade, and apply effects with AudioMass |
 | **Stem Extraction** | Separate vocals, drums, bass, and other with Demucs |
 | **Video Generator** | Create music videos with Pexels backgrounds |
+| **Live Visualizer** | Real-time audio-reactive visuals with 10 presets and fullscreen mode |
 | **Gradient Covers** | Beautiful procedural album art (no internet needed) |
 
 ---
@@ -414,6 +416,7 @@ Full control over every parameter:
 | **🎤 Stem Extraction** | Separate vocals, drums, bass, other |
 | **🎬 Video Generator** | Create music videos with stock footage |
 | **🎨 Album Art** | Auto-generated gradient covers |
+| **🎛️ Live Visualizer** | 10 audio-reactive presets, fullscreen Winamp-style mode, ambient song list background |
 
 ---
 
