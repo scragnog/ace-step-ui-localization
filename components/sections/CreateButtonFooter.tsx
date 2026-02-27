@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useI18n } from '../../context/I18nContext';
 
 interface CreateButtonFooterProps {
@@ -15,6 +15,27 @@ export const CreateButtonFooter: React.FC<CreateButtonFooterProps> = ({
     activeJobCount
 }) => {
     const { t } = useI18n();
+    const [elapsedSecs, setElapsedSecs] = useState(0);
+
+    // Start/stop elapsed timer based on isGenerating
+    useEffect(() => {
+        if (!isGenerating) {
+            setElapsedSecs(0);
+            return;
+        }
+        setElapsedSecs(0);
+        const start = Date.now();
+        const id = setInterval(() => {
+            setElapsedSecs(Math.floor((Date.now() - start) / 1000));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [isGenerating]);
+
+    const formatElapsed = (secs: number) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
+    };
 
     return (
         <div className="p-4 mt-auto sticky bottom-0 bg-zinc-50/95 dark:bg-suno-panel/95 backdrop-blur-sm z-10 border-t border-zinc-200 dark:border-white/5 space-y-3">
@@ -32,14 +53,26 @@ export const CreateButtonFooter: React.FC<CreateButtonFooterProps> = ({
                         <span>
                             {activeJobCount > 0
                                 ? `${t('queueNext')} (${activeJobCount} active)`
-                                : 'Sending…'
+                                : 'Generating…'
                             }
                         </span>
+                        {elapsedSecs > 0 && (
+                            <span className="text-xs font-normal text-white/70 tabular-nums ml-1">
+                                {formatElapsed(elapsedSecs)}
+                            </span>
+                        )}
                     </>
                 ) : (
                     <span>{t('createSong')}</span>
                 )}
             </button>
+
+            {/* Keyboard shortcut hint */}
+            {!isGenerating && (
+                <p className="text-center text-[10px] text-zinc-400 dark:text-zinc-600">
+                    <kbd className="font-mono">Ctrl</kbd>+<kbd className="font-mono">Enter</kbd> to generate
+                </p>
+            )}
 
             {!isAuthenticated && (
                 <p className="text-center text-xs text-rose-500 font-medium">{t('loginRequired')}</p>
