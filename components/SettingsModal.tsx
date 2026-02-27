@@ -19,6 +19,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [persistEnabled, setPersistEnabled] = useState(isPersistenceEnabled);
     const [visualizerBg, setVisualizerBg] = useState(() => localStorage.getItem('visualizer_songlist_bg') === 'true');
+    const [bounceIntensity, setBounceIntensity] = useState(() => {
+        const saved = localStorage.getItem('waveform-bounce-intensity');
+        return saved !== null ? parseFloat(saved) : 0.5;
+    });
 
     if (!isOpen || !user) {
         if (isEditProfileOpen && user) {
@@ -184,6 +188,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                 >
                                     <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${visualizerBg ? 'translate-x-5' : 'translate-x-0'}`} />
                                 </button>
+                            </div>
+                            {/* Waveform Bounce Intensity */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-zinc-900 dark:text-white font-medium">Waveform bass bounce</p>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Bars pulse with the bass — crank it up!</p>
+                                    </div>
+                                    <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 min-w-[60px] text-right">
+                                        {bounceIntensity === 0 ? 'Off' : bounceIntensity <= 0.3 ? 'Subtle' : bounceIntensity <= 0.6 ? 'Medium' : bounceIntensity <= 0.8 ? 'Strong' : 'Maximum'}
+                                    </span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={bounceIntensity}
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        setBounceIntensity(val);
+                                        const key = 'waveform-bounce-intensity';
+                                        localStorage.setItem(key, String(val));
+                                        // Dispatch synthetic event so Player picks it up in same tab
+                                        window.dispatchEvent(new StorageEvent('storage', { key, newValue: String(val) }));
+                                    }}
+                                    className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full appearance-none cursor-pointer accent-pink-600"
+                                />
+                                <div className="flex justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
+                                    <span>Off</span>
+                                    <span>Maximum</span>
+                                </div>
                             </div>
                         </div>
                     </div>

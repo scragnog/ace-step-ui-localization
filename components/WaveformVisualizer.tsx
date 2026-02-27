@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface WaveformVisualizerProps {
   audioUrl: string | null;
@@ -6,6 +6,12 @@ interface WaveformVisualizerProps {
   duration: number;
   progressBarRef?: React.RefObject<HTMLDivElement>;
   onSeek: (time: number) => void;
+  /** AnalyserNode for bass-reactive bounce. Optional — no bounce when null. */
+  analyserNode?: AnalyserNode | null;
+  /** Whether audio is currently playing (enables rAF redraw loop). */
+  isPlaying?: boolean;
+  /** Bass bounce intensity 0-1. 0 = off, 1 = max bounce. */
+  bounceIntensity?: number;
 }
 
 interface WaveformData {
@@ -18,7 +24,6 @@ const WAVEFORM_CACHE_MAX = 30;
 const waveformCache = new Map<string, WaveformData>();
 function cacheSet(url: string, data: WaveformData) {
   if (waveformCache.size >= WAVEFORM_CACHE_MAX) {
-    // Evict oldest entry
     const firstKey = waveformCache.keys().next().value;
     if (firstKey) waveformCache.delete(firstKey);
   }
@@ -40,11 +45,16 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
   duration,
   progressBarRef,
   onSeek,
+  analyserNode,
+  isPlaying = false,
+  bounceIntensity = 0,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [waveformData, setWaveformData] = useState<WaveformData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const rafRef = useRef<number>(0);
+  const smoothBassRef = useRef(0);
 
   // Generate waveform data from audio file
   useEffect(() => {
@@ -53,7 +63,6 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
       return;
     }
 
-    // Check cache first
     const cached = waveformCache.get(audioUrl);
     if (cached) {
       setWaveformData(cached);
@@ -61,7 +70,6 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
       return;
     }
 
-    // Abort any previous in-flight fetch
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -98,8 +106,6 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
           peaks.push(peak);
         }
 
-        // audioBuffer is now only referenced locally — it will be GC'd
-        // We only keep the tiny peaks array
         const data: WaveformData = { peaks, length: audioBuffer.duration };
         cacheSet(audioUrl, data);
         if (!controller.signal.aborted) {
@@ -108,7 +114,7 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
         }
       })
       .catch(error => {
-        if (error?.name === 'AbortError') return; // Expected — ignore
+        if (error?.name === 'AbortError') return;
         console.error('Failed to generate waveform:', error);
         if (!controller.signal.aborted) {
           setIsLoading(false);
@@ -120,8 +126,8 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
     };
   }, [audioUrl]);
 
-  // Draw waveform
-  useEffect(() => {
+  // Draw waveform — extracted so it can be called from both static and rAF paths
+  const drawWaveform = useCallback((bassMultiplier: number = 1) => {
     const canvas = canvasRef.current;
     if (!canvas || !waveformData) return;
 
@@ -138,16 +144,13 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
     const height = rect.height;
     const centerY = height / 2;
 
-    // Dynamic bar spacing — fills the full canvas width
     const totalBars = waveformData.peaks.length;
     const step = width / totalBars;
     const barWidth = Math.max(1, step * 0.65);
     const playedPercent = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0;
     const playedPixelWidth = playedPercent * width;
 
-    const parentEl = canvas.parentElement;
-    const isDarkMode = parentEl ? window.getComputedStyle(parentEl).backgroundColor.includes('28') ||
-      document.documentElement.classList.contains('dark') : false;
+    const isDarkMode = document.documentElement.classList.contains('dark');
 
     ctx.clearRect(0, 0, width, height);
 
@@ -156,7 +159,9 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
         ? (peak + waveformData.peaks[index - 1] + waveformData.peaks[index + 1]) / 3
         : peak;
 
-      const barHeight = Math.max(3, smoothedPeak * (height - 8));
+      // Apply bass multiplier to bar height — grows symmetrically from center
+      const baseBarHeight = Math.max(3, smoothedPeak * (height - 8));
+      const barHeight = baseBarHeight * bassMultiplier;
       const x = index * step;
 
       const barCenterX = x + barWidth / 2;
@@ -172,7 +177,8 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
         ctx.fillStyle = isDarkMode ? 'rgba(160, 160, 170, 0.4)' : 'rgba(100, 100, 110, 0.35)';
       }
 
-      const barH = Math.min(barHeight, height - 4);
+      // Clamp height but allow it to fill the full canvas when boosted
+      const barH = Math.min(barHeight, height);
       const y = centerY - barH / 2;
 
       ctx.beginPath();
@@ -180,6 +186,49 @@ export const WaveformVisualizer: React.FC<WaveformVisualizerProps> = ({
       ctx.fill();
     });
   }, [waveformData, currentTime, duration]);
+
+  // Static draw — when not playing or no analyser
+  useEffect(() => {
+    if (isPlaying && analyserNode && bounceIntensity > 0) return; // rAF loop handles it
+    drawWaveform(1);
+  }, [waveformData, currentTime, duration, isPlaying, analyserNode, bounceIntensity, drawWaveform]);
+
+  // rAF loop — bass-reactive redraw when playing
+  useEffect(() => {
+    if (!isPlaying || !analyserNode || bounceIntensity <= 0 || !waveformData) {
+      smoothBassRef.current = 0;
+      return;
+    }
+
+    const freqData = new Uint8Array(analyserNode.frequencyBinCount);
+
+    const tick = () => {
+      analyserNode.getByteFrequencyData(freqData);
+
+      // Average first 10 bins (~0-430Hz) for bass energy
+      let bass = 0;
+      for (let i = 0; i < 10; i++) bass += freqData[i];
+      bass = (bass / 10) / 255; // normalize 0-1
+
+      // Smooth with exponential decay — snappy attack, gentle release
+      const prev = smoothBassRef.current;
+      smoothBassRef.current = bass > prev
+        ? prev + (bass - prev) * 0.5    // fast attack
+        : prev + (bass - prev) * 0.06;  // slow release
+
+      // Bass multiplier: intensity controls how much the bars grow
+      // At intensity=1, bars can grow up to 2.0x their normal height
+      const bassMultiplier = 1 + smoothBassRef.current * bounceIntensity * 1.0;
+      drawWaveform(bassMultiplier);
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [isPlaying, analyserNode, bounceIntensity, waveformData, drawWaveform]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!duration) return;

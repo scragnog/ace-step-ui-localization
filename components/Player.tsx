@@ -75,42 +75,22 @@ export const Player: React.FC<PlayerProps> = ({
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const speedMenuRef = useRef<HTMLDivElement>(null);
-    const waveformContainerRef = useRef<HTMLDivElement>(null);
     const { analyserNode } = useAudioAnalysis();
+    const [bounceIntensity, setBounceIntensity] = useState(() => {
+        const saved = localStorage.getItem('waveform-bounce-intensity');
+        return saved !== null ? parseFloat(saved) : 0.5;
+    });
 
-    // Bass-reactive bounce on waveform container
+    // Sync bounce intensity from Settings
     useEffect(() => {
-        if (!isPlaying || !analyserNode) return;
-        let raf: number;
-        let smoothBass = 0;
-        const freqData = new Uint8Array(analyserNode.frequencyBinCount);
-
-        const tick = () => {
-            analyserNode.getByteFrequencyData(freqData);
-            // Average first 10 bins (~0-430Hz) for bass energy
-            let bass = 0;
-            for (let i = 0; i < 10; i++) bass += freqData[i];
-            bass = (bass / 10) / 255; // normalize 0-1
-
-            // Smooth with exponential decay — snappy attack, gentle release
-            smoothBass = bass > smoothBass
-                ? smoothBass + (bass - smoothBass) * 0.4   // fast attack
-                : smoothBass + (bass - smoothBass) * 0.08; // slow release
-
-            const scale = 1 + smoothBass * 0.3; // max 1.3x
-            if (waveformContainerRef.current) {
-                waveformContainerRef.current.style.transform = `scaleY(${scale})`;
-            }
-            raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-        return () => {
-            cancelAnimationFrame(raf);
-            if (waveformContainerRef.current) {
-                waveformContainerRef.current.style.transform = 'scaleY(1)';
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === 'waveform-bounce-intensity' && e.newValue !== null) {
+                setBounceIntensity(parseFloat(e.newValue));
             }
         };
-    }, [isPlaying, analyserNode]);
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
 
     // Close fullscreen on Escape key
     useEffect(() => {
@@ -713,17 +693,20 @@ export const Player: React.FC<PlayerProps> = ({
             {/* Progress Bar with Waveform Overlay */}
             <div
                 ref={progressBarRef}
-                className="relative w-full h-10 lg:h-12 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 cursor-pointer group border-y border-zinc-200/50 dark:border-white/5 overflow-visible"
+                className="relative w-full h-10 lg:h-12 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 cursor-pointer group border-y border-zinc-200/50 dark:border-white/5"
                 onClick={(e) => handleSeekInteraction(e, progressBarRef)}
             >
-                {/* Waveform - rendered behind, with bass bounce */}
-                <div ref={waveformContainerRef} className="absolute inset-x-0 inset-y-1 z-0 origin-center" style={{ willChange: 'transform' }}>
+                {/* Waveform - rendered behind, with bass-reactive bar heights */}
+                <div className="absolute inset-x-0 inset-y-1 z-0">
                     <WaveformVisualizer
                         audioUrl={currentSong.audioUrl}
                         currentTime={currentTime}
                         duration={duration}
                         progressBarRef={progressBarRef}
                         onSeek={onSeek}
+                        analyserNode={analyserNode}
+                        isPlaying={isPlaying}
+                        bounceIntensity={bounceIntensity}
                     />
                 </div>
 
