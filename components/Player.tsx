@@ -9,6 +9,7 @@ import { ShareModal } from './ShareModal';
 import { openStemSplitter } from './StemSplitterModal';
 import { AlbumCover } from './AlbumCover';
 import { WaveformVisualizer } from './WaveformVisualizer';
+import { useAudioAnalysis } from '../context/AudioAnalysisContext';
 
 interface PlayerProps {
     currentSong: Song | null;
@@ -74,6 +75,42 @@ export const Player: React.FC<PlayerProps> = ({
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const speedMenuRef = useRef<HTMLDivElement>(null);
+    const waveformContainerRef = useRef<HTMLDivElement>(null);
+    const { analyserNode } = useAudioAnalysis();
+
+    // Bass-reactive bounce on waveform container
+    useEffect(() => {
+        if (!isPlaying || !analyserNode) return;
+        let raf: number;
+        let smoothBass = 0;
+        const freqData = new Uint8Array(analyserNode.frequencyBinCount);
+
+        const tick = () => {
+            analyserNode.getByteFrequencyData(freqData);
+            // Average first 10 bins (~0-430Hz) for bass energy
+            let bass = 0;
+            for (let i = 0; i < 10; i++) bass += freqData[i];
+            bass = (bass / 10) / 255; // normalize 0-1
+
+            // Smooth with exponential decay — snappy attack, gentle release
+            smoothBass = bass > smoothBass
+                ? smoothBass + (bass - smoothBass) * 0.4   // fast attack
+                : smoothBass + (bass - smoothBass) * 0.08; // slow release
+
+            const scale = 1 + smoothBass * 0.12; // max 1.12x
+            if (waveformContainerRef.current) {
+                waveformContainerRef.current.style.transform = `scaleY(${scale})`;
+            }
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => {
+            cancelAnimationFrame(raf);
+            if (waveformContainerRef.current) {
+                waveformContainerRef.current.style.transform = 'scaleY(1)';
+            }
+        };
+    }, [isPlaying, analyserNode]);
 
     // Close fullscreen on Escape key
     useEffect(() => {
@@ -679,8 +716,8 @@ export const Player: React.FC<PlayerProps> = ({
                 className="relative w-full h-10 lg:h-12 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 cursor-pointer group border-y border-zinc-200/50 dark:border-white/5"
                 onClick={(e) => handleSeekInteraction(e, progressBarRef)}
             >
-                {/* Waveform - rendered behind */}
-                <div className="absolute inset-x-0 inset-y-1 z-0">
+                {/* Waveform - rendered behind, with bass bounce */}
+                <div ref={waveformContainerRef} className="absolute inset-x-0 inset-y-1 z-0 origin-center" style={{ willChange: 'transform' }}>
                     <WaveformVisualizer
                         audioUrl={currentSong.audioUrl}
                         currentTime={currentTime}
