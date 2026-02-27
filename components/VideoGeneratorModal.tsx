@@ -5,56 +5,18 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useResponsive } from '../context/ResponsiveContext';
 import { useI18n } from '../context/I18nContext';
+import {
+  PresetType, VisualizerConfig, EffectConfig, EffectIntensities,
+  drawNCSCircle, drawLinearBars, drawDualMirror, drawCenterWave,
+  drawOrbital, drawHexagon, drawOscilloscope, drawDigitalRain,
+  drawShockwave, drawParticles, drawAlbumArt,
+  applyPostProcessing, applyPixelate,
+} from './visualizerEngine';
 
 interface VideoGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   song: Song | null;
-}
-
-type PresetType = 
-  | 'NCS Circle' | 'Linear Bars' | 'Dual Mirror' | 'Center Wave' 
-  | 'Orbital' | 'Digital Rain' | 'Hexagon' | 'Shockwave' 
-  | 'Oscilloscope' | 'Minimal';
-
-interface VisualizerConfig {
-  preset: PresetType;
-  primaryColor: string;
-  secondaryColor: string;
-  bgDim: number;
-  particleCount: number;
-}
-
-interface EffectConfig {
-  shake: boolean;
-  glitch: boolean;
-  vhs: boolean;
-  cctv: boolean;
-  scanlines: boolean;
-  chromatic: boolean;
-  bloom: boolean;
-  filmGrain: boolean;
-  pixelate: boolean;
-  strobe: boolean;
-  vignette: boolean;
-  hueShift: boolean;
-  letterbox: boolean;
-}
-
-interface EffectIntensities {
-  shake: number;
-  glitch: number;
-  vhs: number;
-  cctv: number;
-  scanlines: number;
-  chromatic: number;
-  bloom: number;
-  filmGrain: number;
-  pixelate: number;
-  strobe: number;
-  vignette: number;
-  hueShift: number;
-  letterbox: number;
 }
 
 interface TextLayer {
@@ -96,7 +58,7 @@ const PRESETS: { id: PresetType; label: string; icon: React.ReactNode }[] = [
 function ColumnsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v18"/>
+      <path d="M12 3v18" />
       <rect width="18" height="18" x="3" y="3" rx="2" />
     </svg>
   );
@@ -144,7 +106,7 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
   const [pexelsApiKey, setPexelsApiKey] = useState<string>(() => localStorage.getItem('pexels_api_key') || '');
   const [showPexelsApiKeyInput, setShowPexelsApiKeyInput] = useState(false);
   const [pexelsError, setPexelsError] = useState<string | null>(null);
-  
+
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportStage, setExportStage] = useState<'idle' | 'capturing' | 'encoding'>('idle');
@@ -198,10 +160,10 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
   // Init default text on load
   useEffect(() => {
     if (song) {
-        setTextLayers([
-            { id: '1', text: song.title, x: 50, y: 85, size: 52, color: '#ffffff', font: 'Inter' },
-            { id: '2', text: song.style.toUpperCase(), x: 50, y: 92, size: 24, color: '#3b82f6', font: 'Inter' }
-        ]);
+      setTextLayers([
+        { id: '1', text: song.title, x: 50, y: 85, size: 52, color: '#ffffff', font: 'Inter' },
+        { id: '2', text: song.style.toUpperCase(), x: 50, y: 92, size: 24, color: '#3b82f6', font: 'Inter' }
+      ]);
     }
   }, [song]);
 
@@ -368,7 +330,7 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
       }
       cancelAnimationFrame(animationRef.current);
     };
-  }, [isOpen, song]); 
+  }, [isOpen, song]);
 
   const togglePlay = async () => {
     if (!audioRef.current || !audioContextRef.current) return;
@@ -621,7 +583,7 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
         const zoom = 1 + (Math.sin(time * 0.5) * 0.05);
         ctx.translate(centerX, centerY);
         ctx.scale(zoom, zoom);
-        ctx.drawImage(bgSource, -width/2, -height/2, width, height);
+        ctx.drawImage(bgSource, -width / 2, -height / 2, width, height);
         ctx.restore();
       }
 
@@ -634,7 +596,7 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
         ctx.translate(shakeX, shakeY);
       }
 
-      switch(currentConfig.preset) {
+      switch (currentConfig.preset) {
         case 'NCS Circle':
           drawNCSCircle(ctx, centerX, centerY, dataArray, pulse, time, currentConfig.primaryColor, currentConfig.secondaryColor);
           break;
@@ -892,10 +854,10 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
     // Cleanup FFmpeg filesystem
     setExportProgress(98);
     for (let i = 0; i < totalFrames; i++) {
-      await ffmpeg.deleteFile(`frame${String(i).padStart(6, '0')}.jpg`).catch(() => {});
+      await ffmpeg.deleteFile(`frame${String(i).padStart(6, '0')}.jpg`).catch(() => { });
     }
-    await ffmpeg.deleteFile('audio.mp3').catch(() => {});
-    await ffmpeg.deleteFile('output.mp4').catch(() => {});
+    await ffmpeg.deleteFile('audio.mp3').catch(() => { });
+    await ffmpeg.deleteFile('output.mp4').catch(() => { });
     await audioCtx.close();
 
     setExportProgress(100);
@@ -915,13 +877,13 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const result = ev.target?.result as string;
-            setCustomImage(result);
-            setBackgroundType('custom');
-        };
-        reader.readAsDataURL(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        setCustomImage(result);
+        setBackgroundType('custom');
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -1030,8 +992,8 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
   // --- RENDER ENGINE ---
   const renderLoop = () => {
     if (!canvasRef.current || !analyserRef.current || !song) {
-        animationRef.current = requestAnimationFrame(renderLoop);
-        return;
+      animationRef.current = requestAnimationFrame(renderLoop);
+      return;
     }
 
     const canvas = canvasRef.current;
@@ -1072,94 +1034,94 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
 
     // Draw video or image background
     const bgSource = bgVideoRef.current && bgVideoRef.current.readyState >= 2
-        ? bgVideoRef.current
-        : bgImageRef.current;
+      ? bgVideoRef.current
+      : bgImageRef.current;
 
     if (bgSource) {
-        ctx.save();
-        ctx.globalAlpha = 1 - currentConfig.bgDim;
+      ctx.save();
+      ctx.globalAlpha = 1 - currentConfig.bgDim;
 
-        // Shake Effect (Camera)
-        if (currentEffects.shake && normBass > (0.6 - (currentIntensities.shake * 0.3))) {
-             const magnitude = currentIntensities.shake * 50;
-             const shakeX = (Math.random() - 0.5) * magnitude * normBass;
-             const shakeY = (Math.random() - 0.5) * magnitude * normBass;
-             ctx.translate(shakeX, shakeY);
-        }
+      // Shake Effect (Camera)
+      if (currentEffects.shake && normBass > (0.6 - (currentIntensities.shake * 0.3))) {
+        const magnitude = currentIntensities.shake * 50;
+        const shakeX = (Math.random() - 0.5) * magnitude * normBass;
+        const shakeY = (Math.random() - 0.5) * magnitude * normBass;
+        ctx.translate(shakeX, shakeY);
+      }
 
-        const zoom = 1 + (Math.sin(time * 0.5) * 0.05);
-        ctx.translate(centerX, centerY);
-        ctx.scale(zoom, zoom);
-        ctx.drawImage(bgSource, -width/2, -height/2, width, height);
-        ctx.restore();
+      const zoom = 1 + (Math.sin(time * 0.5) * 0.05);
+      ctx.translate(centerX, centerY);
+      ctx.scale(zoom, zoom);
+      ctx.drawImage(bgSource, -width / 2, -height / 2, width, height);
+      ctx.restore();
     }
 
     // --- 2. PRESET DRAWING ---
     ctx.save();
-    
+
     // Apply Shake to visual elements
     if (currentEffects.shake && normBass > 0.6) {
-         const magnitude = currentIntensities.shake * 30;
-         const shakeX = (Math.random() - 0.5) * magnitude * normBass;
-         const shakeY = (Math.random() - 0.5) * magnitude * normBass;
-         ctx.translate(shakeX, shakeY);
+      const magnitude = currentIntensities.shake * 30;
+      const shakeX = (Math.random() - 0.5) * magnitude * normBass;
+      const shakeY = (Math.random() - 0.5) * magnitude * normBass;
+      ctx.translate(shakeX, shakeY);
     }
 
-    switch(currentConfig.preset) {
-        case 'NCS Circle':
-            drawNCSCircle(ctx, centerX, centerY, dataArray, pulse, time, currentConfig.primaryColor, currentConfig.secondaryColor);
-            break;
-        case 'Linear Bars':
-            drawLinearBars(ctx, width, height, dataArray, currentConfig.primaryColor, currentConfig.secondaryColor);
-            break;
-        case 'Dual Mirror':
-            drawDualMirror(ctx, width, height, dataArray, currentConfig.primaryColor);
-            break;
-        case 'Center Wave':
-            drawCenterWave(ctx, centerX, centerY, dataArray, time, currentConfig.primaryColor);
-            break;
-        case 'Orbital':
-            drawOrbital(ctx, centerX, centerY, dataArray, time, currentConfig.primaryColor, currentConfig.secondaryColor);
-            break;
-        case 'Hexagon':
-            drawHexagon(ctx, centerX, centerY, dataArray, pulse, time, currentConfig.primaryColor);
-            break;
-        case 'Oscilloscope':
-            drawOscilloscope(ctx, width, height, timeDomain, currentConfig.primaryColor);
-            break;
-        case 'Digital Rain':
-            drawDigitalRain(ctx, width, height, dataArray, time, currentConfig.primaryColor);
-            break;
-        case 'Shockwave':
-             drawShockwave(ctx, centerX, centerY, bass, time, currentConfig.primaryColor);
-             break;
+    switch (currentConfig.preset) {
+      case 'NCS Circle':
+        drawNCSCircle(ctx, centerX, centerY, dataArray, pulse, time, currentConfig.primaryColor, currentConfig.secondaryColor);
+        break;
+      case 'Linear Bars':
+        drawLinearBars(ctx, width, height, dataArray, currentConfig.primaryColor, currentConfig.secondaryColor);
+        break;
+      case 'Dual Mirror':
+        drawDualMirror(ctx, width, height, dataArray, currentConfig.primaryColor);
+        break;
+      case 'Center Wave':
+        drawCenterWave(ctx, centerX, centerY, dataArray, time, currentConfig.primaryColor);
+        break;
+      case 'Orbital':
+        drawOrbital(ctx, centerX, centerY, dataArray, time, currentConfig.primaryColor, currentConfig.secondaryColor);
+        break;
+      case 'Hexagon':
+        drawHexagon(ctx, centerX, centerY, dataArray, pulse, time, currentConfig.primaryColor);
+        break;
+      case 'Oscilloscope':
+        drawOscilloscope(ctx, width, height, timeDomain, currentConfig.primaryColor);
+        break;
+      case 'Digital Rain':
+        drawDigitalRain(ctx, width, height, dataArray, time, currentConfig.primaryColor);
+        break;
+      case 'Shockwave':
+        drawShockwave(ctx, centerX, centerY, bass, time, currentConfig.primaryColor);
+        break;
     }
-    
+
     drawParticles(ctx, width, height, time, bass, currentConfig.particleCount, currentConfig.primaryColor);
 
     if (['NCS Circle', 'Hexagon', 'Orbital', 'Shockwave'].includes(currentConfig.preset)) {
-        const rawAlbumArtUrl = customAlbumArt || song.coverUrl;
-        // Proxy external URLs to avoid CORS issues in fallback
-        const albumArtUrl = rawAlbumArtUrl.startsWith('http')
-            ? `/api/proxy/image?url=${encodeURIComponent(rawAlbumArtUrl)}`
-            : rawAlbumArtUrl;
-        drawAlbumArt(ctx, centerX, centerY, pulse, albumArtUrl, currentConfig.primaryColor, customAlbumArtImageRef.current);
+      const rawAlbumArtUrl = customAlbumArt || song.coverUrl;
+      // Proxy external URLs to avoid CORS issues in fallback
+      const albumArtUrl = rawAlbumArtUrl.startsWith('http')
+        ? `/api/proxy/image?url=${encodeURIComponent(rawAlbumArtUrl)}`
+        : rawAlbumArtUrl;
+      drawAlbumArt(ctx, centerX, centerY, pulse, albumArtUrl, currentConfig.primaryColor, customAlbumArtImageRef.current);
     }
 
     // Pixelate effect (applied before text so text stays sharp)
     if (currentEffects.pixelate) {
-        const pixelSize = Math.max(4, Math.floor(16 * currentIntensities.pixelate));
-        ctx.imageSmoothingEnabled = false;
-        const tempCanvas = document.createElement('canvas');
-        const smallW = Math.floor(width / pixelSize);
-        const smallH = Math.floor(height / pixelSize);
-        tempCanvas.width = smallW;
-        tempCanvas.height = smallH;
-        const tempCtx = tempCanvas.getContext('2d')!;
-        tempCtx.drawImage(canvas, 0, 0, smallW, smallH);
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(tempCanvas, 0, 0, smallW, smallH, 0, 0, width, height);
-        ctx.imageSmoothingEnabled = true;
+      const pixelSize = Math.max(4, Math.floor(16 * currentIntensities.pixelate));
+      ctx.imageSmoothingEnabled = false;
+      const tempCanvas = document.createElement('canvas');
+      const smallW = Math.floor(width / pixelSize);
+      const smallH = Math.floor(height / pixelSize);
+      tempCanvas.width = smallW;
+      tempCanvas.height = smallH;
+      const tempCtx = tempCanvas.getContext('2d')!;
+      tempCtx.drawImage(canvas, 0, 0, smallW, smallH);
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(tempCanvas, 0, 0, smallW, smallH, 0, 0, width, height);
+      ctx.imageSmoothingEnabled = true;
     }
 
     // --- 3. CUSTOM TEXT LAYERS ---
@@ -1168,520 +1130,169 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
     ctx.textAlign = 'center';
 
     currentTexts.forEach(layer => {
-        ctx.fillStyle = layer.color;
-        // Adjust font size by pulse for title-like layers if needed, here we do static or slight pulse
-        const dynamicSize = layer.id === '1' && currentConfig.preset === 'Minimal' ? layer.size * pulse : layer.size;
-        ctx.font = `bold ${dynamicSize}px ${layer.font}, sans-serif`;
-        
-        const xPos = (layer.x / 100) * width;
-        const yPos = (layer.y / 100) * height;
-        
-        ctx.fillText(layer.text, xPos, yPos);
+      ctx.fillStyle = layer.color;
+      // Adjust font size by pulse for title-like layers if needed, here we do static or slight pulse
+      const dynamicSize = layer.id === '1' && currentConfig.preset === 'Minimal' ? layer.size * pulse : layer.size;
+      ctx.font = `bold ${dynamicSize}px ${layer.font}, sans-serif`;
+
+      const xPos = (layer.x / 100) * width;
+      const yPos = (layer.y / 100) * height;
+
+      ctx.fillText(layer.text, xPos, yPos);
     });
 
     ctx.restore();
 
     // --- 4. POST-PROCESSING EFFECTS ---
-    
+
     // Scanlines
     if (currentEffects.scanlines || currentEffects.cctv) {
-        ctx.fillStyle = `rgba(0,0,0,${currentIntensities.scanlines * 0.8})`;
-        for (let i = 0; i < height; i+=4) {
-            ctx.fillRect(0, i, width, 2);
-        }
+      ctx.fillStyle = `rgba(0,0,0,${currentIntensities.scanlines * 0.8})`;
+      for (let i = 0; i < height; i += 4) {
+        ctx.fillRect(0, i, width, 2);
+      }
     }
 
     // VHS Color Shift / Chromatic Aberration
     if (currentEffects.vhs || currentEffects.chromatic || (currentEffects.glitch && Math.random() > (1 - currentIntensities.glitch))) {
-        const intensity = currentEffects.vhs ? currentIntensities.vhs : currentIntensities.chromatic;
-        const offset = (10 * intensity) * normBass;
-        ctx.globalCompositeOperation = 'screen';
+      const intensity = currentEffects.vhs ? currentIntensities.vhs : currentIntensities.chromatic;
+      const offset = (10 * intensity) * normBass;
+      ctx.globalCompositeOperation = 'screen';
 
-        // Red Shift - draw colored rectangle offset left
-        ctx.fillStyle = `rgba(255,0,0,${0.2 * intensity})`;
-        ctx.fillRect(-offset, 0, width, height);
+      // Red Shift - draw colored rectangle offset left
+      ctx.fillStyle = `rgba(255,0,0,${0.2 * intensity})`;
+      ctx.fillRect(-offset, 0, width, height);
 
-        // Blue Shift - draw colored rectangle offset right
-        ctx.fillStyle = `rgba(0,0,255,${0.2 * intensity})`;
-        ctx.fillRect(offset, 0, width, height);
+      // Blue Shift - draw colored rectangle offset right
+      ctx.fillStyle = `rgba(0,0,255,${0.2 * intensity})`;
+      ctx.fillRect(offset, 0, width, height);
 
-        ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = 'source-over';
     }
 
     // Glitch Slices
     if (currentEffects.glitch && Math.random() > (1 - currentIntensities.glitch)) {
-        const sliceHeight = Math.random() * 50;
-        const sliceY = Math.random() * height;
-        const offset = (Math.random() - 0.5) * 40 * currentIntensities.glitch;
-        
-        ctx.drawImage(canvas, 0, sliceY, width, sliceHeight, offset, sliceY, width, sliceHeight);
-        
-        // Random colored block
-        ctx.fillStyle = Math.random() > 0.5 ? currentConfig.primaryColor : '#fff';
-        ctx.fillRect(Math.random()*width, Math.random()*height, Math.random()*200, 4);
+      const sliceHeight = Math.random() * 50;
+      const sliceY = Math.random() * height;
+      const offset = (Math.random() - 0.5) * 40 * currentIntensities.glitch;
+
+      ctx.drawImage(canvas, 0, sliceY, width, sliceHeight, offset, sliceY, width, sliceHeight);
+
+      // Random colored block
+      ctx.fillStyle = Math.random() > 0.5 ? currentConfig.primaryColor : '#fff';
+      ctx.fillRect(Math.random() * width, Math.random() * height, Math.random() * 200, 4);
     }
 
     // CCTV Vignette & Grain
     if (currentEffects.cctv) {
-        const intensity = currentIntensities.cctv;
-        // Green tint
-        ctx.globalCompositeOperation = 'overlay';
-        ctx.fillStyle = `rgba(0, 50, 0, ${0.4 * intensity})`;
-        ctx.fillRect(0, 0, width, height);
+      const intensity = currentIntensities.cctv;
+      // Green tint
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.fillStyle = `rgba(0, 50, 0, ${0.4 * intensity})`;
+      ctx.fillRect(0, 0, width, height);
 
-        // Vignette
-        const grad = ctx.createRadialGradient(centerX, centerY, height * 0.4, centerX, centerY, height * 0.9);
-        grad.addColorStop(0, 'transparent');
-        grad.addColorStop(1, 'black');
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+      // Vignette
+      const grad = ctx.createRadialGradient(centerX, centerY, height * 0.4, centerX, centerY, height * 0.9);
+      grad.addColorStop(0, 'transparent');
+      grad.addColorStop(1, 'black');
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
 
-        // Date Stamp
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.font = 'mono 24px monospace';
-        ctx.fillStyle = 'white';
-        ctx.shadowColor = 'black';
-        ctx.fillText(new Date().toLocaleString().toUpperCase(), 60, 60);
-        ctx.fillText("REC ●", width - 120, 60);
+      // Date Stamp
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.font = 'mono 24px monospace';
+      ctx.fillStyle = 'white';
+      ctx.shadowColor = 'black';
+      ctx.fillText(new Date().toLocaleString().toUpperCase(), 60, 60);
+      ctx.fillText("REC ●", width - 120, 60);
     }
 
     // Bloom / Glow effect
     if (currentEffects.bloom) {
-        const intensity = currentIntensities.bloom;
-        ctx.globalCompositeOperation = 'screen';
-        ctx.filter = `blur(${15 * intensity}px)`;
-        ctx.globalAlpha = 0.4 * intensity;
-        ctx.drawImage(canvas, 0, 0);
-        ctx.filter = 'none';
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
+      const intensity = currentIntensities.bloom;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.filter = `blur(${15 * intensity}px)`;
+      ctx.globalAlpha = 0.4 * intensity;
+      ctx.drawImage(canvas, 0, 0);
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
     }
 
     // Film Grain
     if (currentEffects.filmGrain) {
-        const intensity = currentIntensities.filmGrain;
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        const grainAmount = intensity * 50;
-        for (let i = 0; i < data.length; i += 4) {
-            const noise = (Math.random() - 0.5) * grainAmount;
-            data[i] += noise;
-            data[i + 1] += noise;
-            data[i + 2] += noise;
-        }
-        ctx.putImageData(imageData, 0, 0);
+      const intensity = currentIntensities.filmGrain;
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+      const grainAmount = intensity * 50;
+      for (let i = 0; i < data.length; i += 4) {
+        const noise = (Math.random() - 0.5) * grainAmount;
+        data[i] += noise;
+        data[i + 1] += noise;
+        data[i + 2] += noise;
+      }
+      ctx.putImageData(imageData, 0, 0);
     }
 
     // Strobe effect
     if (currentEffects.strobe && normBass > (0.7 - currentIntensities.strobe * 0.3)) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.fillStyle = `rgba(255, 255, 255, ${currentIntensities.strobe * normBass * 0.8})`;
-        ctx.fillRect(0, 0, width, height);
-        ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = `rgba(255, 255, 255, ${currentIntensities.strobe * normBass * 0.8})`;
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalCompositeOperation = 'source-over';
     }
 
     // Vignette effect
     if (currentEffects.vignette) {
-        const intensity = currentIntensities.vignette;
-        const grad = ctx.createRadialGradient(centerX, centerY, height * 0.3, centerX, centerY, height * 0.8);
-        grad.addColorStop(0, 'transparent');
-        grad.addColorStop(1, `rgba(0, 0, 0, ${0.8 * intensity})`);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+      const intensity = currentIntensities.vignette;
+      const grad = ctx.createRadialGradient(centerX, centerY, height * 0.3, centerX, centerY, height * 0.8);
+      grad.addColorStop(0, 'transparent');
+      grad.addColorStop(1, `rgba(0, 0, 0, ${0.8 * intensity})`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
     }
 
     // Hue Shift effect
     if (currentEffects.hueShift) {
-        const hueRotation = currentIntensities.hueShift * 360 * (1 + normBass * 0.5);
-        ctx.filter = `hue-rotate(${hueRotation}deg)`;
-        ctx.drawImage(canvas, 0, 0);
-        ctx.filter = 'none';
+      const hueRotation = currentIntensities.hueShift * 360 * (1 + normBass * 0.5);
+      ctx.filter = `hue-rotate(${hueRotation}deg)`;
+      ctx.drawImage(canvas, 0, 0);
+      ctx.filter = 'none';
     }
 
     // Letterbox effect
     if (currentEffects.letterbox) {
-        const barHeight = height * 0.12 * currentIntensities.letterbox;
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, width, barHeight);
-        ctx.fillRect(0, height - barHeight, width, barHeight);
+      const barHeight = height * 0.12 * currentIntensities.letterbox;
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, width, barHeight);
+      ctx.fillRect(0, height - barHeight, width, barHeight);
     }
 
     animationRef.current = requestAnimationFrame(renderLoop);
   };
 
-  // --- DRAWING FUNCTIONS ---
-  // (Reusing existing drawing functions from previous step, ensuring they use updated args)
-  const drawNCSCircle = (ctx: CanvasRenderingContext2D, cx: number, cy: number, data: Uint8Array, pulse: number, time: number, c1: string, c2: string) => {
-    const radius = 150 + (pulse - 1) * 50;
-    const bars = 80;
-    const step = (Math.PI * 2) / bars;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(time * 0.15);
-    for (let i = 0; i < bars; i++) {
-        const val = data[i + 10];
-        const normalized = val / 255;
-        const h = 8 + Math.pow(normalized, 1.5) * 120;
-        ctx.save();
-        ctx.rotate(i * step);
-        const grad = ctx.createLinearGradient(0, radius, 0, radius + h);
-        grad.addColorStop(0, c1);
-        grad.addColorStop(1, c2);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.roundRect(-3, radius + 10, 6, h, 3);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.beginPath();
-        ctx.roundRect(-3, radius + 10 + h + 2, 6, 3, 2);
-        ctx.fill();
-        ctx.restore();
-    }
-    ctx.beginPath();
-    ctx.arc(0, 0, radius + 150, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.restore();
-  };
-
-  const drawLinearBars = (ctx: CanvasRenderingContext2D, w: number, h: number, data: Uint8Array, c1: string, c2: string) => {
-      const bars = 64;
-      const barW = w / bars;
-      const gap = 2;
-      for(let i=0; i<bars; i++) {
-          const val = data[i * 2];
-          const normalized = val / 255;
-          const barH = 10 + Math.pow(normalized, 1.3) * (h * 0.35);
-          const grad = ctx.createLinearGradient(0, h/2, 0, h/2 - barH);
-          grad.addColorStop(0, c1);
-          grad.addColorStop(1, c2);
-          ctx.fillStyle = grad;
-          ctx.fillRect(i * barW + gap/2, h/2 - barH, barW - gap, barH);
-          ctx.fillStyle = 'rgba(255,255,255,0.2)';
-          ctx.fillRect(i * barW + gap/2, h/2, barW - gap, barH * 0.3);
-      }
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.fillRect(0, h/2, w, 1);
-  };
-
-  const drawDualMirror = (ctx: CanvasRenderingContext2D, w: number, h: number, data: Uint8Array, color: string) => {
-      const bars = 40;
-      const barH = h / bars;
-      const cy = h/2;
-      for(let i=0; i<bars; i++) {
-          const val = data[i*3];
-          const normalized = val / 255;
-          const len = 20 + Math.pow(normalized, 1.4) * (w * 0.3);
-          const alpha = 0.4 + normalized * 0.6;
-          ctx.fillStyle = color;
-          ctx.globalAlpha = alpha;
-          ctx.fillRect(0, cy - (i*barH), len, barH-2);
-          ctx.fillRect(0, cy + (i*barH), len, barH-2);
-          ctx.fillRect(w - len, cy - (i*barH), len, barH-2);
-          ctx.fillRect(w - len, cy + (i*barH), len, barH-2);
-      }
-      ctx.globalAlpha = 1;
-  };
-
-  const drawOrbital = (ctx: CanvasRenderingContext2D, cx: number, cy: number, data: Uint8Array, time: number, c1: string, c2: string) => {
-      for(let i=0; i<5; i++) {
-          const r = 100 + (i * 55);
-          const val = data[i*10];
-          const normalized = val / 255;
-          const width = 4 + normalized * 6;
-          ctx.beginPath();
-          ctx.strokeStyle = i % 2 === 0 ? c1 : c2;
-          ctx.lineWidth = width;
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = ctx.strokeStyle;
-          const direction = i % 2 === 0 ? 1 : -1;
-          const speed = direction * (0.5 + i * 0.1);
-          const start = time * speed;
-          const arcLength = Math.PI * 1.2 + normalized * Math.PI * 0.3;
-          ctx.arc(cx, cy, r, start, start + arcLength);
-          ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-  };
-
-  const drawHexagon = (ctx: CanvasRenderingContext2D, cx: number, cy: number, data: Uint8Array, pulse: number, time: number, color: string) => {
-      const sides = 6;
-      const r = 180 * pulse;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(time * 0.4);
-      ctx.beginPath();
-      ctx.lineWidth = 12;
-      ctx.strokeStyle = color;
-      ctx.lineJoin = 'round';
-      ctx.shadowBlur = 25;
-      ctx.shadowColor = color;
-      for(let i=0; i<=sides; i++) {
-          const angle = i * 2 * Math.PI / sides;
-          const x = r * Math.cos(angle);
-          const y = r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      ctx.restore();
-      ctx.shadowBlur = 0;
-  };
-
-  const drawOscilloscope = (ctx: CanvasRenderingContext2D, w: number, h: number, data: Uint8Array, color: string) => {
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = color;
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = color;
-      ctx.beginPath();
-      const sliceWidth = w / data.length;
-      let x = 0;
-      for(let i = 0; i < data.length; i++) {
-          const normalized = (data[i] - 128) / 128.0;
-          const dampened = normalized * 0.6;
-          const yPos = (h/2) + (dampened * h/2);
-          if(i === 0) ctx.moveTo(x, yPos);
-          else ctx.lineTo(x, yPos);
-          x += sliceWidth;
-      }
-      ctx.stroke();
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, h/2);
-      ctx.lineTo(w, h/2);
-      ctx.stroke();
-  };
-  
-  const drawCenterWave = (ctx: CanvasRenderingContext2D, cx: number, cy: number, data: Uint8Array, time: number, color: string) => {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = color;
-      for(let i=0; i<12; i++) {
-          ctx.beginPath();
-          const baseR = 60 + (i * 35);
-          const val = data[i*4];
-          const normalized = val / 255;
-          const r = baseR + Math.pow(normalized, 1.5) * 25;
-          ctx.globalAlpha = 0.8 - (i/15);
-          ctx.ellipse(cx, cy, r, r * 0.75, time * 0.5 + i * 0.3, 0, Math.PI * 2);
-          ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-  };
-
-  const drawDigitalRain = (ctx: CanvasRenderingContext2D, w: number, h: number, data: Uint8Array, time: number, color: string) => {
-      const cols = 50;
-      const colW = w / cols;
-      ctx.fillStyle = color;
-      ctx.font = 'bold 14px monospace';
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = color;
-      for(let i=0; i<cols; i++) {
-          const val = data[i*2];
-          const normalized = val / 255;
-          const len = 8 + Math.floor(Math.pow(normalized, 1.3) * 15);
-          const baseSpeed = 40 + (i % 5) * 10;
-          const speedOffset = (time * baseSpeed) % h;
-          for(let j=0; j<len; j++) {
-              const char = String.fromCharCode(0x30A0 + Math.random() * 96);
-              const y = (speedOffset + (j * 18)) % h;
-              ctx.globalAlpha = (1 - (j/len)) * 0.8;
-              ctx.fillText(char, i * colW, y);
-          }
-      }
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-  };
-
-  const drawShockwave = (ctx: CanvasRenderingContext2D, cx: number, cy: number, bass: number, time: number, color: string) => {
-      const normBass = bass / 255;
-      const maxRadius = 500;
-      const rings = 6;
-
-      ctx.shadowColor = color;
-
-      for (let i = 0; i < rings; i++) {
-          const phase = (time * 0.8 + (i * 0.4)) % 2;
-          const progress = phase / 2;
-          const radius = 50 + progress * maxRadius;
-          const alpha = (1 - progress) * (0.5 + normBass * 0.5);
-          const lineWidth = (1 - progress) * (8 + normBass * 12);
-
-          if (alpha > 0.05) {
-              ctx.beginPath();
-              ctx.strokeStyle = color;
-              ctx.lineWidth = lineWidth;
-              ctx.globalAlpha = alpha;
-              ctx.shadowBlur = 20 + normBass * 30;
-              ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-              ctx.stroke();
-          }
-      }
-
-      const coreSize = 30 + normBass * 40;
-      const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreSize);
-      coreGrad.addColorStop(0, color);
-      coreGrad.addColorStop(0.5, color);
-      coreGrad.addColorStop(1, 'transparent');
-      ctx.globalAlpha = 0.6 + normBass * 0.4;
-      ctx.fillStyle = coreGrad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, coreSize, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-  };
-
-  const drawParticles = (ctx: CanvasRenderingContext2D, w: number, h: number, time: number, bass: number, count: number, color: string) => {
-      const normBass = bass / 255;
-      const cx = w / 2;
-      const cy = h / 2;
-
-      // Rising particles - float upward with drift
-      const risingCount = Math.floor(count * 0.4);
-      for (let i = 0; i < risingCount; i++) {
-          const seed = i * 127.1;
-          const xBase = ((Math.sin(seed) * 10000) % w + w) % w;
-          const drift = Math.sin(time * 2 + seed) * 30;
-          const x = xBase + drift;
-          const speed = 20 + (i % 7) * 15;
-          const y = h - ((time * speed + seed * 10) % (h + 100));
-          const size = 2 + (i % 4) + normBass * 3;
-          const twinkle = 0.5 + Math.sin(time * 8 + seed) * 0.3;
-
-          ctx.beginPath();
-          ctx.fillStyle = color;
-          ctx.shadowBlur = 15 + normBass * 10;
-          ctx.shadowColor = color;
-          ctx.globalAlpha = twinkle * (0.4 + normBass * 0.4);
-          ctx.arc(x, y, size, 0, Math.PI * 2);
-          ctx.fill();
-      }
-
-      // Burst particles - explode from center on bass
-      const burstCount = Math.floor(count * 0.35);
-      for (let i = 0; i < burstCount; i++) {
-          const angle = (i / burstCount) * Math.PI * 2 + time * 0.3;
-          const seed = i * 234.5;
-          const burstPhase = (time * 1.5 + seed * 0.01) % 3;
-          const burstProgress = burstPhase / 3;
-          const maxDist = 300 + normBass * 200;
-          const dist = burstProgress * maxDist;
-          const x = cx + Math.cos(angle) * dist;
-          const y = cy + Math.sin(angle) * dist;
-          const size = (1 - burstProgress) * (3 + normBass * 4);
-          const alpha = (1 - burstProgress) * (0.6 + normBass * 0.4);
-
-          if (size > 0.5 && alpha > 0.1) {
-              ctx.beginPath();
-              ctx.fillStyle = color;
-              ctx.shadowBlur = 10;
-              ctx.shadowColor = color;
-              ctx.globalAlpha = alpha;
-              ctx.arc(x, y, size, 0, Math.PI * 2);
-              ctx.fill();
-          }
-      }
-
-      // Orbital sparkles - circle around center
-      const orbitalCount = Math.floor(count * 0.15);
-      for (let i = 0; i < orbitalCount; i++) {
-          const orbitRadius = 150 + (i % 4) * 80 + normBass * 50;
-          const speed = (i % 2 === 0 ? 1 : -1) * (0.8 + (i % 3) * 0.3);
-          const angle = time * speed + (i / orbitalCount) * Math.PI * 2;
-          const x = cx + Math.cos(angle) * orbitRadius;
-          const y = cy + Math.sin(angle) * orbitRadius;
-          const sparkle = 0.5 + Math.sin(time * 12 + i * 5) * 0.5;
-          const size = 2 + sparkle * 2 + normBass * 2;
-
-          ctx.beginPath();
-          ctx.fillStyle = '#fff';
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = color;
-          ctx.globalAlpha = sparkle * 0.8;
-          ctx.arc(x, y, size, 0, Math.PI * 2);
-          ctx.fill();
-      }
-
-      // Floating dust - subtle background particles
-      const dustCount = Math.floor(count * 0.1);
-      for (let i = 0; i < dustCount; i++) {
-          const seed = i * 567.8;
-          const x = ((Math.sin(seed) * 10000) % w + w) % w;
-          const y = ((Math.cos(seed) * 10000) % h + h) % h;
-          const drift = Math.sin(time + seed) * 2;
-          const size = 1 + Math.sin(time * 3 + seed) * 0.5;
-
-          ctx.beginPath();
-          ctx.fillStyle = '#fff';
-          ctx.shadowBlur = 5;
-          ctx.shadowColor = '#fff';
-          ctx.globalAlpha = 0.2 + normBass * 0.2;
-          ctx.arc(x + drift, y, size, 0, Math.PI * 2);
-          ctx.fill();
-      }
-
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-  };
-
-  const drawAlbumArt = (ctx: CanvasRenderingContext2D, cx: number, cy: number, pulse: number, url: string, borderColor: string, preloadedImage?: HTMLImageElement | null) => {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(pulse, pulse);
-    ctx.shadowBlur = 40;
-    ctx.shadowColor = borderColor;
-    ctx.beginPath();
-    ctx.arc(0, 0, 150, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = 'white';
-    ctx.stroke();
-    ctx.clip();
-
-    // Use preloaded image if available, otherwise try to draw from URL
-    if (preloadedImage && preloadedImage.complete) {
-        ctx.drawImage(preloadedImage, -150, -150, 300, 300);
-    } else {
-        const img = new Image();
-        img.src = url;
-        if (img.complete) {
-            ctx.drawImage(img, -150, -150, 300, 300);
-        } else {
-            ctx.fillStyle = '#111';
-            ctx.fillRect(-150, -150, 300, 300);
-        }
-    }
-    ctx.restore();
-  };
+  // Drawing functions are imported from ./visualizerEngine
 
   const addTextLayer = () => {
-      const newLayer: TextLayer = {
-          id: Date.now().toString(),
-          text: t('newText'),
-          x: 50,
-          y: 50,
-          size: 40,
-          color: '#ffffff',
-          font: 'Inter'
-      };
-      setTextLayers([...textLayers, newLayer]);
+    const newLayer: TextLayer = {
+      id: Date.now().toString(),
+      text: t('newText'),
+      x: 50,
+      y: 50,
+      size: 40,
+      color: '#ffffff',
+      font: 'Inter'
+    };
+    setTextLayers([...textLayers, newLayer]);
   };
 
   const updateTextLayer = (id: string, updates: Partial<TextLayer>) => {
-      setTextLayers(textLayers.map(l => l.id === id ? { ...l, ...updates } : l));
+    setTextLayers(textLayers.map(l => l.id === id ? { ...l, ...updates } : l));
   };
 
   const removeTextLayer = (id: string) => {
-      setTextLayers(textLayers.filter(l => l.id !== id));
+    setTextLayers(textLayers.filter(l => l.id !== id));
   };
 
   if (!isOpen || !song) return null;
@@ -1693,7 +1304,7 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
 
         {/* Close Button */}
         <button onClick={onClose} className="absolute top-3 right-3 md:top-4 md:right-4 z-50 p-2 bg-black/50 hover:bg-white/20 rounded-full text-white transition-colors">
-            <X size={isMobile ? 20 : 24} />
+          <X size={isMobile ? 20 : 24} />
         </button>
 
         {/* Mobile: Preview at top */}
@@ -1732,472 +1343,471 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
 
         {/* Sidebar Controls */}
         <div className={`${isMobile ? 'flex-1 overflow-hidden' : 'w-96'} bg-suno-panel ${isMobile ? '' : 'border-r border-white/5'} flex flex-col z-20`}>
-            {/* Header - Desktop only */}
-            {!isMobile && (
-              <div className="p-6 border-b border-white/5">
-                  <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-                      <Video className="text-pink-500" size={20} />
-                      {t('videoStudio')}
-                  </h2>
-                  <p className="text-zinc-500 text-xs">{t('createProfessionalVisualizers')}</p>
+          {/* Header - Desktop only */}
+          {!isMobile && (
+            <div className="p-6 border-b border-white/5">
+              <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                <Video className="text-pink-500" size={20} />
+                {t('videoStudio')}
+              </h2>
+              <p className="text-zinc-500 text-xs">{t('createProfessionalVisualizers')}</p>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="flex border-b border-white/5">
+            {[
+              { id: 'presets', label: t('presets'), icon: <Grid size={14} /> },
+              { id: 'style', label: t('style'), icon: <Palette size={14} /> },
+              { id: 'text', label: t('text'), icon: <Type size={14} /> },
+              { id: 'effects', label: t('fx'), icon: <Zap size={14} /> }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === tab.id ? 'text-white border-b-2 border-pink-500 bg-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-4 md:space-y-6">
+
+            {/* PRESETS TAB */}
+            {activeTab === 'presets' && (
+              <div className="grid grid-cols-2 gap-3">
+                {PRESETS.map(preset => (
+                  <button
+                    key={preset.id}
+                    onClick={() => setConfig({ ...config, preset: preset.id })}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${config.preset === preset.id ? 'bg-pink-600/20 border-pink-500 text-white' : 'bg-black/20 border-white/5 text-zinc-400 hover:bg-white/5 hover:border-white/10'}`}
+                  >
+                    <div className={`p-2 rounded-full ${config.preset === preset.id ? 'bg-pink-500 text-white' : 'bg-black/40 text-zinc-500'}`}>
+                      {preset.icon}
+                    </div>
+                    <span className="text-xs font-medium">{preset.label}</span>
+                  </button>
+                ))}
               </div>
             )}
 
-            {/* Tabs */}
-            <div className="flex border-b border-white/5">
-                {[
-                    { id: 'presets', label: t('presets'), icon: <Grid size={14} /> },
-                    { id: 'style', label: t('style'), icon: <Palette size={14} /> },
-                    { id: 'text', label: t('text'), icon: <Type size={14} /> },
-                    { id: 'effects', label: t('fx'), icon: <Zap size={14} /> }
-                ].map(tab => (
-                    <button 
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === tab.id ? 'text-white border-b-2 border-pink-500 bg-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
-                    >
-                        {tab.icon} {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-4 md:space-y-6">
-                
-                {/* PRESETS TAB */}
-                {activeTab === 'presets' && (
-                    <div className="grid grid-cols-2 gap-3">
-                        {PRESETS.map(preset => (
-                            <button
-                                key={preset.id}
-                                onClick={() => setConfig({ ...config, preset: preset.id })}
-                                className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${config.preset === preset.id ? 'bg-pink-600/20 border-pink-500 text-white' : 'bg-black/20 border-white/5 text-zinc-400 hover:bg-white/5 hover:border-white/10'}`}
-                            >
-                                <div className={`p-2 rounded-full ${config.preset === preset.id ? 'bg-pink-500 text-white' : 'bg-black/40 text-zinc-500'}`}>
-                                    {preset.icon}
-                                </div>
-                                <span className="text-xs font-medium">{preset.label}</span>
-                            </button>
-                        ))}
+            {/* STYLE TAB */}
+            {activeTab === 'style' && (
+              <div className="space-y-6">
+                {/* Background */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-zinc-500 uppercase flex justify-between">
+                    {t('background')}
+                  </label>
+                  <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
+                    {/* Type Selection */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => { setBackgroundType('random'); setBackgroundSeed(Date.now()); }}
+                        className={`py-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${backgroundType === 'random' ? 'bg-pink-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                      >
+                        <Wand2 size={12} /> {t('random')}
+                      </button>
+                      <button
+                        onClick={() => setBackgroundType('custom')}
+                        className={`py-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${backgroundType === 'custom' ? 'bg-pink-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                      >
+                        <ImageIcon size={12} /> {t('image')}
+                      </button>
+                      <button
+                        onClick={() => setBackgroundType('video')}
+                        className={`py-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${backgroundType === 'video' ? 'bg-pink-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                      >
+                        <Video size={12} /> {t('videoType')}
+                      </button>
                     </div>
-                )}
 
-                {/* STYLE TAB */}
-                {activeTab === 'style' && (
-                    <div className="space-y-6">
-                         {/* Background */}
-                         <div className="space-y-3">
-                            <label className="text-xs font-bold text-zinc-500 uppercase flex justify-between">
-                                {t('background')}
-                            </label>
-                            <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
-                                {/* Type Selection */}
-                                <div className="grid grid-cols-3 gap-2">
-                                     <button
-                                        onClick={() => { setBackgroundType('random'); setBackgroundSeed(Date.now()); }}
-                                        className={`py-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${backgroundType === 'random' ? 'bg-pink-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
-                                     >
-                                         <Wand2 size={12}/> {t('random')}
-                                     </button>
-                                     <button
-                                        onClick={() => setBackgroundType('custom')}
-                                        className={`py-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${backgroundType === 'custom' ? 'bg-pink-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
-                                     >
-                                         <ImageIcon size={12}/> {t('image')}
-                                     </button>
-                                     <button
-                                        onClick={() => setBackgroundType('video')}
-                                        className={`py-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${backgroundType === 'video' ? 'bg-pink-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
-                                     >
-                                         <Video size={12}/> {t('videoType')}
-                                     </button>
-                                </div>
-
-                                {/* Image Options */}
-                                {backgroundType === 'custom' && (
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="py-2 px-3 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white flex items-center justify-center gap-1"
-                                            >
-                                                <Upload size={12}/> {t('upload')}
-                                            </button>
-                                            <button
-                                                onClick={() => openPexelsBrowser('background', 'photos')}
-                                                className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 rounded text-xs text-white flex items-center justify-center gap-1"
-                                            >
-                                                <Search size={12}/> Pexels
-                                            </button>
-                                        </div>
-                                        {customImage && (
-                                            <div className="relative rounded overflow-hidden h-20">
-                                                <img src={customImage} alt="Background" className="w-full h-full object-cover" />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Video Options */}
-                                {backgroundType === 'video' && (
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={() => videoFileInputRef.current?.click()}
-                                                className="py-2 px-3 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white flex items-center justify-center gap-1"
-                                            >
-                                                <Upload size={12}/> {t('upload')}
-                                            </button>
-                                            <button
-                                                onClick={() => openPexelsBrowser('background', 'videos')}
-                                                className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 rounded text-xs text-white flex items-center justify-center gap-1"
-                                            >
-                                                <Search size={12}/> Pexels
-                                            </button>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            placeholder={t('pasteVideoUrl')}
-                                            value={videoUrl}
-                                            onChange={(e) => setVideoUrl(e.target.value)}
-                                            className="w-full bg-zinc-800 rounded px-3 py-2 text-xs text-white border border-white/10 placeholder-zinc-500"
-                                        />
-                                        {videoUrl && (
-                                            <p className="text-[10px] text-emerald-400 truncate">✓ {t('videoLoaded')}</p>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Hidden File Inputs */}
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileUpload}
-                                    className="hidden"
-                                    accept="image/*"
-                                />
-                                <input
-                                    type="file"
-                                    ref={videoFileInputRef}
-                                    onChange={handleVideoFileUpload}
-                                    className="hidden"
-                                    accept="video/*"
-                                />
-
-                                <div>
-                                    <div className="flex justify-between text-sm text-zinc-300 mb-2">
-                                        <span>{t('dimming')}</span>
-                                        <span>{Math.round(config.bgDim * 100)}%</span>
-                                    </div>
-                                    <input
-                                        type="range" min="0" max="1" step="0.1"
-                                        value={config.bgDim}
-                                        onChange={(e) => setConfig({...config, bgDim: parseFloat(e.target.value)})}
-                                        className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                </div>
-                            </div>
+                    {/* Image Options */}
+                    {backgroundType === 'custom' && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="py-2 px-3 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white flex items-center justify-center gap-1"
+                          >
+                            <Upload size={12} /> {t('upload')}
+                          </button>
+                          <button
+                            onClick={() => openPexelsBrowser('background', 'photos')}
+                            className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 rounded text-xs text-white flex items-center justify-center gap-1"
+                          >
+                            <Search size={12} /> Pexels
+                          </button>
                         </div>
+                        {customImage && (
+                          <div className="relative rounded overflow-hidden h-20">
+                            <img src={customImage} alt="Background" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                         {/* Colors */}
-                         <div className="space-y-3">
-                             <label className="text-xs font-bold text-zinc-500 uppercase">{t('colorPresets')}</label>
-                             <div className="grid grid-cols-5 gap-2">
-                                 {[
-                                     { name: 'Neon Pink', primary: '#ec4899', secondary: '#8b5cf6' },
-                                     { name: 'Cyber Blue', primary: '#06b6d4', secondary: '#3b82f6' },
-                                     { name: 'Sunset', primary: '#f97316', secondary: '#eab308' },
-                                     { name: 'Matrix', primary: '#22c55e', secondary: '#10b981' },
-                                     { name: 'Fire', primary: '#ef4444', secondary: '#f97316' },
-                                     { name: 'Ocean', primary: '#0ea5e9', secondary: '#06b6d4' },
-                                     { name: 'Violet', primary: '#a855f7', secondary: '#ec4899' },
-                                     { name: 'Gold', primary: '#eab308', secondary: '#f59e0b' },
-                                     { name: 'Ice', primary: '#67e8f9', secondary: '#a5f3fc' },
-                                     { name: 'Mono', primary: '#ffffff', secondary: '#a1a1aa' },
-                                 ].map((preset) => (
-                                     <button
-                                         key={preset.name}
-                                         onClick={() => setConfig({...config, primaryColor: preset.primary, secondaryColor: preset.secondary})}
-                                         className={`group relative h-8 rounded-lg overflow-hidden border-2 transition-all ${
-                                             config.primaryColor === preset.primary && config.secondaryColor === preset.secondary
-                                                 ? 'border-white scale-110 shadow-lg'
-                                                 : 'border-transparent hover:border-white/30 hover:scale-105'
-                                         }`}
-                                         title={preset.name}
-                                     >
-                                         <div className="absolute inset-0 flex">
-                                             <div className="flex-1" style={{ backgroundColor: preset.primary }} />
-                                             <div className="flex-1" style={{ backgroundColor: preset.secondary }} />
-                                         </div>
-                                     </button>
-                                 ))}
-                             </div>
-                         </div>
-
-                         <div className="space-y-3">
-                             <label className="text-xs font-bold text-zinc-500 uppercase">{t('customColors')}</label>
-                             <div className="grid grid-cols-2 gap-4">
-                                 <div>
-                                     <span className="text-[10px] text-zinc-400 mb-1 block">{t('primary')}</span>
-                                     <div className="flex items-center gap-2 bg-black/20 p-2 rounded border border-white/5">
-                                         <input type="color" value={config.primaryColor} onChange={(e) => setConfig({...config, primaryColor: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" />
-                                         <span className="text-xs text-zinc-300 font-mono">{config.primaryColor}</span>
-                                     </div>
-                                 </div>
-                                 <div>
-                                     <span className="text-[10px] text-zinc-400 mb-1 block">{t('secondary')}</span>
-                                      <div className="flex items-center gap-2 bg-black/20 p-2 rounded border border-white/5">
-                                         <input type="color" value={config.secondaryColor} onChange={(e) => setConfig({...config, secondaryColor: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" />
-                                         <span className="text-xs text-zinc-300 font-mono">{config.secondaryColor}</span>
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         {/* Particles */}
-                         <div className="space-y-3">
-                            <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase">
-                                <span>{t('particles')}</span>
-                                <span>{config.particleCount}</span>
-                            </div>
-                            <input
-                                type="range" min="0" max="200" step="10"
-                                value={config.particleCount}
-                                onChange={(e) => setConfig({...config, particleCount: parseInt(e.target.value)})}
-                                className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-                            />
+                    {/* Video Options */}
+                    {backgroundType === 'video' && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => videoFileInputRef.current?.click()}
+                            className="py-2 px-3 bg-zinc-700 hover:bg-zinc-600 rounded text-xs text-white flex items-center justify-center gap-1"
+                          >
+                            <Upload size={12} /> {t('upload')}
+                          </button>
+                          <button
+                            onClick={() => openPexelsBrowser('background', 'videos')}
+                            className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 rounded text-xs text-white flex items-center justify-center gap-1"
+                          >
+                            <Search size={12} /> Pexels
+                          </button>
                         </div>
+                        <input
+                          type="text"
+                          placeholder={t('pasteVideoUrl')}
+                          value={videoUrl}
+                          onChange={(e) => setVideoUrl(e.target.value)}
+                          className="w-full bg-zinc-800 rounded px-3 py-2 text-xs text-white border border-white/10 placeholder-zinc-500"
+                        />
+                        {videoUrl && (
+                          <p className="text-[10px] text-emerald-400 truncate">✓ {t('videoLoaded')}</p>
+                        )}
+                      </div>
+                    )}
 
-                        {/* Center Image (Album Art) */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-bold text-zinc-500 uppercase">{t('centerImage')}</label>
-                            <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
-                                <div className="flex items-center gap-3">
-                                    {/* Preview */}
-                                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
-                                        <img
-                                            src={customAlbumArt || song?.coverUrl || ''}
-                                            alt="Center"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={() => albumArtInputRef.current?.click()}
-                                                className="py-1.5 px-2 bg-zinc-700 hover:bg-zinc-600 rounded text-[10px] text-white flex items-center justify-center gap-1"
-                                            >
-                                                <Upload size={10}/> Upload
-                                            </button>
-                                            <button
-                                                onClick={() => openPexelsBrowser('albumArt')}
-                                                className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 rounded text-[10px] text-white flex items-center justify-center gap-1"
-                                            >
-                                                <Search size={10}/> Pexels
-                                            </button>
-                                        </div>
-                                        {customAlbumArt && (
-                                            <button
-                                                onClick={() => setCustomAlbumArt(null)}
-                                                className="w-full py-1 text-[10px] text-zinc-500 hover:text-red-400"
-                                            >
-                                                {t('resetToDefault')}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                                <input
-                                    type="file"
-                                    ref={albumArtInputRef}
-                                    onChange={handleAlbumArtUpload}
-                                    className="hidden"
-                                    accept="image/*"
-                                />
-                            </div>
-                        </div>
+                    {/* Hidden File Inputs */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                    <input
+                      type="file"
+                      ref={videoFileInputRef}
+                      onChange={handleVideoFileUpload}
+                      className="hidden"
+                      accept="video/*"
+                    />
+
+                    <div>
+                      <div className="flex justify-between text-sm text-zinc-300 mb-2">
+                        <span>{t('dimming')}</span>
+                        <span>{Math.round(config.bgDim * 100)}%</span>
+                      </div>
+                      <input
+                        type="range" min="0" max="1" step="0.1"
+                        value={config.bgDim}
+                        onChange={(e) => setConfig({ ...config, bgDim: parseFloat(e.target.value) })}
+                        className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                      />
                     </div>
-                )}
+                  </div>
+                </div>
 
-                {/* TEXT TAB */}
-                {activeTab === 'text' && (
-                    <div className="space-y-4">
-                        <button 
-                            onClick={addTextLayer}
-                            className="w-full py-2 bg-pink-600 text-white rounded-lg flex items-center justify-center gap-2 text-xs font-bold hover:bg-pink-700"
-                        >
-                            <Plus size={14} /> {t('addTextLayer')}
+                {/* Colors */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">{t('colorPresets')}</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[
+                      { name: 'Neon Pink', primary: '#ec4899', secondary: '#8b5cf6' },
+                      { name: 'Cyber Blue', primary: '#06b6d4', secondary: '#3b82f6' },
+                      { name: 'Sunset', primary: '#f97316', secondary: '#eab308' },
+                      { name: 'Matrix', primary: '#22c55e', secondary: '#10b981' },
+                      { name: 'Fire', primary: '#ef4444', secondary: '#f97316' },
+                      { name: 'Ocean', primary: '#0ea5e9', secondary: '#06b6d4' },
+                      { name: 'Violet', primary: '#a855f7', secondary: '#ec4899' },
+                      { name: 'Gold', primary: '#eab308', secondary: '#f59e0b' },
+                      { name: 'Ice', primary: '#67e8f9', secondary: '#a5f3fc' },
+                      { name: 'Mono', primary: '#ffffff', secondary: '#a1a1aa' },
+                    ].map((preset) => (
+                      <button
+                        key={preset.name}
+                        onClick={() => setConfig({ ...config, primaryColor: preset.primary, secondaryColor: preset.secondary })}
+                        className={`group relative h-8 rounded-lg overflow-hidden border-2 transition-all ${config.primaryColor === preset.primary && config.secondaryColor === preset.secondary
+                            ? 'border-white scale-110 shadow-lg'
+                            : 'border-transparent hover:border-white/30 hover:scale-105'
+                          }`}
+                        title={preset.name}
+                      >
+                        <div className="absolute inset-0 flex">
+                          <div className="flex-1" style={{ backgroundColor: preset.primary }} />
+                          <div className="flex-1" style={{ backgroundColor: preset.secondary }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">{t('customColors')}</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-[10px] text-zinc-400 mb-1 block">{t('primary')}</span>
+                      <div className="flex items-center gap-2 bg-black/20 p-2 rounded border border-white/5">
+                        <input type="color" value={config.primaryColor} onChange={(e) => setConfig({ ...config, primaryColor: e.target.value })} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" />
+                        <span className="text-xs text-zinc-300 font-mono">{config.primaryColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-zinc-400 mb-1 block">{t('secondary')}</span>
+                      <div className="flex items-center gap-2 bg-black/20 p-2 rounded border border-white/5">
+                        <input type="color" value={config.secondaryColor} onChange={(e) => setConfig({ ...config, secondaryColor: e.target.value })} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" />
+                        <span className="text-xs text-zinc-300 font-mono">{config.secondaryColor}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Particles */}
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase">
+                    <span>{t('particles')}</span>
+                    <span>{config.particleCount}</span>
+                  </div>
+                  <input
+                    type="range" min="0" max="200" step="10"
+                    value={config.particleCount}
+                    onChange={(e) => setConfig({ ...config, particleCount: parseInt(e.target.value) })}
+                    className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Center Image (Album Art) */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-zinc-500 uppercase">{t('centerImage')}</label>
+                  <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
+                    <div className="flex items-center gap-3">
+                      {/* Preview */}
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
+                        <img
+                          src={customAlbumArt || song?.coverUrl || ''}
+                          alt="Center"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => albumArtInputRef.current?.click()}
+                            className="py-1.5 px-2 bg-zinc-700 hover:bg-zinc-600 rounded text-[10px] text-white flex items-center justify-center gap-1"
+                          >
+                            <Upload size={10} /> Upload
+                          </button>
+                          <button
+                            onClick={() => openPexelsBrowser('albumArt')}
+                            className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 rounded text-[10px] text-white flex items-center justify-center gap-1"
+                          >
+                            <Search size={10} /> Pexels
+                          </button>
+                        </div>
+                        {customAlbumArt && (
+                          <button
+                            onClick={() => setCustomAlbumArt(null)}
+                            className="w-full py-1 text-[10px] text-zinc-500 hover:text-red-400"
+                          >
+                            {t('resetToDefault')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      ref={albumArtInputRef}
+                      onChange={handleAlbumArtUpload}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TEXT TAB */}
+            {activeTab === 'text' && (
+              <div className="space-y-4">
+                <button
+                  onClick={addTextLayer}
+                  className="w-full py-2 bg-pink-600 text-white rounded-lg flex items-center justify-center gap-2 text-xs font-bold hover:bg-pink-700"
+                >
+                  <Plus size={14} /> {t('addTextLayer')}
+                </button>
+
+                <div className="space-y-3">
+                  {textLayers.map((layer, index) => (
+                    <div key={layer.id} className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-zinc-500">{t('layer')} {index + 1}</span>
+                        <button onClick={() => removeTextLayer(layer.id)} className="text-zinc-500 hover:text-red-500">
+                          <Trash2 size={14} />
                         </button>
-                        
-                        <div className="space-y-3">
-                            {textLayers.map((layer, index) => (
-                                <div key={layer.id} className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-zinc-500">{t('layer')} {index + 1}</span>
-                                        <button onClick={() => removeTextLayer(layer.id)} className="text-zinc-500 hover:text-red-500">
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                    <input 
-                                        type="text" 
-                                        value={layer.text} 
-                                        onChange={(e) => updateTextLayer(layer.id, { text: e.target.value })}
-                                        className="w-full bg-zinc-800 rounded px-2 py-1 text-xs text-white border border-white/5"
-                                        placeholder={t('textContent')}
-                                    />
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="text-[10px] text-zinc-500 block mb-1">{t('xPosition')}</label>
-                                            <input type="range" min="0" max="100" value={layer.x} onChange={(e) => updateTextLayer(layer.id, { x: parseInt(e.target.value) })} className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] text-zinc-500 block mb-1">{t('yPosition')}</label>
-                                            <input type="range" min="0" max="100" value={layer.y} onChange={(e) => updateTextLayer(layer.id, { y: parseInt(e.target.value) })} className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none" />
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <div className="flex-1">
-                                            <label className="text-[10px] text-zinc-500 block mb-1">{t('size')}</label>
-                                            <input type="number" value={layer.size} onChange={(e) => updateTextLayer(layer.id, { size: parseInt(e.target.value) })} className="w-full bg-zinc-800 rounded px-2 py-1 text-xs text-white border border-white/5" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[10px] text-zinc-500 block mb-1">{t('color')}</label>
-                                            <input type="color" value={layer.color} onChange={(e) => updateTextLayer(layer.id, { color: e.target.value })} className="w-8 h-6 rounded cursor-pointer border-none bg-transparent" />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                      </div>
+                      <input
+                        type="text"
+                        value={layer.text}
+                        onChange={(e) => updateTextLayer(layer.id, { text: e.target.value })}
+                        className="w-full bg-zinc-800 rounded px-2 py-1 text-xs text-white border border-white/5"
+                        placeholder={t('textContent')}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-zinc-500 block mb-1">{t('xPosition')}</label>
+                          <input type="range" min="0" max="100" value={layer.x} onChange={(e) => updateTextLayer(layer.id, { x: parseInt(e.target.value) })} className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none" />
                         </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-500 block mb-1">{t('yPosition')}</label>
+                          <input type="range" min="0" max="100" value={layer.y} onChange={(e) => updateTextLayer(layer.id, { y: parseInt(e.target.value) })} className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-[10px] text-zinc-500 block mb-1">{t('size')}</label>
+                          <input type="number" value={layer.size} onChange={(e) => updateTextLayer(layer.id, { size: parseInt(e.target.value) })} className="w-full bg-zinc-800 rounded px-2 py-1 text-xs text-white border border-white/5" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-500 block mb-1">{t('color')}</label>
+                          <input type="color" value={layer.color} onChange={(e) => updateTextLayer(layer.id, { color: e.target.value })} className="w-8 h-6 rounded cursor-pointer border-none bg-transparent" />
+                        </div>
+                      </div>
                     </div>
-                )}
+                  ))}
+                </div>
+              </div>
+            )}
 
-                {/* EFFECTS TAB */}
-                {activeTab === 'effects' && (
-                    <div className="space-y-2">
-                        {[
-                            { id: 'shake', label: t('bassShake'), desc: t('bassShakeDesc'), icon: <Activity size={16}/> },
-                            { id: 'glitch', label: t('digitalGlitch'), desc: t('digitalGlitchDesc'), icon: <Zap size={16}/> },
-                            { id: 'vhs', label: t('vhsTape'), desc: t('vhsTapeDesc'), icon: <Disc size={16}/> },
-                            { id: 'cctv', label: t('cctvMode'), desc: t('cctvModeDesc'), icon: <Monitor size={16}/> },
-                            { id: 'scanlines', label: t('scanlines'), desc: t('scanlinesDesc'), icon: <Grid size={16}/> },
-                            { id: 'chromatic', label: t('aberration'), desc: t('aberrationDesc'), icon: <Layers size={16}/> },
-                            { id: 'bloom', label: t('bloom'), desc: t('bloomDesc'), icon: <Sun size={16}/> },
-                            { id: 'filmGrain', label: t('filmGrain'), desc: t('filmGrainDesc'), icon: <Film size={16}/> },
-                            { id: 'pixelate', label: t('pixelate'), desc: t('pixelateDesc'), icon: <Grid size={16}/> },
-                            { id: 'strobe', label: t('strobe'), desc: t('strobeDesc'), icon: <Zap size={16}/> },
-                            { id: 'vignette', label: t('vignette'), desc: t('vignetteDesc'), icon: <Circle size={16}/> },
-                            { id: 'hueShift', label: t('hueShift'), desc: t('hueShiftDesc'), icon: <Palette size={16}/> },
-                            { id: 'letterbox', label: t('letterbox'), desc: t('letterboxDesc'), icon: <Minus size={16}/> },
-                        ].map((effect) => {
-                             const effectId = effect.id as keyof EffectConfig;
-                             const isActive = effects[effectId];
-                             const intensity = intensities[effectId as keyof EffectIntensities];
+            {/* EFFECTS TAB */}
+            {activeTab === 'effects' && (
+              <div className="space-y-2">
+                {[
+                  { id: 'shake', label: t('bassShake'), desc: t('bassShakeDesc'), icon: <Activity size={16} /> },
+                  { id: 'glitch', label: t('digitalGlitch'), desc: t('digitalGlitchDesc'), icon: <Zap size={16} /> },
+                  { id: 'vhs', label: t('vhsTape'), desc: t('vhsTapeDesc'), icon: <Disc size={16} /> },
+                  { id: 'cctv', label: t('cctvMode'), desc: t('cctvModeDesc'), icon: <Monitor size={16} /> },
+                  { id: 'scanlines', label: t('scanlines'), desc: t('scanlinesDesc'), icon: <Grid size={16} /> },
+                  { id: 'chromatic', label: t('aberration'), desc: t('aberrationDesc'), icon: <Layers size={16} /> },
+                  { id: 'bloom', label: t('bloom'), desc: t('bloomDesc'), icon: <Sun size={16} /> },
+                  { id: 'filmGrain', label: t('filmGrain'), desc: t('filmGrainDesc'), icon: <Film size={16} /> },
+                  { id: 'pixelate', label: t('pixelate'), desc: t('pixelateDesc'), icon: <Grid size={16} /> },
+                  { id: 'strobe', label: t('strobe'), desc: t('strobeDesc'), icon: <Zap size={16} /> },
+                  { id: 'vignette', label: t('vignette'), desc: t('vignetteDesc'), icon: <Circle size={16} /> },
+                  { id: 'hueShift', label: t('hueShift'), desc: t('hueShiftDesc'), icon: <Palette size={16} /> },
+                  { id: 'letterbox', label: t('letterbox'), desc: t('letterboxDesc'), icon: <Minus size={16} /> },
+                ].map((effect) => {
+                  const effectId = effect.id as keyof EffectConfig;
+                  const isActive = effects[effectId];
+                  const intensity = intensities[effectId as keyof EffectIntensities];
 
-                             return (
-                                <div key={effect.id} className={`rounded-lg border transition-all ${isActive ? 'bg-pink-600/10 border-pink-500/30' : 'bg-black/20 border-white/5'}`}>
-                                     <button 
-                                        onClick={() => setEffects(prev => ({ ...prev, [effectId]: !prev[effectId] }))}
-                                        className="w-full flex items-center justify-between p-3"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-1.5 rounded-md ${isActive ? 'bg-pink-500 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
-                                                {effect.icon}
-                                            </div>
-                                            <div className="text-left">
-                                                <div className={`text-sm font-bold ${isActive ? 'text-white' : 'text-zinc-400'}`}>{effect.label}</div>
-                                                <div className="text-[10px] text-zinc-500">{effect.desc}</div>
-                                            </div>
-                                        </div>
-                                        <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)]' : 'bg-zinc-700'}`}></div>
-                                    </button>
-                                    
-                                    {/* Intensity Slider */}
-                                    {isActive && (
-                                        <div className="px-3 pb-3 pt-0 animate-in fade-in slide-in-from-top-2">
-                                            <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
-                                                <span>{t('intensity')}</span>
-                                                <span>{Math.round(intensity * 100)}%</span>
-                                            </div>
-                                            <input 
-                                                type="range" min="0" max="1" step="0.05" 
-                                                value={intensity}
-                                                onChange={(e) => setIntensities({...intensities, [effectId]: parseFloat(e.target.value)})}
-                                                className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                             );
-                        })}
+                  return (
+                    <div key={effect.id} className={`rounded-lg border transition-all ${isActive ? 'bg-pink-600/10 border-pink-500/30' : 'bg-black/20 border-white/5'}`}>
+                      <button
+                        onClick={() => setEffects(prev => ({ ...prev, [effectId]: !prev[effectId] }))}
+                        className="w-full flex items-center justify-between p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-1.5 rounded-md ${isActive ? 'bg-pink-500 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
+                            {effect.icon}
+                          </div>
+                          <div className="text-left">
+                            <div className={`text-sm font-bold ${isActive ? 'text-white' : 'text-zinc-400'}`}>{effect.label}</div>
+                            <div className="text-[10px] text-zinc-500">{effect.desc}</div>
+                          </div>
+                        </div>
+                        <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.8)]' : 'bg-zinc-700'}`}></div>
+                      </button>
+
+                      {/* Intensity Slider */}
+                      {isActive && (
+                        <div className="px-3 pb-3 pt-0 animate-in fade-in slide-in-from-top-2">
+                          <div className="flex justify-between text-[10px] text-zinc-400 mb-1">
+                            <span>{t('intensity')}</span>
+                            <span>{Math.round(intensity * 100)}%</span>
+                          </div>
+                          <input
+                            type="range" min="0" max="1" step="0.05"
+                            value={intensity}
+                            onChange={(e) => setIntensities({ ...intensities, [effectId]: parseFloat(e.target.value) })}
+                            className="w-full accent-pink-500 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                      )}
                     </div>
-                )}
+                  );
+                })}
+              </div>
+            )}
 
-            </div>
+          </div>
 
-            {/* Footer */}
-            <div className="p-4 md:p-6 border-t border-white/5 bg-black/20 space-y-3 safe-area-inset-bottom">
-                 {ffmpegLoading ? (
-                     <div className="w-full bg-zinc-800 rounded-xl h-12 flex items-center justify-center px-4">
-                         <div className="flex items-center gap-2 text-white font-bold text-sm">
-                             <Loader2 className="animate-spin" size={18} />
-                             {t('loadingVideoEncoder')}
-                         </div>
-                     </div>
-                 ) : isExporting ? (
-                     <div className="w-full bg-zinc-800 rounded-xl h-12 flex items-center justify-center px-4 relative overflow-hidden">
-                         <div
-                           className={`absolute left-0 top-0 bottom-0 transition-all duration-100 ${exportStage === 'capturing' ? 'bg-pink-600/20' : 'bg-blue-600/20'}`}
-                           style={{ width: `${exportProgress}%` }}
-                         />
-                         <div className="flex items-center gap-2 z-10 text-white font-bold text-sm">
-                             {exportStage === 'capturing' ? (
-                               <>
-                                 <Loader2 className="animate-spin text-pink-400" size={16} />
-                                 {t('renderingFrames')} {Math.round(exportProgress)}%
-                               </>
-                             ) : (
-                               <>
-                                 <Loader2 className="animate-spin text-blue-400" size={16} />
-                                 {exportProgress < 95 ? t('encodingBePatient') : `${t('encodingMP4')} ${Math.round(exportProgress)}%`}
-                               </>
-                             )}
-                         </div>
-                     </div>
-                 ) : (
-                    <button
-                        onClick={startRecording}
-                        disabled={ffmpegLoading}
-                        className="w-full h-12 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform disabled:opacity-50"
-                    >
-                        <Download size={18} />
-                        {t('renderVideoMP4')}
-                    </button>
-                 )}
-                 <p className="text-[10px] text-zinc-600 text-center">
-                   {ffmpegLoaded ? `${t('encoderReady')} • ` : ''}{t('offlineRendering')}
-                 </p>
-            </div>
+          {/* Footer */}
+          <div className="p-4 md:p-6 border-t border-white/5 bg-black/20 space-y-3 safe-area-inset-bottom">
+            {ffmpegLoading ? (
+              <div className="w-full bg-zinc-800 rounded-xl h-12 flex items-center justify-center px-4">
+                <div className="flex items-center gap-2 text-white font-bold text-sm">
+                  <Loader2 className="animate-spin" size={18} />
+                  {t('loadingVideoEncoder')}
+                </div>
+              </div>
+            ) : isExporting ? (
+              <div className="w-full bg-zinc-800 rounded-xl h-12 flex items-center justify-center px-4 relative overflow-hidden">
+                <div
+                  className={`absolute left-0 top-0 bottom-0 transition-all duration-100 ${exportStage === 'capturing' ? 'bg-pink-600/20' : 'bg-blue-600/20'}`}
+                  style={{ width: `${exportProgress}%` }}
+                />
+                <div className="flex items-center gap-2 z-10 text-white font-bold text-sm">
+                  {exportStage === 'capturing' ? (
+                    <>
+                      <Loader2 className="animate-spin text-pink-400" size={16} />
+                      {t('renderingFrames')} {Math.round(exportProgress)}%
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="animate-spin text-blue-400" size={16} />
+                      {exportProgress < 95 ? t('encodingBePatient') : `${t('encodingMP4')} ${Math.round(exportProgress)}%`}
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={startRecording}
+                disabled={ffmpegLoading}
+                className="w-full h-12 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform disabled:opacity-50"
+              >
+                <Download size={18} />
+                {t('renderVideoMP4')}
+              </button>
+            )}
+            <p className="text-[10px] text-zinc-600 text-center">
+              {ffmpegLoaded ? `${t('encoderReady')} • ` : ''}{t('offlineRendering')}
+            </p>
+          </div>
         </div>
 
         {/* Preview Area - Desktop only */}
         {!isMobile && (
           <div className="flex-1 bg-black relative flex flex-col">
-               <canvas
-                  ref={canvasRef}
-                  width={1920}
-                  height={1080}
-                  className="w-full h-full object-contain bg-[#0a0a0a]"
-               />
+            <canvas
+              ref={canvasRef}
+              width={1920}
+              height={1080}
+              className="w-full h-full object-contain bg-[#0a0a0a]"
+            />
 
-               {/* Playback Controls Overlay */}
-               <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-center justify-center gap-6">
-                   <button
-                      onClick={togglePlay}
-                      disabled={isExporting}
-                      className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
-                   >
-                       {isPlaying ? <Pause fill="black" size={24} /> : <Play fill="black" className="ml-1" size={24} />}
-                   </button>
-               </div>
+            {/* Playback Controls Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-center justify-center gap-6">
+              <button
+                onClick={togglePlay}
+                disabled={isExporting}
+                className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPlaying ? <Pause fill="black" size={24} /> : <Play fill="black" className="ml-1" size={24} />}
+              </button>
+            </div>
           </div>
         )}
 
@@ -2287,20 +1897,20 @@ export const VideoGeneratorModal: React.FC<VideoGeneratorModalProps> = ({ isOpen
             {/* Tabs & Search */}
             <div className="p-4 border-b border-white/10 space-y-3">
               {pexelsTarget !== 'albumArt' && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setPexelsTab('photos'); searchPexels(pexelsQuery, 'photos'); }}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 ${pexelsTab === 'photos' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
-                >
-                  <ImageIcon size={14} /> {t('photos')}
-                </button>
-                <button
-                  onClick={() => { setPexelsTab('videos'); searchPexels(pexelsQuery, 'videos'); }}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 ${pexelsTab === 'videos' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
-                >
-                  <Video size={14} /> {t('videos')}
-                </button>
-              </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setPexelsTab('photos'); searchPexels(pexelsQuery, 'photos'); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 ${pexelsTab === 'photos' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                  >
+                    <ImageIcon size={14} /> {t('photos')}
+                  </button>
+                  <button
+                    onClick={() => { setPexelsTab('videos'); searchPexels(pexelsQuery, 'videos'); }}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 ${pexelsTab === 'videos' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}
+                  >
+                    <Video size={14} /> {t('videos')}
+                  </button>
+                </div>
               )}
               <div className="flex gap-2">
                 <input
