@@ -1806,6 +1806,7 @@ function AppContent() {
                 onSongUpdate={handleSongUpdate}
                 onDeleteUpload={handleDeleteReferenceTrack}
                 showVisualizerBg={showVisualizerBg}
+                currentTime={currentTime}
                 onSetAsTrackA={(song: Song) => {
                   // If already A → toggle off
                   if (abTrackA?.id === song.id) {

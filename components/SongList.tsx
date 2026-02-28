@@ -8,6 +8,7 @@ import { ShareModal } from './ShareModal';
 import { AlbumCover } from './AlbumCover';
 import { songsApi } from '../services/api';
 import { LiveVisualizer } from './LiveVisualizer';
+import { LyricsBar } from './LyricsBar';
 import { SongCard } from './SongCard';
 import { SongItemCompact } from './SongItemCompact';
 import { usePersistedState } from '../hooks/usePersistedState';
@@ -40,6 +41,7 @@ interface SongListProps {
     onDownloadFormat?: (song: Song) => void;
     onDeleteUpload?: (trackId: string) => void;
     showVisualizerBg?: boolean;
+    currentTime?: number;
     onSetAsTrackA?: (song: Song) => void;
     onSetAsTrackB?: (song: Song) => void;
     abTrackA?: Song | null;
@@ -131,6 +133,7 @@ export const SongList: React.FC<SongListProps> = ({
     onDownloadFormat,
     onDeleteUpload,
     showVisualizerBg,
+    currentTime,
     onSetAsTrackA,
     onSetAsTrackB,
     abTrackA,
@@ -575,6 +578,15 @@ export const SongList: React.FC<SongListProps> = ({
                     )}
                 </div> {/* End container */}
             </div> {/* End scroll area */}
+
+            {/* Lyrics Bar — shown when playing and NOT in comparison mode */}
+            {!(abTrackA && abTrackB) && isPlaying && currentSong && (
+                <LyricsBar
+                    audioUrl={currentSong.audioUrl}
+                    currentTime={currentTime ?? 0}
+                    isPlaying={isPlaying}
+                />
+            )}
 
             {/* A/B Comparison Bar — fixed footer below scroll area */}
             {abTrackA && abTrackB && (
