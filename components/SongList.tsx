@@ -40,6 +40,10 @@ interface SongListProps {
     onDownloadFormat?: (song: Song) => void;
     onDeleteUpload?: (trackId: string) => void;
     showVisualizerBg?: boolean;
+    onSetAsTrackA?: (song: Song) => void;
+    onSetAsTrackB?: (song: Song) => void;
+    abTrackA?: Song | null;
+    abTrackB?: Song | null;
 }
 
 // ... existing code ...
@@ -121,7 +125,11 @@ export const SongList: React.FC<SongListProps> = ({
     onCoverUpload,
     onDownloadFormat,
     onDeleteUpload,
-    showVisualizerBg
+    showVisualizerBg,
+    onSetAsTrackA,
+    onSetAsTrackB,
+    abTrackA,
+    abTrackB
 }) => {
     const { user } = useAuth();
     const { t } = useI18n();
@@ -498,6 +506,10 @@ export const SongList: React.FC<SongListProps> = ({
                                 onUseAsReference: () => onUseAsReference?.(item.song),
                                 onCoverSong: () => onCoverSong?.(item.song),
                                 onDownloadFormat: () => onDownloadFormat?.(item.song),
+                                onSetAsTrackA: () => onSetAsTrackA?.(item.song),
+                                onSetAsTrackB: () => onSetAsTrackB?.(item.song),
+                                isTrackA: abTrackA?.id === item.song.id,
+                                isTrackB: abTrackB?.id === item.song.id,
                             };
 
                             if (viewMode === 'grid') return <SongCard {...songProps} />;
@@ -578,6 +590,10 @@ interface SongItemProps {
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDownloadFormat?: () => void;
+    onSetAsTrackA?: () => void;
+    onSetAsTrackB?: () => void;
+    isTrackA?: boolean;
+    isTrackB?: boolean;
 }
 
 const SongItem: React.FC<SongItemProps> = ({
@@ -602,7 +618,11 @@ const SongItem: React.FC<SongItemProps> = ({
     onSongUpdate,
     onUseAsReference,
     onCoverSong,
-    onDownloadFormat
+    onDownloadFormat,
+    onSetAsTrackA,
+    onSetAsTrackB,
+    isTrackA,
+    isTrackB
 }) => {
     const { token } = useAuth();
     const { t } = useI18n();
@@ -911,6 +931,10 @@ const SongItem: React.FC<SongItemProps> = ({
                                     onUseAsReference={() => onUseAsReference?.()}
                                     onCoverSong={() => onCoverSong?.()}
                                     onDownloadFormat={() => onDownloadFormat?.()}
+                                    onSetAsTrackA={onSetAsTrackA}
+                                    onSetAsTrackB={onSetAsTrackB}
+                                    isTrackA={isTrackA}
+                                    isTrackB={isTrackB}
                                 />
                             </div>
                         </div>

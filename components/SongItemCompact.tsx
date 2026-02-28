@@ -44,6 +44,10 @@ export interface SongItemCompactProps {
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDownloadFormat?: () => void;
+    onSetAsTrackA?: () => void;
+    onSetAsTrackB?: () => void;
+    isTrackA?: boolean;
+    isTrackB?: boolean;
 }
 
 export const SongItemCompact: React.FC<SongItemCompactProps> = ({
@@ -65,7 +69,11 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
     onDelete,
     onUseAsReference,
     onCoverSong,
-    onDownloadFormat
+    onDownloadFormat,
+    onSetAsTrackA,
+    onSetAsTrackB,
+    isTrackA,
+    isTrackB
 }) => {
     const { t } = useI18n();
     const [showDropdown, setShowDropdown] = useState(false);
@@ -91,8 +99,8 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
             <div
                 onClick={onSelect}
                 className={`group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-[#18181b] transition-all cursor-pointer border ${isSelected
-                        ? 'bg-zinc-100 dark:bg-[#18181b] border-zinc-200 dark:border-white/10'
-                        : 'border-transparent'
+                    ? 'bg-zinc-100 dark:bg-[#18181b] border-zinc-200 dark:border-white/10'
+                    : 'border-transparent'
                     }`}
             >
                 {/* Selection checkbox */}
@@ -212,6 +220,10 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
                             onUseAsReference={() => onUseAsReference?.()}
                             onCoverSong={() => onCoverSong?.()}
                             onDownloadFormat={() => onDownloadFormat?.()}
+                            onSetAsTrackA={onSetAsTrackA}
+                            onSetAsTrackB={onSetAsTrackB}
+                            isTrackA={isTrackA}
+                            isTrackB={isTrackB}
                         />
                     </div>
                 )}

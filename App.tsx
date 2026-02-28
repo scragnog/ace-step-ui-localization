@@ -29,6 +29,7 @@ import DebugPanel from './components/DebugPanel';
 import { usePersistedState } from './hooks/usePersistedState';
 import { AudioAnalysisProvider, useAudioAnalysis } from './context/AudioAnalysisContext';
 import { FullscreenVisualizer } from './components/FullscreenVisualizer';
+import { ABCompareModal } from './components/ABCompareModal';
 
 
 type AppErrorBoundaryProps = PropsWithChildren<{}>;
@@ -195,6 +196,12 @@ function AppContent() {
 
   // Fullscreen Visualizer State
   const [showFullscreenVisualizer, setShowFullscreenVisualizer] = useState(false);
+
+  // A/B Comparison State
+  const [abTrackA, setAbTrackA] = useState<Song | null>(null);
+  const [abTrackB, setAbTrackB] = useState<Song | null>(null);
+  const [abActive, setAbActive] = useState<'A' | 'B' | null>(null);
+  const [showABCompare, setShowABCompare] = useState(false);
 
   // Visualizer songlist background setting
   const [showVisualizerBg, setShowVisualizerBg] = useState(() => localStorage.getItem('visualizer_songlist_bg') === 'true');
@@ -1692,6 +1699,18 @@ function AppContent() {
                 onSongUpdate={handleSongUpdate}
                 onDeleteUpload={handleDeleteReferenceTrack}
                 showVisualizerBg={showVisualizerBg}
+                onSetAsTrackA={(song: Song) => {
+                  setAbTrackA(song);
+                  if (!abActive) setAbActive('A');
+                  showToast(`Track A: ${song.title}`);
+                }}
+                onSetAsTrackB={(song: Song) => {
+                  setAbTrackB(song);
+                  if (abTrackA && !abActive) setAbActive('A');
+                  showToast(`Track B: ${song.title}`);
+                }}
+                abTrackA={abTrackA}
+                abTrackB={abTrackB}
               />
             </div>
 
@@ -1839,6 +1858,18 @@ function AppContent() {
         onDownloadFormat={() => currentSong && openDownloadModal(currentSong)}
         onAddToPlaylist={() => currentSong && openAddToPlaylistModal(currentSong)}
         onDelete={() => currentSong && handleDeleteSong(currentSong)}
+        abTrackA={abTrackA}
+        abTrackB={abTrackB}
+        abActive={abActive}
+        onABToggle={() => {
+          if (!abTrackA || !abTrackB) return;
+          const next = abActive === 'A' ? 'B' : 'A';
+          setAbActive(next);
+          const target = next === 'A' ? abTrackA : abTrackB;
+          setCurrentSong(target);
+          setIsPlaying(true);
+        }}
+        onABCompare={() => setShowABCompare(true)}
       />
 
       <CreatePlaylistModal
@@ -1897,6 +1928,13 @@ function AppContent() {
         onNext={playNext}
         onPrevious={playPrevious}
         onSeek={handleSeek}
+      />
+
+      <ABCompareModal
+        isOpen={showABCompare}
+        onClose={() => setShowABCompare(false)}
+        trackA={abTrackA}
+        trackB={abTrackB}
       />
 
       {/* Mobile Details Modal */}

@@ -45,6 +45,10 @@ export interface SongCardProps {
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDownloadFormat?: () => void;
+    onSetAsTrackA?: () => void;
+    onSetAsTrackB?: () => void;
+    isTrackA?: boolean;
+    isTrackB?: boolean;
 }
 
 export const SongCard: React.FC<SongCardProps> = ({
@@ -69,7 +73,11 @@ export const SongCard: React.FC<SongCardProps> = ({
     onSongUpdate,
     onUseAsReference,
     onCoverSong,
-    onDownloadFormat
+    onDownloadFormat,
+    onSetAsTrackA,
+    onSetAsTrackB,
+    isTrackA,
+    isTrackB
 }) => {
     const { token } = useAuth();
     const { t } = useI18n();
@@ -122,8 +130,8 @@ export const SongCard: React.FC<SongCardProps> = ({
             <div
                 onClick={onSelect}
                 className={`group relative flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all border ${isSelected
-                        ? 'bg-zinc-100 dark:bg-[#18181b] border-zinc-300 dark:border-white/15 ring-1 ring-pink-500/30'
-                        : 'border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/10 bg-white dark:bg-[#0c0c0e] hover:bg-zinc-50 dark:hover:bg-[#18181b]'
+                    ? 'bg-zinc-100 dark:bg-[#18181b] border-zinc-300 dark:border-white/15 ring-1 ring-pink-500/30'
+                    : 'border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/10 bg-white dark:bg-[#0c0c0e] hover:bg-zinc-50 dark:hover:bg-[#18181b]'
                     }`}
             >
                 {/* Selection checkbox */}
@@ -132,8 +140,8 @@ export const SongCard: React.FC<SongCardProps> = ({
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
                         className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked
-                                ? 'bg-pink-600 border-pink-600 text-white'
-                                : 'border-white/50 bg-black/30 backdrop-blur-sm text-transparent hover:border-white/80'
+                            ? 'bg-pink-600 border-pink-600 text-white'
+                            : 'border-white/50 bg-black/30 backdrop-blur-sm text-transparent hover:border-white/80'
                             }`}
                     >
                         {isChecked && <span className="text-[10px] font-bold">✓</span>}
@@ -305,6 +313,10 @@ export const SongCard: React.FC<SongCardProps> = ({
                                     onUseAsReference={() => onUseAsReference?.()}
                                     onCoverSong={() => onCoverSong?.()}
                                     onDownloadFormat={() => onDownloadFormat?.()}
+                                    onSetAsTrackA={onSetAsTrackA}
+                                    onSetAsTrackB={onSetAsTrackB}
+                                    isTrackA={isTrackA}
+                                    isTrackB={isTrackB}
                                 />
                             </div>
                         </div>

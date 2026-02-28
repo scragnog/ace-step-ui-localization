@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Song } from '../types';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Download, Heart, MoreVertical, Volume2, VolumeX, Video, Maximize2, Repeat1, ChevronDown, ChevronUp, Edit3, AudioLines } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Download, Heart, MoreVertical, Volume2, VolumeX, Video, Maximize2, Repeat1, ChevronDown, ChevronUp, Edit3, AudioLines, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useResponsive } from '../context/ResponsiveContext';
 import { useI18n } from '../context/I18nContext';
@@ -36,6 +36,13 @@ interface PlayerProps {
     onReusePrompt?: () => void;
     onAddToPlaylist?: () => void;
     onDelete?: () => void;
+    // A/B comparison
+    abTrackA?: Song | null;
+    abTrackB?: Song | null;
+    abActive?: 'A' | 'B' | null;
+    onABToggle?: () => void;
+    onABCompare?: () => void;
+    onDownloadFormat?: () => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -62,7 +69,13 @@ export const Player: React.FC<PlayerProps> = ({
     onOpenVideo,
     onReusePrompt,
     onAddToPlaylist,
-    onDelete
+    onDelete,
+    abTrackA,
+    abTrackB,
+    abActive,
+    onABToggle,
+    onABCompare,
+    onDownloadFormat
 }) => {
     const { user } = useAuth();
     const { isMobile } = useResponsive();
@@ -861,6 +874,32 @@ export const Player: React.FC<PlayerProps> = ({
                     >
                         <Download size={18} />
                     </button>
+
+                    {/* A/B Toggle */}
+                    {abTrackA && abTrackB && (
+                        <div className="flex items-center gap-0.5 hidden sm:flex">
+                            <button
+                                onClick={onABToggle}
+                                title="Switch between Track A and Track B"
+                                className={`px-2 py-1 rounded-l-lg text-[11px] font-bold transition-all border ${abActive === 'A'
+                                        ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                                        : abActive === 'B'
+                                            ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30'
+                                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-white/10'
+                                    }`}
+                            >
+                                {abActive === 'A' ? 'A' : abActive === 'B' ? 'B' : 'A/B'}
+                            </button>
+                            <button
+                                onClick={onABCompare}
+                                title="Compare parameters between A and B tracks"
+                                className="px-1.5 py-1 rounded-r-lg text-zinc-500 hover:text-pink-600 dark:hover:text-pink-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-pink-50 dark:hover:bg-pink-900/20 border border-l-0 border-zinc-200 dark:border-white/10 transition-colors"
+                            >
+                                <ArrowLeftRight size={14} />
+                            </button>
+                        </div>
+                    )}
+
                     <button
                         onClick={() => setIsFullscreen(true)}
                         className="p-1.5 lg:p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors"
