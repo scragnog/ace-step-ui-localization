@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import { Play, Pause, SkipBack, SkipForward, X, Minimize2 } from 'lucide-react';
 import { Song } from '../types';
 import { LiveVisualizer } from './LiveVisualizer';
+import { LyricsOverlay } from './LyricsOverlay';
 
 interface FullscreenVisualizerProps {
     isOpen: boolean;
@@ -121,6 +122,13 @@ export const FullscreenVisualizer: React.FC<FullscreenVisualizerProps> = ({
                 isPlaying={isPlaying}
                 className="absolute inset-0 w-full h-full"
                 showControls={false}
+            />
+
+            {/* Synced lyrics overlay — always visible, not tied to HUD */}
+            <LyricsOverlay
+                audioUrl={song.audioUrl}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
             />
 
             {/* HUD Overlay */}
