@@ -102,7 +102,10 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
                 <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
                     {/* Thinking Toggle */}
                     <div className="flex items-center justify-between py-1">
-                        <span className={`text-xs font-medium text-zinc-600 dark:text-zinc-400`} title={t('thinkingTooltip')}>{t('thinkingCot')}</span>
+                        <div>
+                            <span className={`text-xs font-medium text-zinc-600 dark:text-zinc-400`} title={t('thinkingTooltip')}>{t('thinkingCot')}</span>
+                            <p className="text-[10px] text-zinc-500">Let the AI reason about your prompt before generating music</p>
+                        </div>
                         <div className="flex items-center gap-2">
                             {loraLoaded && thinking && <span className="text-[10px] text-amber-500 dark:text-amber-400">⚠ experimental</span>}
                             <Toggle on={thinking} onClick={onThinkingToggle} />
@@ -151,8 +154,8 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
                             <EditableSlider label={t('lmTemperature')} value={lmTemperature} min={0} max={2} step={0.05} onChange={onLmTemperatureChange} formatDisplay={(val) => val.toFixed(2)} helpText={t('higherMoreRandom')} title={t('lmTemperatureTooltip')} />
                             <EditableSlider label={t('lmCfgScale')} value={lmCfgScale} min={1} max={3} step={0.1} onChange={onLmCfgScaleChange} formatDisplay={(val) => val.toFixed(1)} helpText={t('noCfgScale')} title={t('lmGuidanceScaleTooltip')} />
                             <div className="grid grid-cols-2 gap-3">
-                                <EditableSlider label={t('topK')} value={lmTopK} min={0} max={100} step={1} onChange={onLmTopKChange} title={t('lmTopKTooltip')} />
-                                <EditableSlider label={t('topP')} value={lmTopP} min={0} max={1} step={0.01} onChange={onLmTopPChange} formatDisplay={(val) => val.toFixed(2)} title={t('lmTopPTooltip')} />
+                                <EditableSlider label={t('topK')} value={lmTopK} min={0} max={100} step={1} onChange={onLmTopKChange} title={t('lmTopKTooltip')} helpText="0 = no limit. Lower values = safer, more predictable word choices" />
+                                <EditableSlider label={t('topP')} value={lmTopP} min={0} max={1} step={0.01} onChange={onLmTopPChange} formatDisplay={(val) => val.toFixed(2)} title={t('lmTopPTooltip')} helpText="Controls vocabulary diversity. 0.92 is a good default" />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('lmNegativePromptTooltip')}>{t('lmNegativePrompt')}</label>
@@ -164,7 +167,10 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
 
                     {/* Allow LM Batch */}
                     <div className="flex items-center justify-between py-1">
-                        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('allowLmBatchTooltip')}>{t('allowLmBatch')}</span>
+                        <div>
+                            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('allowLmBatchTooltip')}>{t('allowLmBatch')}</span>
+                            <p className="text-[10px] text-zinc-500">Process multiple prompts at once for faster batch generation</p>
+                        </div>
                         <Toggle on={allowLmBatch} onClick={onAllowLmBatchToggle} />
                     </div>
 
