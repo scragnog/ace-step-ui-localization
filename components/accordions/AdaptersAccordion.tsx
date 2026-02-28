@@ -252,7 +252,6 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                     ) : (
                         /* ADVANCED MODE */
                         <>
-                            {/* Adapter folder browser */}
                             <div className="space-y-2">
                                 <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Adapter Folder</label>
                                 <div className="flex gap-2">
@@ -264,13 +263,83 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                         className="flex-1 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-pink-500"
                                     />
                                     <button
-                                        onClick={onScanFolder}
-                                        disabled={!adapterFolder.trim()}
+                                        onClick={async () => {
+                                            const folder = adapterFolder.trim() || './lokr_output';
+                                            onAdapterFolderChange(folder);
+                                            onScanFolder();
+                                        }}
+                                        disabled={!adapterFolder.trim() && false}
                                         className="px-3 py-2 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40 transition-colors"
                                     >
                                         Scan
                                     </button>
+                                    <button
+                                        onClick={async () => {
+                                            setIsBrowsing(true);
+                                            try {
+                                                const folder = adapterFolder.trim() || './lokr_output';
+                                                const res = await fetch('/api/generate/adapters/scan', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ folder }),
+                                                });
+                                                if (res.ok) {
+                                                    const data = await res.json();
+                                                    setBrowsedFiles(data.files || []);
+                                                    setShowBrowse(true);
+                                                    if (!adapterFolder.trim()) onAdapterFolderChange(folder);
+                                                }
+                                            } catch { } finally { setIsBrowsing(false); }
+                                        }}
+                                        disabled={isBrowsing}
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30 disabled:opacity-40 transition-colors"
+                                        title="Browse for adapter files in the folder"
+                                    >
+                                        <FolderSearch size={14} />
+                                        {isBrowsing ? '...' : 'Browse'}
+                                    </button>
                                 </div>
+                                {showBrowse && browsedFiles.length > 0 && (
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                                Found ({browsedFiles.length})
+                                            </label>
+                                            <button
+                                                onClick={() => setShowBrowse(false)}
+                                                className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                            >
+                                                Hide
+                                            </button>
+                                        </div>
+                                        <div className="max-h-28 overflow-y-auto space-y-1">
+                                            {browsedFiles.map((file) => {
+                                                const isAlreadyLoaded = adapterSlots.some(s => s.path === file.path);
+                                                return (
+                                                    <button
+                                                        key={file.path}
+                                                        onClick={() => {
+                                                            if (!isAlreadyLoaded) onLoadSlot(file.path);
+                                                            setShowBrowse(false);
+                                                        }}
+                                                        disabled={isAlreadyLoaded}
+                                                        className={`w-full flex items-center justify-between bg-zinc-50 dark:bg-black/20 rounded-lg px-3 py-2 text-left transition-colors ${isAlreadyLoaded ? 'opacity-50 cursor-not-allowed' : 'hover:bg-pink-50 dark:hover:bg-pink-900/10 cursor-pointer'}`}
+                                                    >
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${file.type === 'lora' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}`}>
+                                                                {file.type.toUpperCase()}
+                                                            </span>
+                                                            <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate">{file.name}</span>
+                                                        </div>
+                                                        <span className="text-[10px] text-zinc-400 flex-shrink-0 ml-2">
+                                                            {isAlreadyLoaded ? '✓ Loaded' : `${(file.size / 1024 / 1024).toFixed(1)}MB`}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* File list */}

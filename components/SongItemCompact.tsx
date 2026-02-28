@@ -44,10 +44,6 @@ export interface SongItemCompactProps {
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDownloadFormat?: () => void;
-    onSetAsTrackA?: () => void;
-    onSetAsTrackB?: () => void;
-    isTrackA?: boolean;
-    isTrackB?: boolean;
 }
 
 export const SongItemCompact: React.FC<SongItemCompactProps> = ({
@@ -69,11 +65,7 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
     onDelete,
     onUseAsReference,
     onCoverSong,
-    onDownloadFormat,
-    onSetAsTrackA,
-    onSetAsTrackB,
-    isTrackA,
-    isTrackB
+    onDownloadFormat
 }) => {
     const { t } = useI18n();
     const [showDropdown, setShowDropdown] = useState(false);
@@ -220,10 +212,6 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
                             onUseAsReference={() => onUseAsReference?.()}
                             onCoverSong={() => onCoverSong?.()}
                             onDownloadFormat={() => onDownloadFormat?.()}
-                            onSetAsTrackA={onSetAsTrackA}
-                            onSetAsTrackB={onSetAsTrackB}
-                            isTrackA={isTrackA}
-                            isTrackB={isTrackB}
                         />
                     </div>
                 )}

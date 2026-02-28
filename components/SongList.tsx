@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Song } from '../types';
-import { Play, MoreHorizontal, Heart, ThumbsDown, ListPlus, Pause, Search, Filter, Check, Globe, Lock, Loader2, ThumbsUp, Share2, Video, Info, Clock, ChevronLeft, ChevronRight, Trash2, LayoutList, LayoutGrid, List } from 'lucide-react';
+import { Play, MoreHorizontal, Heart, ThumbsDown, ListPlus, Pause, Search, Filter, Check, Globe, Lock, Loader2, ThumbsUp, Share2, Video, Info, Clock, ChevronLeft, ChevronRight, Trash2, LayoutList, LayoutGrid, List, ArrowLeftRight, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
@@ -44,6 +44,11 @@ interface SongListProps {
     onSetAsTrackB?: (song: Song) => void;
     abTrackA?: Song | null;
     abTrackB?: Song | null;
+    onABCompare?: () => void;
+    onABPlay?: () => void;
+    onABClear?: () => void;
+    abActive?: 'A' | 'B' | null;
+    onABToggle?: () => void;
 }
 
 // ... existing code ...
@@ -129,7 +134,12 @@ export const SongList: React.FC<SongListProps> = ({
     onSetAsTrackA,
     onSetAsTrackB,
     abTrackA,
-    abTrackB
+    abTrackB,
+    onABCompare,
+    onABPlay,
+    onABClear,
+    abActive,
+    onABToggle
 }) => {
     const { user } = useAuth();
     const { t } = useI18n();
@@ -563,6 +573,77 @@ export const SongList: React.FC<SongListProps> = ({
                     </div>
                 )}
             </div> {/* End container */}
+
+            {/* A/B Comparison Bar */}
+            {abTrackA && abTrackB && (
+                <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-100 dark:from-zinc-900 via-zinc-100/95 dark:via-zinc-900/95 to-zinc-100/80 dark:to-zinc-900/80 backdrop-blur-sm border-t border-zinc-200 dark:border-white/10 px-4 py-3 z-30">
+                    <div className="flex items-center gap-3 max-w-3xl mx-auto">
+                        {/* Track labels */}
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${abActive === 'A' ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 ring-1 ring-blue-500/20' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'}`}>
+                                A
+                            </span>
+                            <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate">{abTrackA.title}</span>
+                            <span className="text-zinc-400 text-xs">vs</span>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${abActive === 'B' ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30 ring-1 ring-orange-500/20' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'}`}>
+                                B
+                            </span>
+                            <span className="text-xs text-zinc-700 dark:text-zinc-300 truncate">{abTrackB.title}</span>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            {/* A/B Toggle */}
+                            {abActive && (
+                                <div className="flex items-center rounded-lg border border-zinc-200 dark:border-white/10 overflow-hidden">
+                                    <button
+                                        onClick={onABToggle}
+                                        className={`px-3 py-1.5 text-xs font-bold transition-all ${abActive === 'A' ? 'bg-blue-500 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-blue-600'}`}
+                                    >
+                                        A
+                                    </button>
+                                    <button
+                                        onClick={onABToggle}
+                                        className={`px-3 py-1.5 text-xs font-bold transition-all ${abActive === 'B' ? 'bg-orange-500 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-orange-600'}`}
+                                    >
+                                        B
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Play Comparison */}
+                            {!abActive && (
+                                <button
+                                    onClick={onABPlay}
+                                    className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-blue-500 to-orange-500 text-white hover:from-blue-600 hover:to-orange-600 shadow-lg shadow-blue-500/20 transition-all"
+                                >
+                                    <Play size={14} fill="currentColor" />
+                                    Play Comparison
+                                </button>
+                            )}
+
+                            {/* Compare Params */}
+                            <button
+                                onClick={onABCompare}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                                title="Compare parameters"
+                            >
+                                <ArrowLeftRight size={14} />
+                                Diff
+                            </button>
+
+                            {/* Clear */}
+                            <button
+                                onClick={onABClear}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                title="Clear comparison"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -899,6 +980,37 @@ const SongItem: React.FC<SongItemProps> = ({
                                 <ListPlus size={16} />
                             </button>
 
+                            {/* Compare toggle button */}
+                            <button
+                                className={`relative p-2 rounded-full transition-colors ${isTrackA
+                                    ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30'
+                                    : isTrackB
+                                        ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500/30'
+                                        : 'hover:bg-zinc-200 dark:hover:bg-white/5 text-zinc-400 hover:text-black dark:hover:text-white'
+                                    }`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isTrackA) {
+                                        // Already A → clear A
+                                        onSetAsTrackA?.(); // App.tsx will toggle off
+                                    } else if (isTrackB) {
+                                        // Already B → clear B
+                                        onSetAsTrackB?.(); // App.tsx will toggle off
+                                    } else {
+                                        // Not assigned → auto-pick A or B
+                                        onSetAsTrackA?.(); // App.tsx will decide: if A exists, set as B instead
+                                    }
+                                }}
+                                title={isTrackA ? 'Compare: Track A (click to clear)' : isTrackB ? 'Compare: Track B (click to clear)' : 'Add to comparison'}
+                            >
+                                <ArrowLeftRight size={16} />
+                                {(isTrackA || isTrackB) && (
+                                    <span className={`absolute -top-1 -right-1 text-[8px] font-black px-1 rounded-full ${isTrackA ? 'bg-blue-500 text-white' : 'bg-orange-500 text-white'}`}>
+                                        {isTrackA ? 'A' : 'B'}
+                                    </span>
+                                )}
+                            </button>
+
                             {/* Info Button - Visible only on small/medium screens where sidebar is hidden */}
                             <button
                                 className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-white/5 text-zinc-400 hover:text-black dark:hover:text-white transition-colors xl:hidden"
@@ -931,10 +1043,6 @@ const SongItem: React.FC<SongItemProps> = ({
                                     onUseAsReference={() => onUseAsReference?.()}
                                     onCoverSong={() => onCoverSong?.()}
                                     onDownloadFormat={() => onDownloadFormat?.()}
-                                    onSetAsTrackA={onSetAsTrackA}
-                                    onSetAsTrackB={onSetAsTrackB}
-                                    isTrackA={isTrackA}
-                                    isTrackB={isTrackB}
                                 />
                             </div>
                         </div>

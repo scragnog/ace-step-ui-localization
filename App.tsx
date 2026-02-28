@@ -202,6 +202,100 @@ function AppContent() {
   const [abTrackB, setAbTrackB] = useState<Song | null>(null);
   const [abActive, setAbActive] = useState<'A' | 'B' | null>(null);
   const [showABCompare, setShowABCompare] = useState(false);
+  const abAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // A/B Comparison Handlers
+  const handleABPlay = useCallback(() => {
+    if (!abTrackA || !abTrackB) return;
+    const mainAudio = audioRef.current;
+    if (!mainAudio) return;
+
+    // Create secondary audio element for track B
+    if (abAudioRef.current) {
+      abAudioRef.current.pause();
+      abAudioRef.current = null;
+    }
+    const secondAudio = new Audio();
+    secondAudio.crossOrigin = 'anonymous';
+    secondAudio.volume = volume;
+    secondAudio.playbackRate = playbackRate;
+    abAudioRef.current = secondAudio;
+
+    // Load track A into main audio, track B into secondary
+    currentSongIdRef.current = abTrackA.id;
+    mainAudio.src = abTrackA.audioUrl;
+    mainAudio.muted = false;
+    mainAudio.load();
+
+    secondAudio.src = abTrackB.audioUrl;
+    secondAudio.muted = true;
+    secondAudio.load();
+
+    // Play both simultaneously
+    const playBoth = () => {
+      mainAudio.play().catch(() => { });
+      secondAudio.play().catch(() => { });
+    };
+    mainAudio.addEventListener('canplay', playBoth, { once: true });
+
+    // Sync ended event
+    const onEnded = () => {
+      secondAudio.pause();
+      secondAudio.currentTime = 0;
+      playNextRef.current();
+    };
+    mainAudio.addEventListener('ended', onEnded, { once: true });
+
+    setCurrentSong(abTrackA);
+    setAbActive('A');
+    setIsPlaying(true);
+  }, [abTrackA, abTrackB, volume, playbackRate]);
+
+  const handleABToggle = useCallback(() => {
+    if (!abTrackA || !abTrackB || !abActive) return;
+    const mainAudio = audioRef.current;
+    const secondAudio = abAudioRef.current;
+    if (!mainAudio || !secondAudio) return;
+
+    const next = abActive === 'A' ? 'B' : 'A';
+
+    // Sync position: bring inactive to active's currentTime
+    if (next === 'B') {
+      secondAudio.currentTime = mainAudio.currentTime;
+      mainAudio.muted = true;
+      secondAudio.muted = false;
+      setCurrentSong(abTrackB);
+      currentSongIdRef.current = abTrackB.id;
+    } else {
+      mainAudio.currentTime = secondAudio.currentTime;
+      secondAudio.muted = true;
+      mainAudio.muted = false;
+      setCurrentSong(abTrackA);
+      currentSongIdRef.current = abTrackA.id;
+    }
+
+    setAbActive(next);
+  }, [abTrackA, abTrackB, abActive]);
+
+  const handleABClear = useCallback(() => {
+    if (abAudioRef.current) {
+      abAudioRef.current.pause();
+      abAudioRef.current = null;
+    }
+    // Unmute main audio if it was muted
+    if (audioRef.current) audioRef.current.muted = false;
+    setAbTrackA(null);
+    setAbTrackB(null);
+    setAbActive(null);
+  }, []);
+
+  // Keep secondary audio volume/rate in sync
+  useEffect(() => {
+    if (abAudioRef.current) {
+      abAudioRef.current.volume = volume;
+      abAudioRef.current.playbackRate = playbackRate;
+    }
+  }, [volume, playbackRate]);
 
   // Visualizer songlist background setting
   const [showVisualizerBg, setShowVisualizerBg] = useState(() => localStorage.getItem('visualizer_songlist_bg') === 'true');
@@ -1700,17 +1794,39 @@ function AppContent() {
                 onDeleteUpload={handleDeleteReferenceTrack}
                 showVisualizerBg={showVisualizerBg}
                 onSetAsTrackA={(song: Song) => {
-                  setAbTrackA(song);
-                  if (!abActive) setAbActive('A');
-                  showToast(`Track A: ${song.title}`);
+                  // If already A → toggle off
+                  if (abTrackA?.id === song.id) {
+                    handleABClear();
+                    showToast('Comparison cleared');
+                    return;
+                  }
+                  // If A already exists → assign as B instead
+                  if (abTrackA) {
+                    setAbTrackB(song);
+                    showToast(`Track B: ${song.title}`);
+                  } else {
+                    setAbTrackA(song);
+                    showToast(`Track A: ${song.title}`);
+                  }
                 }}
                 onSetAsTrackB={(song: Song) => {
+                  // If already B → toggle off
+                  if (abTrackB?.id === song.id) {
+                    setAbTrackB(null);
+                    if (abActive) handleABClear();
+                    showToast('Track B cleared');
+                    return;
+                  }
                   setAbTrackB(song);
-                  if (abTrackA && !abActive) setAbActive('A');
                   showToast(`Track B: ${song.title}`);
                 }}
                 abTrackA={abTrackA}
                 abTrackB={abTrackB}
+                abActive={abActive}
+                onABCompare={() => setShowABCompare(true)}
+                onABPlay={handleABPlay}
+                onABClear={handleABClear}
+                onABToggle={handleABToggle}
               />
             </div>
 
@@ -1858,18 +1974,6 @@ function AppContent() {
         onDownloadFormat={() => currentSong && openDownloadModal(currentSong)}
         onAddToPlaylist={() => currentSong && openAddToPlaylistModal(currentSong)}
         onDelete={() => currentSong && handleDeleteSong(currentSong)}
-        abTrackA={abTrackA}
-        abTrackB={abTrackB}
-        abActive={abActive}
-        onABToggle={() => {
-          if (!abTrackA || !abTrackB) return;
-          const next = abActive === 'A' ? 'B' : 'A';
-          setAbActive(next);
-          const target = next === 'A' ? abTrackA : abTrackB;
-          setCurrentSong(target);
-          setIsPlaying(true);
-        }}
-        onABCompare={() => setShowABCompare(true)}
       />
 
       <CreatePlaylistModal

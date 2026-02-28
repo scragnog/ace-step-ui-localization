@@ -10,8 +10,7 @@ import {
     Download,
     Trash2,
     Share2,
-    Sparkles,
-    ArrowLeftRight
+    Sparkles
 } from 'lucide-react';
 import { openStemSplitter } from './StemSplitterModal';
 import { openAudioEnhancer } from './AudioEnhancerModal';
@@ -33,10 +32,6 @@ interface SongDropdownMenuProps {
     onDelete?: () => void;
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
-    onSetAsTrackA?: () => void;
-    onSetAsTrackB?: () => void;
-    isTrackA?: boolean;
-    isTrackB?: boolean;
 }
 
 interface MenuItemProps {
@@ -83,11 +78,7 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
     onShare,
     onDelete,
     onUseAsReference,
-    onCoverSong,
-    onSetAsTrackA,
-    onSetAsTrackB,
-    isTrackA,
-    isTrackB
+    onCoverSong
 }) => {
     const { t } = useI18n();
     const menuRef = useRef<HTMLDivElement>(null);
@@ -214,27 +205,6 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
                     onClick={() => handleAction(onCoverSong)}
                     disabled={!song.audioUrl}
                 />
-            )}
-
-            {/* A/B Comparison */}
-            {(onSetAsTrackA || onSetAsTrackB) && (
-                <>
-                    <MenuDivider />
-                    {onSetAsTrackA && (
-                        <MenuItem
-                            icon={<ArrowLeftRight size={14} />}
-                            label={isTrackA ? '✓ Track A' : 'Set as Track A'}
-                            onClick={() => handleAction(onSetAsTrackA)}
-                        />
-                    )}
-                    {onSetAsTrackB && (
-                        <MenuItem
-                            icon={<ArrowLeftRight size={14} />}
-                            label={isTrackB ? '✓ Track B' : 'Set as Track B'}
-                            onClick={() => handleAction(onSetAsTrackB)}
-                        />
-                    )}
-                </>
             )}
 
             <MenuDivider />

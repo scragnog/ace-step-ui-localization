@@ -45,10 +45,6 @@ export interface SongCardProps {
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDownloadFormat?: () => void;
-    onSetAsTrackA?: () => void;
-    onSetAsTrackB?: () => void;
-    isTrackA?: boolean;
-    isTrackB?: boolean;
 }
 
 export const SongCard: React.FC<SongCardProps> = ({
@@ -73,11 +69,7 @@ export const SongCard: React.FC<SongCardProps> = ({
     onSongUpdate,
     onUseAsReference,
     onCoverSong,
-    onDownloadFormat,
-    onSetAsTrackA,
-    onSetAsTrackB,
-    isTrackA,
-    isTrackB
+    onDownloadFormat
 }) => {
     const { token } = useAuth();
     const { t } = useI18n();
@@ -313,10 +305,6 @@ export const SongCard: React.FC<SongCardProps> = ({
                                     onUseAsReference={() => onUseAsReference?.()}
                                     onCoverSong={() => onCoverSong?.()}
                                     onDownloadFormat={() => onDownloadFormat?.()}
-                                    onSetAsTrackA={onSetAsTrackA}
-                                    onSetAsTrackB={onSetAsTrackB}
-                                    isTrackA={isTrackA}
-                                    isTrackB={isTrackB}
                                 />
                             </div>
                         </div>
