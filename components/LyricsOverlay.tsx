@@ -18,7 +18,7 @@ interface LyricsOverlayProps {
 /** Parse "[mm:ss.xx]text" lines into sorted array */
 function parseLrc(raw: string): LrcLine[] {
     const lines: LrcLine[] = [];
-    for (const line of raw.split('\n')) {
+    for (const line of raw.replace(/\r/g, '').split('\n')) {
         // Match [mm:ss.xx] or [mm:ss] format
         const match = line.match(/^\[(\d+):(\d+)(?:\.(\d+))?\]\s*(.*)$/);
         if (match) {
