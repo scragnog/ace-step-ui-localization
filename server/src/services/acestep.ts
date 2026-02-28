@@ -167,6 +167,7 @@ async function submitToApi(params: GenerationParams): Promise<{ taskId: string }
   if (params.latentShift !== undefined && params.latentShift !== 0) body.latent_shift = params.latentShift;
   if (params.latentRescale !== undefined && params.latentRescale !== 1.0) body.latent_rescale = params.latentRescale;
   if (params.instruction) body.instruction = params.instruction;
+  if (params.getLrc) body.get_lrc = true;
   // LLM and CoT parameters only sent when thinking mode is enabled
   if (params.thinking) {
     if (params.lmTemperature !== undefined) body.lm_temperature = params.lmTemperature;
@@ -243,6 +244,7 @@ async function submitToApi(params: GenerationParams): Promise<{ taskId: string }
 interface ApiTaskResult {
   status: number; // 0 = processing, 1 = done, 2 = failed
   audioPaths: string[];
+  lrc?: string[];
   metas?: {
     bpm?: number;
     duration?: number;
@@ -289,8 +291,9 @@ async function pollApiResult(taskId: string, maxWaitMs = 600000): Promise<ApiTas
         ? resultData.map((r: { file?: string }) => r.file).filter(Boolean)
         : [];
       const metas = resultData[0]?.metas;
+      const lrc = resultData[0]?.lrc ?? resultData.lrc;
 
-      return { status: 1, audioPaths, metas };
+      return { status: 1, audioPaths, lrc: Array.isArray(lrc) ? lrc : undefined, metas };
     } else if (taskData.status === 2) {
       const details = taskData.error
         || taskData.message
@@ -444,6 +447,7 @@ interface GenerationResult {
   keyScale?: string;
   timeSignature?: string;
   status: string;
+  lrc?: string[];
 }
 
 interface JobStatus {
@@ -617,6 +621,7 @@ async function processGeneration(
         keyScale: apiResult.metas?.keyscale || params.keyScale,
         timeSignature: apiResult.metas?.timesignature || params.timeSignature,
         status: 'succeeded',
+        lrc: apiResult.lrc,
       };
       console.log(`Job ${jobId}: Completed via API with ${audioUrls.length} audio files`);
 
