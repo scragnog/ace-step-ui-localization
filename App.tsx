@@ -103,6 +103,9 @@ function AppContent() {
   // Create panel resizable width (persisted)
   const [createPanelWidth, setCreatePanelWidth] = usePersistedState('ace-createPanelWidth', 360);
 
+  // Right sidebar resizable width (persisted)
+  const [rightSidebarWidth, setRightSidebarWidth] = usePersistedState('ace-rightSidebarWidth', 360);
+
   // Auth
   const { user, token, isAuthenticated, isLoading: authLoading, setupUser, logout } = useAuth();
   const [showUsernameModal, setShowUsernameModal] = useState(false);
@@ -1619,7 +1622,7 @@ function AppContent() {
           <div className="flex h-full overflow-hidden relative w-full bg-zinc-50 dark:bg-suno-panel">
             {/* Create Panel — resizable */}
             <div
-              className="w-full md:w-auto flex-shrink-0 h-full border-r border-zinc-200 dark:border-white/5 relative z-10"
+              className="w-full md:w-auto flex-shrink-0 h-full border-r border-zinc-200 dark:border-white/5 z-10"
               style={{ width: isDesktop ? createPanelWidth : undefined }}
             >
               <CreatePanel
@@ -1631,31 +1634,31 @@ function AppContent() {
                 pendingAudioSelection={pendingAudioSelection}
                 onAudioSelectionApplied={() => setPendingAudioSelection(null)}
               />
-              {/* Resize handle */}
-              <div
-                className="hidden md:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize group z-20 hover:bg-pink-500/20 active:bg-pink-500/30 transition-colors"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  const startX = e.clientX;
-                  const startW = createPanelWidth;
-                  const onMove = (ev: MouseEvent) => {
-                    const newW = Math.min(600, Math.max(280, startW + ev.clientX - startX));
-                    setCreatePanelWidth(newW);
-                  };
-                  const onUp = () => {
-                    document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('mouseup', onUp);
-                    document.body.style.cursor = '';
-                    document.body.style.userSelect = '';
-                  };
-                  document.body.style.cursor = 'col-resize';
-                  document.body.style.userSelect = 'none';
-                  document.addEventListener('mousemove', onMove);
-                  document.addEventListener('mouseup', onUp);
-                }}
-              >
-                <div className="absolute top-1/2 -translate-y-1/2 left-0.5 w-0.5 h-8 rounded-full bg-zinc-600 group-hover:bg-pink-400 transition-colors" />
-              </div>
+            </div>
+            {/* Left resize handle — outside scrollable area so it doesn't overlap the scrollbar */}
+            <div
+              className="hidden md:flex flex-shrink-0 w-1.5 h-full cursor-col-resize group z-20 items-center hover:bg-pink-500/20 active:bg-pink-500/30 transition-colors"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startW = createPanelWidth;
+                const onMove = (ev: MouseEvent) => {
+                  const newW = Math.min(600, Math.max(280, startW + ev.clientX - startX));
+                  setCreatePanelWidth(newW);
+                };
+                const onUp = () => {
+                  document.removeEventListener('mousemove', onMove);
+                  document.removeEventListener('mouseup', onUp);
+                  document.body.style.cursor = '';
+                  document.body.style.userSelect = '';
+                };
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+              }}
+            >
+              <div className="w-0.5 h-8 rounded-full bg-zinc-600 group-hover:bg-pink-400 transition-colors" />
             </div>
 
             {/* Song List */}
@@ -1692,25 +1695,56 @@ function AppContent() {
               />
             </div>
 
-            {/* Right Sidebar */}
+            {/* Right Sidebar — resizable */}
             {showRightSidebar && (
-              <div className="hidden xl:block w-[360px] flex-shrink-0 h-full bg-zinc-50 dark:bg-suno-panel relative z-10 border-l border-zinc-200 dark:border-white/5">
-                <RightSidebar
-                  song={selectedSong}
-                  onClose={() => setShowRightSidebar(false)}
-                  onOpenVideo={() => selectedSong && openVideoGenerator(selectedSong)}
-                  onReuse={handleReuse}
-                  onSongUpdate={handleSongUpdate}
-                  onNavigateToProfile={handleNavigateToProfile}
-                  onNavigateToSong={handleNavigateToSong}
-                  isLiked={selectedSong ? likedSongIds.has(selectedSong.id) : false}
-                  onToggleLike={toggleLike}
-                  onDelete={handleDeleteSong}
-                  isPlaying={isPlaying && currentSong?.id === selectedSong?.id}
-                  currentSong={currentSong}
-                  onFullscreenVisualizer={() => setShowFullscreenVisualizer(true)}
-                />
-              </div>
+              <>
+                {/* Right resize handle — outside scrollable area */}
+                <div
+                  className="hidden xl:flex flex-shrink-0 w-1.5 h-full cursor-col-resize group z-20 items-center hover:bg-pink-500/20 active:bg-pink-500/30 transition-colors"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const startX = e.clientX;
+                    const startW = rightSidebarWidth;
+                    const onMove = (ev: MouseEvent) => {
+                      // Dragging left = wider (startX - ev.clientX)
+                      const newW = Math.min(600, Math.max(280, startW + startX - ev.clientX));
+                      setRightSidebarWidth(newW);
+                    };
+                    const onUp = () => {
+                      document.removeEventListener('mousemove', onMove);
+                      document.removeEventListener('mouseup', onUp);
+                      document.body.style.cursor = '';
+                      document.body.style.userSelect = '';
+                    };
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                  }}
+                >
+                  <div className="w-0.5 h-8 rounded-full bg-zinc-600 group-hover:bg-pink-400 transition-colors" />
+                </div>
+                <div
+                  className="hidden xl:block flex-shrink-0 h-full bg-zinc-50 dark:bg-suno-panel z-10 border-l border-zinc-200 dark:border-white/5"
+                  style={{ width: rightSidebarWidth }}
+                >
+                  <RightSidebar
+                    song={selectedSong}
+                    onClose={() => setShowRightSidebar(false)}
+                    onOpenVideo={() => selectedSong && openVideoGenerator(selectedSong)}
+                    onReuse={handleReuse}
+                    onSongUpdate={handleSongUpdate}
+                    onNavigateToProfile={handleNavigateToProfile}
+                    onNavigateToSong={handleNavigateToSong}
+                    isLiked={selectedSong ? likedSongIds.has(selectedSong.id) : false}
+                    onToggleLike={toggleLike}
+                    onDelete={handleDeleteSong}
+                    isPlaying={isPlaying && currentSong?.id === selectedSong?.id}
+                    currentSong={currentSong}
+                    onFullscreenVisualizer={() => setShowFullscreenVisualizer(true)}
+                  />
+                </div>
+              </>
             )}
           </div>
         );
