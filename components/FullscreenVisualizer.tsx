@@ -122,6 +122,7 @@ export const FullscreenVisualizer: React.FC<FullscreenVisualizerProps> = ({
                 isPlaying={isPlaying}
                 className="absolute inset-0 w-full h-full"
                 showControls={false}
+                instanceId="fullscreen"
             />
 
             {/* Synced lyrics overlay — always visible, not tied to HUD */}

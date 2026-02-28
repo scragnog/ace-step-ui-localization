@@ -285,6 +285,7 @@ export const SongList: React.FC<SongListProps> = ({
                             className="w-full h-full"
                             dimmed={true}
                             showControls={false}
+                            instanceId="songlist"
                         />
                     </div>
                 )}

@@ -25,6 +25,21 @@ const PRESET_LABELS: Record<PresetType, string> = {
 
 const RANDOM_CYCLE_MS = 30_000; // 30 seconds
 
+// Global registry: which preset each instance is currently showing
+const activePresets: Record<string, PresetType> = {};
+
+function getEnabledPresets(): PresetType[] {
+    try {
+        const saved = localStorage.getItem('visualizer_enabled_presets');
+        if (saved) {
+            const parsed = JSON.parse(saved) as string[];
+            const valid = parsed.filter(p => ALL_PRESETS.includes(p as PresetType)) as PresetType[];
+            return valid.length > 0 ? valid : ALL_PRESETS;
+        }
+    } catch { }
+    return [...ALL_PRESETS];
+}
+
 interface LiveVisualizerProps {
     /** Is audio currently playing? Controls animation loop. */
     isPlaying: boolean;
@@ -36,6 +51,8 @@ interface LiveVisualizerProps {
     showControls?: boolean;
     /** Callback when fullscreen is requested */
     onFullscreen?: () => void;
+    /** Unique instance ID for coordinating random presets between instances */
+    instanceId?: string;
 }
 
 export const LiveVisualizer: React.FC<LiveVisualizerProps> = ({
@@ -44,10 +61,25 @@ export const LiveVisualizer: React.FC<LiveVisualizerProps> = ({
     dimmed = false,
     showControls = true,
     onFullscreen,
+    instanceId = 'default',
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number>(0);
     const { analyserNode } = useAudioAnalysis();
+
+    // Enabled presets pool
+    const [enabledPresets, setEnabledPresets] = useState<PresetType[]>(getEnabledPresets);
+
+    // Listen for settings changes
+    useEffect(() => {
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === 'visualizer_enabled_presets') {
+                setEnabledPresets(getEnabledPresets());
+            }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
 
     // Preset state
     const [selectedPreset, setSelectedPreset] = useState<PresetType | 'Random'>(() => {
@@ -60,11 +92,18 @@ export const LiveVisualizer: React.FC<LiveVisualizerProps> = ({
     const [currentPreset, setCurrentPreset] = useState<PresetType>(() => {
         const saved = localStorage.getItem('visualizer_preset');
         if (saved && saved !== 'Random' && ALL_PRESETS.includes(saved as PresetType)) return saved as PresetType;
-        return ALL_PRESETS[Math.floor(Math.random() * ALL_PRESETS.length)];
+        const pool = getEnabledPresets();
+        return pool[Math.floor(Math.random() * pool.length)];
     });
 
     const [showPicker, setShowPicker] = useState(false);
     const pickerRef = useRef<HTMLDivElement>(null);
+
+    // Register this instance's current preset
+    useEffect(() => {
+        activePresets[instanceId] = currentPreset;
+        return () => { delete activePresets[instanceId]; };
+    }, [currentPreset, instanceId]);
 
     // Save selection
     useEffect(() => {
@@ -74,18 +113,23 @@ export const LiveVisualizer: React.FC<LiveVisualizerProps> = ({
         }
     }, [selectedPreset]);
 
-    // Random mode: cycle every 30s
+    // Random mode: cycle every 30s, avoid what other instances are showing
     useEffect(() => {
         if (selectedPreset !== 'Random' || !isPlaying) return;
 
         const pickRandom = () => {
-            const available = ALL_PRESETS.filter(p => p !== currentPreset);
-            setCurrentPreset(available[Math.floor(Math.random() * available.length)]);
+            // Get presets used by OTHER instances
+            const othersUsing = Object.entries(activePresets)
+                .filter(([id]) => id !== instanceId)
+                .map(([, preset]) => preset);
+            // Filter to enabled presets not used by others
+            let pool = enabledPresets.filter(p => !othersUsing.includes(p) && p !== currentPreset);
+            if (pool.length === 0) pool = enabledPresets.filter(p => p !== currentPreset);
+            if (pool.length === 0) pool = enabledPresets;
+            setCurrentPreset(pool[Math.floor(Math.random() * pool.length)]);
         };
 
-        // Pick one immediately when switching to random
         pickRandom();
-
         const interval = setInterval(pickRandom, RANDOM_CYCLE_MS);
         return () => clearInterval(interval);
     }, [selectedPreset, isPlaying]); // intentionally omitting currentPreset to avoid re-triggering
@@ -189,8 +233,8 @@ export const LiveVisualizer: React.FC<LiveVisualizerProps> = ({
                                 <button
                                     onClick={() => { setSelectedPreset('Random'); setShowPicker(false); }}
                                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${selectedPreset === 'Random'
-                                            ? 'text-pink-400 bg-pink-500/10'
-                                            : 'text-zinc-300 hover:text-white hover:bg-white/5'
+                                        ? 'text-pink-400 bg-pink-500/10'
+                                        : 'text-zinc-300 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
                                     <Shuffle size={13} />
@@ -208,8 +252,8 @@ export const LiveVisualizer: React.FC<LiveVisualizerProps> = ({
                                         key={preset}
                                         onClick={() => { setSelectedPreset(preset); setShowPicker(false); }}
                                         className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium transition-colors ${currentPreset === preset && selectedPreset !== 'Random'
-                                                ? 'text-pink-400 bg-pink-500/10'
-                                                : 'text-zinc-300 hover:text-white hover:bg-white/5'
+                                            ? 'text-pink-400 bg-pink-500/10'
+                                            : 'text-zinc-300 hover:text-white hover:bg-white/5'
                                             }`}
                                     >
                                         <span>{PRESET_LABELS[preset]}</span>

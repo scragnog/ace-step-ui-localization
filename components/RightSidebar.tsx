@@ -161,6 +161,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                     className="w-full h-full"
                                     showControls={true}
                                     onFullscreen={onFullscreenVisualizer}
+                                    instanceId="artbox"
                                 />
                                 {/* Synced lyrics overlay */}
                                 <LyricsOverlay

@@ -23,6 +23,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
         const saved = localStorage.getItem('waveform-bounce-intensity');
         return saved !== null ? parseFloat(saved) : 0.5;
     });
+    const [enabledPresets, setEnabledPresets] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('visualizer_enabled_presets');
+            if (saved) return JSON.parse(saved);
+        } catch { }
+        return ['NCS Circle', 'Linear Bars', 'Dual Mirror', 'Center Wave', 'Orbital', 'Hexagon', 'Oscilloscope', 'Digital Rain', 'Shockwave', 'Minimal'];
+    });
 
     if (!isOpen || !user) {
         if (isEditProfileOpen && user) {
@@ -219,6 +226,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                 <div className="flex justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
                                     <span>Off</span>
                                     <span>Maximum</span>
+                                </div>
+                            </div>
+                            {/* Visualizer Preset Rotation Pool */}
+                            <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-700/50">
+                                <div>
+                                    <p className="text-sm text-zinc-900 dark:text-white font-medium">Visualizer presets</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Choose which styles cycle in random mode</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    {(['NCS Circle', 'Linear Bars', 'Dual Mirror', 'Center Wave', 'Orbital', 'Hexagon', 'Oscilloscope', 'Digital Rain', 'Shockwave', 'Minimal'] as const).map(preset => {
+                                        const labels: Record<string, string> = {
+                                            'NCS Circle': '🔵 Classic NCS',
+                                            'Linear Bars': '📊 Spectrum',
+                                            'Dual Mirror': '🪞 Mirror',
+                                            'Center Wave': '🌊 Shockwave',
+                                            'Orbital': '🪐 Orbital',
+                                            'Hexagon': '⬡ Hex Core',
+                                            'Oscilloscope': '📈 Analog',
+                                            'Digital Rain': '🟢 Matrix',
+                                            'Shockwave': '💥 Pulse',
+                                            'Minimal': '✨ Clean',
+                                        };
+                                        const enabled = enabledPresets.includes(preset);
+                                        return (
+                                            <button
+                                                key={preset}
+                                                onClick={() => {
+                                                    let next: string[];
+                                                    if (enabled) {
+                                                        next = enabledPresets.filter((p: string) => p !== preset);
+                                                        if (next.length === 0) return; // must keep at least one
+                                                    } else {
+                                                        next = [...enabledPresets, preset];
+                                                    }
+                                                    setEnabledPresets(next);
+                                                    localStorage.setItem('visualizer_enabled_presets', JSON.stringify(next));
+                                                    window.dispatchEvent(new StorageEvent('storage', { key: 'visualizer_enabled_presets', newValue: JSON.stringify(next) }));
+                                                }}
+                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all border ${enabled
+                                                    ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/30'
+                                                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
+                                                    }`}
+                                            >
+                                                <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${enabled ? 'bg-pink-600 border-pink-600' : 'border-zinc-300 dark:border-zinc-600'
+                                                    }`}>
+                                                    {enabled && <span className="text-white text-[8px] font-black">✓</span>}
+                                                </span>
+                                                <span className="truncate">{labels[preset] || preset}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                    <button
+                                        onClick={() => {
+                                            const all = ['NCS Circle', 'Linear Bars', 'Dual Mirror', 'Center Wave', 'Orbital', 'Hexagon', 'Oscilloscope', 'Digital Rain', 'Shockwave', 'Minimal'];
+                                            setEnabledPresets(all);
+                                            localStorage.setItem('visualizer_enabled_presets', JSON.stringify(all));
+                                            window.dispatchEvent(new StorageEvent('storage', { key: 'visualizer_enabled_presets', newValue: JSON.stringify(all) }));
+                                        }}
+                                        className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                    >
+                                        Select All
+                                    </button>
+                                    <span className="text-zinc-300 dark:text-zinc-600 text-[10px]">|</span>
+                                    <button
+                                        onClick={() => {
+                                            // Keep only one — the first enabled one
+                                            const first = enabledPresets[0] || 'NCS Circle';
+                                            setEnabledPresets([first]);
+                                            localStorage.setItem('visualizer_enabled_presets', JSON.stringify([first]));
+                                            window.dispatchEvent(new StorageEvent('storage', { key: 'visualizer_enabled_presets', newValue: JSON.stringify([first]) }));
+                                        }}
+                                        className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
                             </div>
                         </div>
