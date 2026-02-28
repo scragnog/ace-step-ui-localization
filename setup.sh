@@ -7,33 +7,33 @@ echo "=================================="
 echo "  ACE-Step UI Setup"
 echo "=================================="
 
-# Check if ACE-Step exists
-ACESTEP_PATH="${ACESTEP_PATH:-../ACE-Step-1.5}"
+# ============= ACE-Step Configuration | ACE-Step 配置 =============
+# Set ACE-Step installation path (parent directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ACESTEP_PATH="${ACESTEP_PATH:-$(dirname "$SCRIPT_DIR")}"
+# Set Python executable path (virtual environment)
+if [ -f "$ACESTEP_PATH/.venv/bin/python" ]; then
+    PYTHON_PATH="$ACESTEP_PATH/.venv/bin/python"
+elif [ -f "$ACESTEP_PATH/venv/bin/python" ]; then
+    PYTHON_PATH="$ACESTEP_PATH/venv/bin/python"
+else
+    PYTHON_PATH=""
+fi
+
+echo "ACE-Step Path: $ACESTEP_PATH"
+echo "Python Path:   ${PYTHON_PATH:-not found}"
+echo ""
 
 if [ ! -d "$ACESTEP_PATH" ]; then
     echo "Error: ACE-Step not found at $ACESTEP_PATH"
-    echo ""
-    echo "Please clone ACE-Step first:"
-    echo "  cd .."
-    echo "  git clone https://github.com/ace-step/ACE-Step-1.5"
-    echo "  cd ACE-Step-1.5"
-    echo "  uv venv && uv pip install -e ."
-    echo "  cd ../ace-step-ui"
-    echo "  ./setup.sh"
     exit 1
 fi
 
-if [ ! -d "$ACESTEP_PATH/.venv" ]; then
-    echo "Error: ACE-Step venv not found. Please set up ACE-Step first:"
+if [ -z "$PYTHON_PATH" ]; then
+    echo "Warning: ACE-Step venv not found. Please set up ACE-Step first:"
     echo "  cd $ACESTEP_PATH"
     echo "  uv venv && uv pip install -e ."
-    exit 1
 fi
-
-echo "Found ACE-Step at: $ACESTEP_PATH"
-
-# Get absolute path
-ACESTEP_PATH=$(cd "$ACESTEP_PATH" && pwd)
 
 # Create .env file
 echo "Creating .env file..."
@@ -42,6 +42,7 @@ cat > .env << EOF
 
 # Path to ACE-Step installation
 ACESTEP_PATH=$ACESTEP_PATH
+PYTHON_PATH=${PYTHON_PATH}
 
 # Server ports
 PORT=3001
