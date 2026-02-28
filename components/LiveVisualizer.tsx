@@ -37,7 +37,7 @@ function getEnabledPresets(): PresetType[] {
             return valid.length > 0 ? valid : ALL_PRESETS;
         }
     } catch { }
-    return [...ALL_PRESETS];
+    return ['NCS Circle', 'Linear Bars', 'Dual Mirror', 'Oscilloscope'] as PresetType[];
 }
 
 interface LiveVisualizerProps {

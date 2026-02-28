@@ -28,7 +28,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
             const saved = localStorage.getItem('visualizer_enabled_presets');
             if (saved) return JSON.parse(saved);
         } catch { }
-        return ['NCS Circle', 'Linear Bars', 'Dual Mirror', 'Center Wave', 'Orbital', 'Hexagon', 'Oscilloscope', 'Digital Rain', 'Shockwave', 'Minimal'];
+        return ['NCS Circle', 'Linear Bars', 'Dual Mirror', 'Oscilloscope'];
     });
 
     if (!isOpen || !user) {
