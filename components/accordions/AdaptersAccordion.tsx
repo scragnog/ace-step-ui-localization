@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Sliders, ChevronDown, FolderSearch } from 'lucide-react';
 import { useI18n } from '../../context/I18nContext';
+import { useAuth } from '../../context/AuthContext';
+import { generateApi } from '../../services/api';
 import { EditableSlider } from '../EditableSlider';
 
 export interface AdapterSlot {
@@ -84,6 +86,7 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
     onSlotGroupScaleChange,
 }) => {
     const { t } = useI18n();
+    const { token } = useAuth();
     const [browsedFiles, setBrowsedFiles] = useState<AdapterFile[]>([]);
     const [showBrowse, setShowBrowse] = useState(false);
     const [isBrowsing, setIsBrowsing] = useState(false);
@@ -93,17 +96,12 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
         const folder = loraPath.replace(/[\\/][^\\/]*$/, '') || './lokr_output';
         setIsBrowsing(true);
         try {
-            const res = await fetch(`/api/lora/list-files?folder=${encodeURIComponent(folder)}`);
-            if (res.ok) {
-                const data = await res.json();
-                setBrowsedFiles(data.files || []);
-                setShowBrowse(true);
-            } else {
-                const err = await res.json().catch(() => ({ error: 'Failed to scan' }));
-                console.warn('Browse failed:', err.error);
-            }
-        } catch (e) {
-            console.warn('Browse error:', e);
+            if (!token) return;
+            const result = await generateApi.listLoraFiles(folder, token);
+            setBrowsedFiles(result.files || []);
+            setShowBrowse(true);
+        } catch (err) {
+            console.warn('Browse error:', err);
         } finally {
             setIsBrowsing(false);
         }
@@ -276,17 +274,12 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                         onClick={async () => {
                                             setIsBrowsing(true);
                                             try {
+                                                if (!token) return;
                                                 const folder = adapterFolder.trim() || './lokr_output';
-                                                const res = await fetch(`/api/lora/list-files?folder=${encodeURIComponent(folder)}`);
-                                                if (res.ok) {
-                                                    const data = await res.json();
-                                                    setBrowsedFiles(data.files || []);
-                                                    setShowBrowse(true);
-                                                    if (!adapterFolder.trim()) onAdapterFolderChange(folder);
-                                                } else {
-                                                    const err = await res.json().catch(() => ({ error: 'Failed' }));
-                                                    console.warn('Browse failed:', err.error);
-                                                }
+                                                const result = await generateApi.listLoraFiles(folder, token);
+                                                setBrowsedFiles(result.files || []);
+                                                setShowBrowse(true);
+                                                if (!adapterFolder.trim()) onAdapterFolderChange(folder);
                                             } catch (e) { console.warn('Browse error:', e); } finally { setIsBrowsing(false); }
                                         }}
                                         disabled={isBrowsing}

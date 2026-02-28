@@ -574,9 +574,9 @@ export const SongList: React.FC<SongListProps> = ({
                 )}
             </div> {/* End container */}
 
-            {/* A/B Comparison Bar — fixed above player */}
+            {/* A/B Comparison Bar — sticky at bottom of scroll area */}
             {abTrackA && abTrackB && (
-                <div className="fixed bottom-[72px] left-0 right-0 bg-zinc-100/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-white/10 px-6 py-2.5 z-40">
+                <div className="sticky bottom-0 -mx-6 -mb-32 bg-zinc-100/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-white/10 px-6 py-2.5 z-30">
                     <div className="flex items-center gap-3">
                         {/* Track labels */}
                         <div className="flex items-center gap-2 flex-1 min-w-0">
