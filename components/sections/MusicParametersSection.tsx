@@ -69,6 +69,7 @@ export const MusicParametersSection: React.FC<MusicParametersSectionProps> = ({
                             <option key={key} value={key}>{key}</option>
                         ))}
                     </select>
+                    <p className="text-[10px] text-zinc-500">Musical key (e.g. C major). Auto = AI chooses</p>
                 </div>
                 <div className="space-y-1.5">
                     <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('timeTooltip')}>{t('time')}</label>
@@ -82,6 +83,7 @@ export const MusicParametersSection: React.FC<MusicParametersSectionProps> = ({
                             <option key={time} value={time}>{time}</option>
                         ))}
                     </select>
+                    <p className="text-[10px] text-zinc-500">4/4 = pop/rock, 3/4 = waltz, 6/8 = folk</p>
                 </div>
             </div>
 
