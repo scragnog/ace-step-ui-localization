@@ -25,6 +25,8 @@ interface GenerationSettingsAccordionProps {
     // Shift
     shift: number;
     onShiftChange: (val: number) => void;
+    // Model type
+    isTurbo: boolean;
     // Inference
     inferenceSteps: number;
     onInferenceStepsChange: (val: number) => void;
@@ -203,8 +205,10 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                         step={0.1}
                         onChange={props.onShiftChange}
                         formatDisplay={(val) => val.toFixed(1)}
-                        helpText={t('timestepShiftForBase')}
-                        title={t('shiftTooltip')}
+                        helpText={props.isTurbo ? undefined : 'Controls how the model distributes denoising effort. Higher = more focus on structure, less on fine detail.'}
+                        title={'Timestep schedule warping factor. Turbo models are trained with shift=3.0; base/SFT models default to 1.0.'}
+                        disabled={props.isTurbo}
+                        disabledReason={props.isTurbo ? 'Locked to 3.0 — turbo models are trained with this value' : undefined}
                     />
 
                     {/* Inference Settings (nested accordion) */}
@@ -227,10 +231,10 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                                     label={t('inferenceSteps')}
                                     value={props.inferenceSteps}
                                     min={4}
-                                    max={200}
+                                    max={props.isTurbo ? 20 : 200}
                                     step={1}
                                     onChange={props.onInferenceStepsChange}
-                                    helpText={t('moreStepsBetterQuality')}
+                                    helpText={props.isTurbo ? 'Turbo models are optimised for 8 steps (max 20)' : t('moreStepsBetterQuality')}
                                     title={t('inferenceStepsTooltip')}
                                 />
                                 <div className="grid grid-cols-2 gap-3">
@@ -275,6 +279,7 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                         onCfgIntervalStartChange={props.onCfgIntervalStartChange}
                         cfgIntervalEnd={props.cfgIntervalEnd}
                         onCfgIntervalEndChange={props.onCfgIntervalEndChange}
+                        isTurbo={props.isTurbo}
                     />
 
                     {/* LM / CoT Settings */}

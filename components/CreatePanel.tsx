@@ -2215,6 +2215,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         <GenerationSettingsAccordion
           isOpen={showGenerationSettings}
           onToggle={() => setShowGenerationSettings(!showGenerationSettings)}
+          isTurbo={isTurboModel(selectedModel)}
           batchSize={batchSize}
           onBatchSizeChange={setBatchSize}
           bulkCount={bulkCount}

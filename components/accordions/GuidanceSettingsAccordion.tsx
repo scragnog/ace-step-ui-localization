@@ -22,6 +22,7 @@ interface GuidanceSettingsAccordionProps {
     onCfgIntervalStartChange: (val: number) => void;
     cfgIntervalEnd: number;
     onCfgIntervalEndChange: (val: number) => void;
+    isTurbo?: boolean;
 }
 
 export const GuidanceSettingsAccordion: React.FC<GuidanceSettingsAccordionProps> = ({
@@ -41,6 +42,7 @@ export const GuidanceSettingsAccordion: React.FC<GuidanceSettingsAccordionProps>
     onCfgIntervalStartChange,
     cfgIntervalEnd,
     onCfgIntervalEndChange,
+    isTurbo = false,
 }) => {
     const { t } = useI18n();
 
@@ -60,6 +62,13 @@ export const GuidanceSettingsAccordion: React.FC<GuidanceSettingsAccordionProps>
 
             {isOpen && (
                 <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
+                    {/* Turbo model notice */}
+                    {isTurbo && (
+                        <div className="flex items-start gap-2 p-2.5 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-500/20 rounded-lg">
+                            <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <p className="text-[11px] text-amber-700 dark:text-amber-300">Turbo models don't use classifier-free guidance. These settings only apply to base/SFT models.</p>
+                        </div>
+                    )}
                     {/* Guidance Scale */}
                     <EditableSlider
                         label={t('guidanceScale')}

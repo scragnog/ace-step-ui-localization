@@ -11,6 +11,8 @@ interface EditableSliderProps {
   helpText?: string;
   title?: string;
   autoLabel?: string;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export const EditableSlider: React.FC<EditableSliderProps> = ({
@@ -24,6 +26,8 @@ export const EditableSlider: React.FC<EditableSliderProps> = ({
   helpText,
   title = '',
   autoLabel = 'Auto',
+  disabled = false,
+  disabledReason,
 }) => {
   const [inputValue, setInputValue] = useState(value.toString());
   const [isEditing, setIsEditing] = useState(false);
@@ -62,10 +66,10 @@ export const EditableSlider: React.FC<EditableSliderProps> = ({
   const displayValue = formatDisplay ? formatDisplay(value) : (value === min && autoLabel ? autoLabel : value.toString());
 
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex items-center justify-between">
         <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300" title={title}>{label}</label>
-        {isEditing ? (
+        {isEditing && !disabled ? (
           <input
             type="number"
             value={inputValue}
@@ -81,8 +85,8 @@ export const EditableSlider: React.FC<EditableSliderProps> = ({
           />
         ) : (
           <span
-            onClick={() => setIsEditing(true)}
-            className="text-xs font-mono text-zinc-700 dark:text-zinc-200 bg-gradient-to-r from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-lg cursor-pointer hover:from-zinc-100 hover:to-zinc-200 dark:hover:from-zinc-700 dark:hover:to-zinc-800 transition-all shadow-sm"
+            onClick={() => !disabled && setIsEditing(true)}
+            className={`text-xs font-mono text-zinc-700 dark:text-zinc-200 bg-gradient-to-r from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-zinc-700 px-2.5 py-1 rounded-lg transition-all shadow-sm ${disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:from-zinc-100 hover:to-zinc-200 dark:hover:from-zinc-700 dark:hover:to-zinc-800'}`}
           >
             {displayValue}
           </span>
@@ -95,21 +99,27 @@ export const EditableSlider: React.FC<EditableSliderProps> = ({
           max={max}
           step={step}
           value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          onChange={(e) => !disabled && onChange(Number(e.target.value))}
+          className={`absolute inset-0 w-full h-full opacity-0 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+          disabled={disabled}
         />
-        <div 
+        <div
           className="absolute top-0 left-0 h-full bg-gradient-to-r from-pink-400 to-rose-500 dark:from-pink-500 dark:to-rose-600 rounded-full pointer-events-none transition-all duration-150"
           style={{ width: `${((value - min) / (max - min)) * 100}%` }}
         />
-        <div 
+        <div
           className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white dark:bg-zinc-200 rounded-full shadow-md border-2 border-pink-500 pointer-events-none transition-all duration-150"
           style={{ left: `calc(${((value - min) / (max - min)) * 100}% - 8px)` }}
         />
       </div>
-      {helpText && (
+      {(disabled && disabledReason) ? (
+        <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v.01M12 9v3m0 8a9 9 0 110-18 9 9 0 010 18z" /></svg>
+          {disabledReason}
+        </p>
+      ) : helpText ? (
         <p className="text-[10px] text-zinc-500">{helpText}</p>
-      )}
+      ) : null}
     </div>
   );
 };
