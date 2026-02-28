@@ -101,7 +101,10 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     }, [lrcProp, audioUrl]);
 
     const rawLrc = lrcProp || fetchedLrc;
-    const lines = useMemo(() => rawLrc ? parseLrc(rawLrc) : [], [rawLrc]);
+    const allLines = useMemo(() => rawLrc ? parseLrc(rawLrc) : [], [rawLrc]);
+    // Filter out section markers (e.g. [Verse 1], [Chorus], [Instrumental]) for display
+    // but keep them in allLines for future use
+    const lines = useMemo(() => allLines.filter(l => !/^\[.*\]$/.test(l.text)), [allLines]);
     const currentIdx = findCurrentIndex(lines, currentTime);
 
     console.log('[LyricsOverlay] render — lines:', lines.length, 'currentIdx:', currentIdx, 'rawLrc:', !!rawLrc);
