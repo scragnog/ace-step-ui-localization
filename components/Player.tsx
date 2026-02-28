@@ -835,7 +835,7 @@ export const Player: React.FC<PlayerProps> = ({
 
                         {/* Vertical Volume Slider */}
                         {isHoveringVolume && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pb-2">
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 pb-2">
                                 <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-white/10 p-2">
                                     <div className="relative h-24 w-8 flex items-center justify-center">
                                         <input
