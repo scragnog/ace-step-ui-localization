@@ -48,7 +48,7 @@ const PRESETS: Preset[] = [
     {
         id: 'radio_ready', label: 'Radio Ready', icon: '📻',
         clarity: 0.6, warmth: 0.3, air: 0.5, dynamics: 0.6,
-        reverb_amount: 0.1, reverb_room_size: 0.4, reverb_damping: 0.5,
+        reverb_amount: 0.0, reverb_room_size: 0.4, reverb_damping: 0.5,
         echo_delay: 0.0, echo_decay: 0.0, stereo_width: 0.2,
         vocals_enhance: 0.6, drums_enhance: 0.5, bass_enhance: 0.4, other_enhance: 0.4,
     },
@@ -491,7 +491,7 @@ export const AudioEnhancerModal: React.FC = () => {
                         </div>
                     )}
 
-                    {status === 'idle' && (
+                    {(status === 'idle' || status === 'complete') && (
                         <>
                             {/* Presets */}
                             <div className="space-y-2">
@@ -586,6 +586,100 @@ export const AudioEnhancerModal: React.FC = () => {
                                     <EnhancerSlider label="🎵 Other" value={otherEnhance} onChange={(v) => { setOtherEnhance(v); setSelectedPreset(null); }} color="blue" />
                                 </Section>
                             )}
+
+                            {/* Inline Result Player (shown when enhancement is complete) */}
+                            {status === 'complete' && (
+                                <div className="space-y-3 p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/15 dark:to-teal-900/15 border border-emerald-200 dark:border-emerald-500/20">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                                            <Sparkles size={14} />
+                                            <span className="text-xs font-bold">Enhanced Result</span>
+                                        </div>
+                                        {/* A/B Toggle */}
+                                        <div className="flex rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10">
+                                            <button
+                                                onClick={() => {
+                                                    setPreviewSource('original');
+                                                    if (isPlaying && audioRef.current && enhancedAudioRef.current) {
+                                                        const t = enhancedAudioRef.current.currentTime;
+                                                        enhancedAudioRef.current.pause();
+                                                        audioRef.current.currentTime = t;
+                                                        audioRef.current.play();
+                                                    }
+                                                }}
+                                                className={`px-2 py-1 text-[10px] font-bold transition-colors ${previewSource === 'original'
+                                                    ? 'bg-zinc-600 text-white'
+                                                    : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                                                    }`}
+                                            >
+                                                Original
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setPreviewSource('enhanced');
+                                                    if (isPlaying && audioRef.current && enhancedAudioRef.current) {
+                                                        const t = audioRef.current.currentTime;
+                                                        audioRef.current.pause();
+                                                        enhancedAudioRef.current.currentTime = t;
+                                                        enhancedAudioRef.current.play();
+                                                    }
+                                                }}
+                                                className={`px-2 py-1 text-[10px] font-bold transition-colors ${previewSource === 'enhanced'
+                                                    ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white'
+                                                    : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                                                    }`}
+                                            >
+                                                ✨ Enhanced
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Compact Player */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={togglePreview}
+                                            className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-violet-600 flex items-center justify-center shadow-md hover:scale-105 transition-transform flex-shrink-0"
+                                        >
+                                            {isPlaying
+                                                ? <Pause size={12} className="text-white" fill="white" />
+                                                : <Play size={12} className="text-white ml-0.5" fill="white" />}
+                                        </button>
+                                        <div className="flex-1 min-w-0">
+                                            <div
+                                                className="w-full h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full cursor-pointer relative"
+                                                onClick={(e) => {
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const pct = (e.clientX - rect.left) / rect.width;
+                                                    const activeAudio = previewSource === 'enhanced' ? enhancedAudioRef.current : audioRef.current;
+                                                    if (activeAudio) {
+                                                        activeAudio.currentTime = pct * duration;
+                                                        setCurrentTime(pct * duration);
+                                                    }
+                                                }}
+                                            >
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-pink-500 to-violet-500 rounded-full transition-[width] duration-100"
+                                                    style={{ width: `${progressPct}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between mt-0.5">
+                                                <span className="text-[9px] text-zinc-500 font-mono">{formatTime(currentTime)}</span>
+                                                <span className="text-[9px] text-zinc-400 font-mono italic">
+                                                    {previewSource === 'enhanced' ? '✨ Enhanced' : 'Original'}
+                                                </span>
+                                                <span className="text-[9px] text-zinc-500 font-mono">{formatTime(duration)}</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={downloadEnhanced}
+                                            className="p-1.5 rounded-lg bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-500/30 transition-colors"
+                                            title="Download enhanced audio"
+                                        >
+                                            <Download size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -618,121 +712,18 @@ export const AudioEnhancerModal: React.FC = () => {
                         </div>
                     )}
 
-                    {status === 'complete' && (
-                        <div className="space-y-4 py-4">
-                            <div className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
-                                <Sparkles size={20} />
-                                <span className="text-sm font-bold">Enhancement Complete!</span>
-                            </div>
 
-                            {/* A/B Toggle */}
-                            <div className="flex items-center justify-center gap-1">
-                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider mr-2">Compare</span>
-                                <div className="flex rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10">
-                                    <button
-                                        onClick={() => {
-                                            setPreviewSource('original');
-                                            // If playing, switch source seamlessly
-                                            if (isPlaying && audioRef.current && enhancedAudioRef.current) {
-                                                const t = enhancedAudioRef.current.currentTime;
-                                                enhancedAudioRef.current.pause();
-                                                audioRef.current.currentTime = t;
-                                                audioRef.current.play();
-                                            }
-                                        }}
-                                        className={`px-3 py-1.5 text-xs font-bold transition-colors ${previewSource === 'original'
-                                            ? 'bg-zinc-600 text-white'
-                                            : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-                                            }`}
-                                    >
-                                        Original
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setPreviewSource('enhanced');
-                                            if (isPlaying && audioRef.current && enhancedAudioRef.current) {
-                                                const t = audioRef.current.currentTime;
-                                                audioRef.current.pause();
-                                                enhancedAudioRef.current.currentTime = t;
-                                                enhancedAudioRef.current.play();
-                                            }
-                                        }}
-                                        className={`px-3 py-1.5 text-xs font-bold transition-colors ${previewSource === 'enhanced'
-                                            ? 'bg-gradient-to-r from-pink-500 to-violet-500 text-white'
-                                            : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-                                            }`}
-                                    >
-                                        ✨ Enhanced
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Player */}
-                            <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10">
-                                <button
-                                    onClick={togglePreview}
-                                    className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-violet-600 flex items-center justify-center shadow-lg hover:scale-105 transition-transform flex-shrink-0"
-                                >
-                                    {isPlaying
-                                        ? <Pause size={16} className="text-white" fill="white" />
-                                        : <Play size={16} className="text-white ml-0.5" fill="white" />}
-                                </button>
-                                <div className="flex-1 min-w-0">
-                                    <div
-                                        className="w-full h-2 bg-zinc-300 dark:bg-zinc-700 rounded-full cursor-pointer relative group"
-                                        onClick={(e) => {
-                                            const rect = e.currentTarget.getBoundingClientRect();
-                                            const pct = (e.clientX - rect.left) / rect.width;
-                                            const activeAudio = previewSource === 'enhanced' ? enhancedAudioRef.current : audioRef.current;
-                                            if (activeAudio) {
-                                                activeAudio.currentTime = pct * duration;
-                                                setCurrentTime(pct * duration);
-                                            }
-                                        }}
-                                    >
-                                        <div
-                                            className="h-full bg-gradient-to-r from-pink-500 to-violet-500 rounded-full transition-[width] duration-100"
-                                            style={{ width: `${progressPct}%` }}
-                                        />
-                                    </div>
-                                    <div className="flex justify-between mt-1">
-                                        <span className="text-[10px] text-zinc-500 font-mono">{formatTime(currentTime)}</span>
-                                        <span className="text-[10px] text-zinc-400 font-mono italic">
-                                            {previewSource === 'enhanced' ? '✨ Enhanced' : 'Original'}
-                                        </span>
-                                        <span className="text-[10px] text-zinc-500 font-mono">{formatTime(duration)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={downloadEnhanced}
-                                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-violet-600 hover:from-pink-700 hover:to-violet-700 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Download size={16} /> Download Enhanced
-                                </button>
-                                <button
-                                    onClick={() => setStatus('idle')}
-                                    className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-white/10 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                >
-                                    Re-do
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer — Enhance button */}
-                {status === 'idle' && (
+                {(status === 'idle' || status === 'complete') && (
                     <div className="px-6 py-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
                         <button
                             onClick={startEnhancement}
                             disabled={available === false}
                             className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-600 to-violet-600 hover:from-pink-700 hover:to-violet-700 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            <Sparkles size={16} /> Enhance Audio
+                            <Sparkles size={16} /> {status === 'complete' ? 'Re-enhance' : 'Enhance Audio'}
                         </button>
                     </div>
                 )}
