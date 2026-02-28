@@ -1887,8 +1887,10 @@ function AppContent() {
                     isLiked={selectedSong ? likedSongIds.has(selectedSong.id) : false}
                     onToggleLike={toggleLike}
                     onDelete={handleDeleteSong}
+                    onPlay={playSong}
                     isPlaying={isPlaying && currentSong?.id === selectedSong?.id}
                     currentSong={currentSong}
+                    currentTime={currentTime}
                     onFullscreenVisualizer={() => setShowFullscreenVisualizer(true)}
                   />
                 </div>
@@ -2073,8 +2075,10 @@ function AppContent() {
               isLiked={selectedSong ? likedSongIds.has(selectedSong.id) : false}
               onToggleLike={toggleLike}
               onDelete={handleDeleteSong}
+              onPlay={playSong}
               isPlaying={isPlaying && currentSong?.id === selectedSong?.id}
               currentSong={currentSong}
+              currentTime={currentTime}
               onFullscreenVisualizer={() => setShowFullscreenVisualizer(true)}
             />
           </div>

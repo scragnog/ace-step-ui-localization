@@ -9,6 +9,7 @@ import { ShareModal } from './ShareModal';
 import { openStemSplitter } from './StemSplitterModal';
 import { AlbumCover } from './AlbumCover';
 import { LiveVisualizer } from './LiveVisualizer';
+import { LyricsOverlay } from './LyricsOverlay';
 
 interface RightSidebarProps {
     song: Song | null;
@@ -25,10 +26,11 @@ interface RightSidebarProps {
     onPlay?: (song: Song) => void;
     isPlaying?: boolean;
     currentSong?: Song | null;
+    currentTime?: number;
     onFullscreenVisualizer?: () => void;
 }
 
-export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpenVideo, onReuse, onSongUpdate, onNavigateToProfile, onNavigateToSong, isLiked, onToggleLike, onDelete, onAddToPlaylist, onPlay, isPlaying, currentSong, onFullscreenVisualizer }) => {
+export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpenVideo, onReuse, onSongUpdate, onNavigateToProfile, onNavigateToSong, isLiked, onToggleLike, onDelete, onAddToPlaylist, onPlay, isPlaying, currentSong, currentTime, onFullscreenVisualizer }) => {
     const { token, user } = useAuth();
     const { t } = useI18n();
     const [showMenu, setShowMenu] = useState(false);
@@ -159,6 +161,12 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                     className="w-full h-full"
                                     showControls={true}
                                     onFullscreen={onFullscreenVisualizer}
+                                />
+                                {/* Synced lyrics overlay */}
+                                <LyricsOverlay
+                                    audioUrl={song.audioUrl}
+                                    currentTime={currentTime ?? 0}
+                                    isPlaying={true}
                                 />
                             </div>
                         ) : (
