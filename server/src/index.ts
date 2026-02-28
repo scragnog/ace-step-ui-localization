@@ -86,6 +86,46 @@ app.use(express.json());
 // Serve static audio files
 app.use('/audio', express.static(path.join(__dirname, '../public/audio')));
 
+// Serve LRC (synced lyrics) files — resolves from audio URL
+app.get('/api/lrc', async (req, res) => {
+  const audioUrl = req.query.audioUrl as string;
+  if (!audioUrl) {
+    res.status(400).json({ error: 'audioUrl required' });
+    return;
+  }
+
+  // Resolve audio URL to local filesystem path
+  let audioPath: string | null = null;
+
+  if (audioUrl.startsWith('/audio/')) {
+    // Static audio path: /audio/jobId/uuid.flac
+    audioPath = path.join(__dirname, '../public', audioUrl);
+  } else {
+    // Python API URL: http://localhost:8001/v1/audio?path=C:\...\uuid.flac
+    try {
+      const parsed = new URL(audioUrl, 'http://localhost');
+      const pathParam = parsed.searchParams.get('path');
+      if (pathParam) audioPath = pathParam;
+    } catch { /* ignore */ }
+  }
+
+  if (!audioPath) {
+    res.status(404).json({ error: 'Cannot resolve audio path' });
+    return;
+  }
+
+  // Swap extension to .lrc
+  const lrcPath = audioPath.replace(/\.\w+$/, '.lrc');
+
+  try {
+    const fs = await import('fs/promises');
+    const content = await fs.readFile(lrcPath, 'utf-8');
+    res.type('text/plain').send(content);
+  } catch {
+    res.status(404).json({ error: 'LRC file not found' });
+  }
+});
+
 // Serve training dataset audio files (securely)
 app.get('/api/audio/file', async (req, res) => {
   const filePath = req.query.path as string;

@@ -73,21 +73,10 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
         let cancelled = false;
 
-        // Derive the .lrc URL from the audio URL
-        // The audio URL can be: /audio/jobId/uuid.flac (static) or
-        // http://localhost:8001/v1/audio?path=C:\...\uuid.flac (Python API)
-        const deriveLrcUrl = (url: string): string => {
-            // Handle /v1/audio?path=... format (Python API)
-            if (url.includes('/v1/audio?path=') || url.includes('/v1/audio%3Fpath=')) {
-                return url.replace(/\.\w+$/, '.lrc').replace(/\.\w+(&|$)/, '.lrc$1');
-            }
-            // Handle regular path: just swap extension
-            return url.replace(/\.\w+$/, '.lrc');
-        };
+        // Use the dedicated /api/lrc endpoint which resolves audio paths server-side
+        const lrcApiUrl = `/api/lrc?audioUrl=${encodeURIComponent(audioUrl)}`;
 
-        const lrcUrl = deriveLrcUrl(audioUrl);
-
-        fetch(lrcUrl)
+        fetch(lrcApiUrl)
             .then(res => {
                 if (!res.ok) throw new Error('No LRC file');
                 return res.text();
