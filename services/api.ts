@@ -215,6 +215,9 @@ export const songsApi = {
   deleteAllSongs: (token: string): Promise<{ success: boolean; deletedCount: number }> =>
     api('/api/songs/all', { method: 'DELETE', token }),
 
+  deleteAllReferenceTracks: (token: string): Promise<{ success: boolean; deletedCount: number }> =>
+    api('/api/reference-tracks/all', { method: 'DELETE', token }),
+
   toggleLike: (id: string, token: string): Promise<{ liked: boolean }> =>
     api(`/api/songs/${id}/like`, { method: 'POST', token }),
 

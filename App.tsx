@@ -1258,7 +1258,10 @@ function AppContent() {
       onConfirm: async () => {
         setConfirmDialog(null);
         try {
-          await songsApi.deleteAllSongs(token!);
+          await Promise.all([
+            songsApi.deleteAllSongs(token!),
+            songsApi.deleteAllReferenceTracks(token!),
+          ]);
 
           // Stop playback
           if (audioRef.current) {
@@ -1270,6 +1273,7 @@ function AppContent() {
           setSelectedSong(null);
           setPlayQueue([]);
           setLikedSongIds(new Set());
+          setReferenceTracks([]);
 
           // Keep only generating songs (temp/job IDs)
           setSongs(prev => prev.filter(s => s.isGenerating));

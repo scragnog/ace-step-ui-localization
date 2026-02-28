@@ -287,6 +287,39 @@ router.post('/:id/transcribe', authMiddleware, async (req: AuthenticatedRequest,
   }
 });
 
+// Delete ALL reference tracks for the authenticated user
+router.delete('/all', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, storage_key FROM reference_tracks WHERE user_id = $1',
+      [req.user!.id]
+    );
+
+    if (result.rows.length === 0) {
+      res.json({ success: true, deletedCount: 0 });
+      return;
+    }
+
+    // Delete all files from storage
+    const storage = getStorageProvider();
+    for (const track of result.rows) {
+      try {
+        await storage.delete(track.storage_key);
+      } catch (err) {
+        console.error(`Failed to delete reference track file ${track.storage_key}:`, err);
+      }
+    }
+
+    // Bulk delete from DB
+    await pool.query('DELETE FROM reference_tracks WHERE user_id = $1', [req.user!.id]);
+
+    res.json({ success: true, deletedCount: result.rows.length });
+  } catch (error) {
+    console.error('Delete all reference tracks error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Delete a reference track
 router.delete('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
