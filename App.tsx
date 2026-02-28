@@ -294,13 +294,21 @@ function AppContent() {
     setAbActive(null);
   }, []);
 
-  // Keep secondary audio volume/rate in sync
+  // Keep secondary audio volume/rate/playstate in sync
   useEffect(() => {
     if (abAudioRef.current) {
       abAudioRef.current.volume = volume;
       abAudioRef.current.playbackRate = playbackRate;
+      // Sync play/pause state with main player
+      if (abActive) {
+        if (isPlaying) {
+          abAudioRef.current.play().catch(() => { });
+        } else {
+          abAudioRef.current.pause();
+        }
+      }
     }
-  }, [volume, playbackRate]);
+  }, [volume, playbackRate, isPlaying, abActive]);
 
   // Visualizer songlist background setting
   const [showVisualizerBg, setShowVisualizerBg] = useState(() => localStorage.getItem('visualizer_songlist_bg') === 'true');
