@@ -248,13 +248,14 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('inferMethodTooltip')}>{t('inferMethod')}</label>
+                                        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('inferMethod')}</label>
                                         <select value={props.inferMethod} onChange={(e) => props.onInferMethodChange(e.target.value as 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4')} className={selectClass}>
                                             <option value="ode">{t('solverEuler')}</option>
                                             <option value="heun">{t('solverHeun')}</option>
                                             <option value="dpm2m">{t('solverDpm2m')}</option>
                                             <option value="rk4">{t('solverRk4')}</option>
                                         </select>
+                                        <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">{t('inferMethodTooltip')}</p>
                                     </div>
                                 </div>
                             </div>
