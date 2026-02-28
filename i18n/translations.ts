@@ -131,8 +131,8 @@ export const translations = {
         // CreatePanel - Audio
         useReferenceAudio: 'Use Reference Audio',
         useReferenceAudioTooltip: 'Provide an existing audio file to guide the generation (style, rhythm, structure).',
-        reference: 'Reference',
-        cover: 'Cover',
+        reference: 'Style Ref',
+        cover: 'Content Ref',
         fromLibrary: 'From library',
         upload: 'Upload',
 
@@ -425,6 +425,7 @@ export const translations = {
         loraOperationFailed: 'LoRA operation failed',
         failedToUnloadLoRA: 'Failed to unload LoRA',
         pleaseSignInToUploadAudio: 'Please sign in to upload audio',
+        contentRefRequiredForTask: 'This task requires content reference audio. Please upload one.',
         uploadFailed: 'Upload failed',
         formatFailed: 'Format failed',
         formatFailedLLMNotInitialized: 'Format failed. Make sure the LLM is initialized.',
@@ -439,10 +440,10 @@ export const translations = {
         // CreatePanel - Drag & Drop
         dropToUseAudio: 'Drop to use audio',
         dropToUpload: 'Drop to upload',
-        usingAsReference: 'Using as Reference',
-        usingAsCover: 'Using as Cover',
-        uploadingAsReference: 'Uploading as Reference',
-        uploadingAsCover: 'Uploading as Cover',
+        usingAsReference: 'Using as Style Reference',
+        usingAsCover: 'Using as Content Reference',
+        uploadingAsReference: 'Uploading as Style Reference',
+        uploadingAsCover: 'Uploading as Content Reference',
 
         // CreatePanel - Vocal Gender
         vocalGender: 'Vocal Gender',
@@ -683,8 +684,8 @@ export const translations = {
         copied: 'Copied!',
         copyAllTags: 'Copy all tags',
         sources: 'Sources',
-        referenceAudio: 'Reference',
-        coverAudio: 'Cover',
+        referenceAudio: 'Style Ref',
+        coverAudio: 'Content Ref',
         instrumentalTrack: 'Instrumental Track',
         noLyricsGenerated: 'No lyrics generated',
         video: 'Video',
@@ -750,10 +751,10 @@ export const translations = {
         emailBody: 'Hey!\n\nI created this AI-generated song and thought you\'d love it:\n\n"{title}" by {creator}\n{style}\n\nListen here: {url}\n\nMade with ACE-Step UI - free and open source local AI music generation!',
 
         // Reference Modal
-        referenceModalTitle: 'Reference',
-        coverModalTitle: 'Cover',
-        referenceModalDescription: 'Create songs inspired by a reference track',
-        coverModalDescription: 'Transform an existing track into a new version',
+        referenceModalTitle: 'Style Reference',
+        coverModalTitle: 'Content Reference',
+        referenceModalDescription: 'Upload a style reference track for tone/genre guidance',
+        coverModalDescription: 'Upload content audio to remix, repaint, or transform',
         uploadAudio: 'Upload audio',
         uploadingAudio: 'Uploading...',
         audioFormats: 'MP3, WAV, FLAC',
@@ -1081,8 +1082,8 @@ export const translations = {
         // CreatePanel - Audio
         useReferenceAudio: '使用参考音频',
         useReferenceAudioTooltip: '提供现有的音频文件来指导生成（风格、节奏、结构等）。',
-        reference: '参考',
-        cover: '翻唱',
+        reference: '风格参考',
+        cover: '内容参考',
         fromLibrary: '从库中选择',
         upload: '上传',
 
@@ -1325,10 +1326,10 @@ export const translations = {
         // CreatePanel - Drag & Drop
         dropToUseAudio: '拖放以使用音频',
         dropToUpload: '拖放以上传',
-        usingAsReference: '用作参考',
-        usingAsCover: '用作翻唱',
-        uploadingAsReference: '上传为参考',
-        uploadingAsCover: '上传为翻唱',
+        usingAsReference: '用作风格参考',
+        usingAsCover: '用作内容参考',
+        uploadingAsReference: '上传为风格参考',
+        uploadingAsCover: '上传为内容参考',
 
         // CreatePanel - Vocal Gender
         vocalGender: '人声性别',
@@ -1584,8 +1585,8 @@ export const translations = {
         copied: '已复制！',
         copyAllTags: '复制所有标签',
         sources: '来源',
-        referenceAudio: '参考',
-        coverAudio: '翻唱',
+        referenceAudio: '风格参考',
+        coverAudio: '内容参考',
         instrumentalTrack: '纯音乐',
         noLyricsGenerated: '未生成歌词',
         video: '视频',
@@ -1651,8 +1652,8 @@ export const translations = {
         emailBody: '嘿！\n\n我创作了这首AI生成的歌曲，觉得你会喜欢：\n\n《{title}》- {creator}\n{style}\n\n点击收听：{url}\n\n使用 ACE-Step UI 制作 - 免费开源的本地AI音乐生成工具！',
 
         // Reference Modal
-        referenceModalTitle: '参考音频',
-        coverModalTitle: '翻唱音频',
+        referenceModalTitle: '风格参考',
+        coverModalTitle: '内容参考',
         referenceModalDescription: '基于参考音轨创作歌曲',
         coverModalDescription: '将现有音轨转换为新版本',
         uploadAudio: '上传音频',
@@ -1982,8 +1983,8 @@ export const translations = {
         // CreatePanel - Audio
         useReferenceAudio: 'リファレンスオーディオを使用',
         useReferenceAudioTooltip: '生成（スタイル、リズム、構造）をガイドするために既存のオーディオファイルを提供します。',
-        reference: '参照',
-        cover: 'カバー',
+        reference: 'スタイルリファレンス',
+        cover: 'コンテンツリファレンス',
         fromLibrary: 'ライブラリから',
         upload: 'アップロード',
 
@@ -2220,10 +2221,10 @@ export const translations = {
         // CreatePanel - Drag & Drop
         dropToUseAudio: 'ドロップしてオーディオを使用',
         dropToUpload: 'ドロップしてアップロード',
-        usingAsReference: '参照として使用',
-        usingAsCover: 'カバーとして使用',
-        uploadingAsReference: '参照としてアップロード',
-        uploadingAsCover: 'カバーとしてアップロード',
+        usingAsReference: 'スタイル参照として使用',
+        usingAsCover: 'コンテンツ参照として使用',
+        uploadingAsReference: 'スタイル参照としてアップロード',
+        uploadingAsCover: 'コンテンツ参照としてアップロード',
 
         // CreatePanel - Vocal Gender
         vocalGender: 'ボーカルの性別',
@@ -2563,8 +2564,8 @@ export const translations = {
         emailBody: 'こんにちは！\n\n私がこのAI生成の曲を作りました。気に入ってもらえると思います：\n\n「{title}」by {creator}\n{style}\n\nここで聴いてください：{url}\n\nACE-Step UIで作成 - 無料でオープンソースのローカルAI音楽生成！',
 
         // Reference Modal
-        referenceModalTitle: 'リファレンス',
-        coverModalTitle: 'カバー',
+        referenceModalTitle: 'スタイル参照',
+        coverModalTitle: 'コンテンツ参照',
         referenceModalDescription: 'リファレンストラックに触発された曲を作成',
         coverModalDescription: '既存のトラックを新しいバージョンに変換',
         uploadAudio: 'オーディオをアップロード',
@@ -2895,8 +2896,8 @@ export const translations = {
         // CreatePanel - Audio
         useReferenceAudio: '레퍼런스 오디오 사용',
         useReferenceAudioTooltip: '생성(스타일, 리듬, 구조)을 가이드하기 위해 기존 오디오 파일을 제공합니다.',
-        reference: '참조',
-        cover: '커버',
+        reference: '스타일 참조',
+        cover: '콘텐츠 참조',
         fromLibrary: '라이브러리에서',
         upload: '업로드',
 
@@ -3133,10 +3134,10 @@ export const translations = {
         // CreatePanel - Drag & Drop
         dropToUseAudio: '드롭하여 오디오 사용',
         dropToUpload: '드롭하여 업로드',
-        usingAsReference: '참조로 사용',
-        usingAsCover: '커버로 사용',
-        uploadingAsReference: '참조로 업로드',
-        uploadingAsCover: '커버로 업로드',
+        usingAsReference: '스타일 참조로 사용',
+        usingAsCover: '콘텐츠 참조로 사용',
+        uploadingAsReference: '스타일 참조로 업로드',
+        uploadingAsCover: '콘텐츠 참조로 업로드',
 
         // CreatePanel - Vocal Gender
         vocalGender: '보컬 성별',
@@ -3476,8 +3477,8 @@ export const translations = {
         emailBody: '안녕하세요!\n\n제가 만든 이 AI 생성 곡을 들어보세요. 마음에 드실 거예요:\n\n"{title}" - {creator}\n{style}\n\n여기서 들으세요: {url}\n\nACE-Step UI로 제작 - 무료 오픈 소스 로컬 AI 음악 생성!',
 
         // Reference Modal
-        referenceModalTitle: '참조 음악',
-        coverModalTitle: '커버 음악',
+        referenceModalTitle: '스타일 참조',
+        coverModalTitle: '콘텐츠 참조',
         referenceModalDescription: '참조 트랙에서 영감을 받은 곡 만들기',
         coverModalDescription: '기존 트랙을 새로운 버전으로 변환',
         uploadAudio: '오디오 업로드',

@@ -760,8 +760,8 @@ cron.schedule('0 3 * * *', async () => {
   }
 });
 
-// Start server on all interfaces for LAN access
-app.listen(config.port, '0.0.0.0', () => {
+// Start server on configured host (default 0.0.0.0 for LAN access)
+app.listen(config.port, config.host, () => {
   console.log(`ACE-Step UI Server running on http://localhost:${config.port}`);
   console.log(`Environment: ${config.nodeEnv}`);
   console.log(`ACE-Step API: ${config.acestep.apiUrl}`);

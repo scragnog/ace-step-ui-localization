@@ -267,8 +267,8 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         repainting_start: params.repaintingStart || 0.0,
         repainting_end: params.repaintingEnd,
         instruction: params.instruction,
-        audio_cover_strength: ['repaint', 'extract', 'lego'].includes(params.taskType || '') ? 0.0 : (params.audioCoverStrength ?? 1.0),
-        cover_noise_strength: params.taskType === 'cover' ? (params.coverNoiseStrength ?? 0.0) : 0.0,
+        audio_cover_strength: params.audioCoverStrength ?? 1.0,
+        cover_noise_strength: params.coverNoiseStrength ?? 0.0,
         // tempo_scale: pitch-preserving time-stretch for cover source audio (>1=faster, <1=slower)
         tempo_scale: (['cover', 'repaint', 'audio2audio'].includes(params.taskType || ''))
           ? (params.tempoScale ?? 1.0) : 1.0,
