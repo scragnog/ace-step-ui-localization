@@ -104,6 +104,7 @@
 | Feature | Description |
 |---------|-------------|
 | **Lyrics Editor** | Write and format lyrics with structure tags |
+| **Synced Lyrics** | Real-time LRC lyrics overlay on the visualizer and a dedicated lyrics bar |
 | **Format Assistant** | AI-powered caption and lyrics formatting |
 | **Prompt Templates** | Quick-start with genre presets |
 | **Reuse Prompts** | Clone settings from any previous generation |
@@ -112,11 +113,12 @@
 | Feature | Description |
 |---------|-------------|
 | **Spotify-Inspired UI** | Clean, modern design with dark/light mode |
-| **Bottom Player** | Full-featured player with waveform and progress |
+| **Bottom Player** | Full-featured player with waveform, section markers, and progress |
+| **Lyrics Bar** | Synced lyrics displayed line-by-line above the player with fade transitions |
 | **Library Management** | Browse, search, and organize all your tracks |
 | **Likes & Playlists** | Organize favorites into custom playlists |
 | **Real-time Progress** | Live generation progress with queue position |
-| **Live Visualizer** | 10 audio-reactive presets, fullscreen mode, preset picker |
+| **Live Visualizer** | 10 audio-reactive presets with configurable rotation pool, fullscreen mode |
 | **LAN Access** | Use from any device on your local network |
 
 ### 🛠️ Built-in Tools
@@ -416,7 +418,8 @@ Full control over every parameter:
 | **🎤 Stem Extraction** | Separate vocals, drums, bass, other |
 | **🎬 Video Generator** | Create music videos with stock footage |
 | **🎨 Album Art** | Auto-generated gradient covers |
-| **🎛️ Live Visualizer** | 10 audio-reactive presets, fullscreen Winamp-style mode, ambient song list background |
+| **🎛️ Live Visualizer** | 10 audio-reactive presets, fullscreen Winamp-style mode, configurable preset rotation |
+| **🎤 Synced Lyrics** | LRC lyrics overlay on visualizer, collapsible lyrics bar, section markers above waveform |
 
 ---
 
