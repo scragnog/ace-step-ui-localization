@@ -50,8 +50,8 @@ function findCurrentIndex(lines: LrcLine[], time: number): number {
 export const LyricsBar: React.FC<LyricsBarProps> = ({ audioUrl, currentTime, isPlaying }) => {
     const [fetchedLrc, setFetchedLrc] = useState<string | null>(null);
     const [expanded, setExpanded] = useState(true);
-    const [prevIdx, setPrevIdx] = useState(-1);
-    const [animating, setAnimating] = useState(false);
+    const [displayText, setDisplayText] = useState('');
+    const [fadeKey, setFadeKey] = useState(0);
 
     // Fetch LRC
     useEffect(() => {
@@ -68,64 +68,61 @@ export const LyricsBar: React.FC<LyricsBarProps> = ({ audioUrl, currentTime, isP
     const lines = useMemo(() => fetchedLrc ? parseLrc(fetchedLrc) : [], [fetchedLrc]);
     const currentIdx = findCurrentIndex(lines, currentTime);
 
-    // Trigger fade animation on line change
+    // Update displayed text with crossfade when line changes
     useEffect(() => {
-        if (currentIdx !== prevIdx && currentIdx >= 0) {
-            setAnimating(true);
-            const timer = setTimeout(() => setAnimating(false), 400);
-            setPrevIdx(currentIdx);
-            return () => clearTimeout(timer);
+        const newText = currentIdx >= 0 ? lines[currentIdx]?.text : '';
+        if (newText && newText !== displayText) {
+            setFadeKey(prev => prev + 1);
+            setDisplayText(newText);
         }
-    }, [currentIdx, prevIdx]);
+    }, [currentIdx, lines]);
 
     if (lines.length === 0 || !isPlaying) return null;
 
-    const currentLine = currentIdx >= 0 ? lines[currentIdx] : null;
-    const nextLine = currentIdx >= 0 && currentIdx + 1 < lines.length ? lines[currentIdx + 1] : null;
-
     return (
-        <div className="flex-shrink-0 border-t border-zinc-200 dark:border-white/10 bg-gradient-to-r from-zinc-50 via-zinc-100 to-zinc-50 dark:from-zinc-900 dark:via-[#111113] dark:to-zinc-900 z-30 transition-all duration-300">
+        <div className="flex-shrink-0 border-t border-white/5 bg-black/80 backdrop-blur-sm z-30 transition-all duration-300">
             {/* Collapse/Expand toggle tab */}
             <button
                 onClick={() => setExpanded(!expanded)}
-                className="w-full flex items-center justify-center gap-2 py-1 text-xs text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors group"
+                className="w-full flex items-center justify-center gap-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
             >
-                <Music size={12} className="text-pink-500/60" />
-                <span className="font-medium">Lyrics</span>
-                {expanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                <Music size={11} className="text-pink-500/60" />
+                <span className="font-medium tracking-wide uppercase text-[10px]">Lyrics</span>
+                {expanded ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
             </button>
 
             {/* Lyrics content */}
             <div
                 className="overflow-hidden transition-all duration-300 ease-out"
-                style={{ maxHeight: expanded ? '80px' : '0px', opacity: expanded ? 1 : 0 }}
+                style={{ maxHeight: expanded ? '60px' : '0px', opacity: expanded ? 1 : 0 }}
             >
-                <div className="px-6 pb-3 flex flex-col items-center justify-center min-h-[50px]">
-                    {/* Current line */}
+                <div className="px-8 pb-3 flex items-center justify-center">
                     <div
-                        className={`text-center transition-all duration-400 ease-out ${animating ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}
-                        style={{ transitionDuration: animating ? '0ms' : '400ms' }}
+                        key={fadeKey}
+                        className="text-center animate-lyrics-fade-in"
                     >
                         <span
-                            className="text-sm md:text-base font-semibold text-zinc-800 dark:text-white"
+                            className="text-lg md:text-xl font-bold text-white tracking-wide"
                             style={{
-                                textShadow: '0 0 20px rgba(236, 72, 153, 0.3)',
+                                textShadow: '0 0 30px rgba(236, 72, 153, 0.4), 0 2px 8px rgba(0,0,0,0.5)',
                             }}
                         >
-                            {currentLine?.text || '♪ ♪ ♪'}
+                            {displayText || '♪ ♪ ♪'}
                         </span>
                     </div>
-
-                    {/* Next line preview */}
-                    {nextLine && (
-                        <div className="mt-1">
-                            <span className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
-                                {nextLine.text}
-                            </span>
-                        </div>
-                    )}
                 </div>
             </div>
+
+            {/* Inline keyframe animation */}
+            <style>{`
+                @keyframes lyrics-fade-in {
+                    0% { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+                    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+                }
+                .animate-lyrics-fade-in {
+                    animation: lyrics-fade-in 0.5s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 };
