@@ -340,6 +340,16 @@ export const translations = {
         solverHeun: 'Heun (2nd order, 2× cost)',
         solverDpm2m: 'DPM++ 2M (2nd order, same cost)',
         solverRk4: 'RK4 (4th order, 4× cost)',
+        // Per-option descriptions for inference method
+        solverEulerDesc: 'Fastest solver. Good default for most generations.',
+        solverHeunDesc: 'Higher accuracy per step, but each step costs 2× compute. Try with fewer steps.',
+        solverDpm2mDesc: 'Uses velocity history for 2nd-order accuracy at no extra cost. Great quality/speed balance.',
+        solverRk4Desc: 'Highest mathematical precision (4th order), but each step costs 4× compute. For critical renders.',
+        // Per-option descriptions for audio format
+        audioFormatMp3Desc: 'Compressed, small files. Good for sharing and previews.',
+        audioFormatFlacDesc: 'Lossless compression, perfect quality. Best for archiving and further editing.',
+        audioFormatWavDesc: 'Uncompressed, largest files. Maximum compatibility with DAWs and editors.',
+        audioFormatOpusDesc: 'Modern codec, excellent quality at small file sizes. Great for streaming.',
         // Guidance Mode
         guidanceMode: 'Guidance Mode',
         guidanceModeTooltip: 'APG: perpendicular guidance with momentum (default). ADG: angle-based dynamic. PAG: perturbed attention. CFG: standard classifier-free. CFG++: optimized for few steps. Dynamic: decaying schedule. Rescaled: prevents over-saturation.',

@@ -241,21 +241,26 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('audioFormat')}</label>
                                         <select value={props.audioFormat} onChange={(e) => props.onAudioFormatChange(e.target.value as 'mp3' | 'flac' | 'wav' | 'opus')} className={selectClass}>
-                                            <option value="mp3">{t('mp3Smaller')}</option>
-                                            <option value="flac">{t('flacLossless')}</option>
-                                            <option value="wav">WAV</option>
-                                            <option value="opus">Opus</option>
+                                            <option value="mp3" title={t('audioFormatMp3Desc')}>{t('mp3Smaller')}</option>
+                                            <option value="flac" title={t('audioFormatFlacDesc')}>{t('flacLossless')}</option>
+                                            <option value="wav" title={t('audioFormatWavDesc')}>WAV</option>
+                                            <option value="opus" title={t('audioFormatOpusDesc')}>Opus</option>
                                         </select>
+                                        <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">
+                                            {t(({ mp3: 'audioFormatMp3Desc', flac: 'audioFormatFlacDesc', wav: 'audioFormatWavDesc', opus: 'audioFormatOpusDesc' } as const)[props.audioFormat])}
+                                        </p>
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('inferMethod')}</label>
                                         <select value={props.inferMethod} onChange={(e) => props.onInferMethodChange(e.target.value as 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4')} className={selectClass}>
-                                            <option value="ode">{t('solverEuler')}</option>
-                                            <option value="heun">{t('solverHeun')}</option>
-                                            <option value="dpm2m">{t('solverDpm2m')}</option>
-                                            <option value="rk4">{t('solverRk4')}</option>
+                                            <option value="ode" title={t('solverEulerDesc')}>{t('solverEuler')}</option>
+                                            <option value="heun" title={t('solverHeunDesc')}>{t('solverHeun')}</option>
+                                            <option value="dpm2m" title={t('solverDpm2mDesc')}>{t('solverDpm2m')}</option>
+                                            <option value="rk4" title={t('solverRk4Desc')}>{t('solverRk4')}</option>
                                         </select>
-                                        <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">{t('inferMethodTooltip')}</p>
+                                        <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">
+                                            {t(({ ode: 'solverEulerDesc', euler: 'solverEulerDesc', heun: 'solverHeunDesc', dpm2m: 'solverDpm2mDesc', rk4: 'solverRk4Desc' } as const)[props.inferMethod])}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
