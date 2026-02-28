@@ -259,6 +259,11 @@ function AppContent() {
 
     const next = abActive === 'A' ? 'B' : 'A';
 
+    // Check if the active audio is actually paused — respect pause state
+    const activeAudio = abActive === 'A' ? mainAudio : secondAudio;
+    const wasPaused = activeAudio.paused;
+    if (wasPaused) setIsPlaying(false);
+
     // Sync position: bring inactive to active's currentTime
     if (next === 'B') {
       secondAudio.currentTime = mainAudio.currentTime;
