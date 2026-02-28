@@ -93,18 +93,17 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
         const folder = loraPath.replace(/[\\/][^\\/]*$/, '') || './lokr_output';
         setIsBrowsing(true);
         try {
-            const res = await fetch('/api/generate/adapters/scan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ folder }),
-            });
+            const res = await fetch(`/api/lora/list-files?folder=${encodeURIComponent(folder)}`);
             if (res.ok) {
                 const data = await res.json();
                 setBrowsedFiles(data.files || []);
                 setShowBrowse(true);
+            } else {
+                const err = await res.json().catch(() => ({ error: 'Failed to scan' }));
+                console.warn('Browse failed:', err.error);
             }
-        } catch {
-            // silently fail
+        } catch (e) {
+            console.warn('Browse error:', e);
         } finally {
             setIsBrowsing(false);
         }
@@ -278,18 +277,17 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                             setIsBrowsing(true);
                                             try {
                                                 const folder = adapterFolder.trim() || './lokr_output';
-                                                const res = await fetch('/api/generate/adapters/scan', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ folder }),
-                                                });
+                                                const res = await fetch(`/api/lora/list-files?folder=${encodeURIComponent(folder)}`);
                                                 if (res.ok) {
                                                     const data = await res.json();
                                                     setBrowsedFiles(data.files || []);
                                                     setShowBrowse(true);
                                                     if (!adapterFolder.trim()) onAdapterFolderChange(folder);
+                                                } else {
+                                                    const err = await res.json().catch(() => ({ error: 'Failed' }));
+                                                    console.warn('Browse failed:', err.error);
                                                 }
-                                            } catch { } finally { setIsBrowsing(false); }
+                                            } catch (e) { console.warn('Browse error:', e); } finally { setIsBrowsing(false); }
                                         }}
                                         disabled={isBrowsing}
                                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30 disabled:opacity-40 transition-colors"

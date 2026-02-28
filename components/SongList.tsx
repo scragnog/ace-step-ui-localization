@@ -574,10 +574,10 @@ export const SongList: React.FC<SongListProps> = ({
                 )}
             </div> {/* End container */}
 
-            {/* A/B Comparison Bar */}
+            {/* A/B Comparison Bar — fixed above player */}
             {abTrackA && abTrackB && (
-                <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-100 dark:from-zinc-900 via-zinc-100/95 dark:via-zinc-900/95 to-zinc-100/80 dark:to-zinc-900/80 backdrop-blur-sm border-t border-zinc-200 dark:border-white/10 px-4 py-3 z-30">
-                    <div className="flex items-center gap-3 max-w-3xl mx-auto">
+                <div className="fixed bottom-[72px] left-0 right-0 bg-zinc-100/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-white/10 px-6 py-2.5 z-40">
+                    <div className="flex items-center gap-3">
                         {/* Track labels */}
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${abActive === 'A' ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 ring-1 ring-blue-500/20' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'}`}>
