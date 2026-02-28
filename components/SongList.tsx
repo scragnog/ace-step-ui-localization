@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Song } from '../types';
-import { Play, MoreHorizontal, Heart, ThumbsDown, ListPlus, Pause, Search, Filter, Check, Globe, Lock, Loader2, ThumbsUp, Share2, Video, Info, Clock, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Play, MoreHorizontal, Heart, ThumbsDown, ListPlus, Pause, Search, Filter, Check, Globe, Lock, Loader2, ThumbsUp, Share2, Video, Info, Clock, ChevronLeft, ChevronRight, Trash2, LayoutList, LayoutGrid, List } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
@@ -8,6 +8,11 @@ import { ShareModal } from './ShareModal';
 import { AlbumCover } from './AlbumCover';
 import { songsApi } from '../services/api';
 import { LiveVisualizer } from './LiveVisualizer';
+import { SongCard } from './SongCard';
+import { SongItemCompact } from './SongItemCompact';
+import { usePersistedState } from '../hooks/usePersistedState';
+
+type ViewMode = 'list' | 'grid' | 'compact';
 
 interface SongListProps {
     songs: Song[];
@@ -128,6 +133,7 @@ export const SongList: React.FC<SongListProps> = ({
     const filterRef = useRef<HTMLDivElement>(null);
     const [pageSize, setPageSize] = useState(30);
     const [currentPage, setCurrentPage] = useState(1);
+    const [viewMode, setViewMode] = usePersistedState<ViewMode>('ace-songListViewMode', 'list');
 
     const FILTERS: { id: FilterType; label: string; icon: React.ReactNode }[] = [
         { id: 'liked', label: t('liked'), icon: <ThumbsUp size={16} /> },
@@ -352,6 +358,31 @@ export const SongList: React.FC<SongListProps> = ({
                                 <Trash2 size={14} />
                             </button>
                         )}
+
+                        {/* View mode toggle */}
+                        <div className="flex items-center bg-zinc-100 dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden">
+                            <button
+                                onClick={() => setViewMode('list')}
+                                title={t('viewList') || 'List view'}
+                                className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
+                            >
+                                <LayoutList size={14} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                title={t('viewGrid') || 'Grid view'}
+                                className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
+                            >
+                                <LayoutGrid size={14} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('compact')}
+                                title={t('viewCompact') || 'Compact view'}
+                                className={`p-2.5 transition-colors ${viewMode === 'compact' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
+                            >
+                                <List size={14} />
+                            </button>
+                        </div>
                     </div>
 
                     {isSelecting && (
@@ -392,10 +423,10 @@ export const SongList: React.FC<SongListProps> = ({
                     )}
                 </div>
 
-                {/* List */}
-                <div className="space-y-2"> {/* Reduced vertical spacing */}
+                {/* Song items — view mode dependent */}
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-3' : viewMode === 'compact' ? 'space-y-0.5' : 'space-y-2'}>
                     {listItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-zinc-500 space-y-4 border border-dashed border-zinc-200 dark:border-white/5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02]">
+                        <div className={`flex flex-col items-center justify-center h-64 text-zinc-500 space-y-4 border border-dashed border-zinc-200 dark:border-white/5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] ${viewMode === 'grid' ? 'col-span-full' : ''}`}>
                             <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center">
                                 <Filter size={32} />
                             </div>
@@ -408,64 +439,71 @@ export const SongList: React.FC<SongListProps> = ({
                             </button>
                         </div>
                     ) : (
-                        paginatedItems.map((item) => (
-                            item.type === 'song' ? (
-                                <SongItem
-                                    key={item.id}
-                                    song={item.song}
-                                    isCurrent={currentSong?.id === item.song.id}
-                                    isSelected={selectedSong?.id === item.song.id}
-                                    isSelectionMode={isSelecting}
-                                    isChecked={selectedIds.has(item.song.id)}
-                                    isLiked={likedSongIds.has(item.song.id)}
-                                    isPlaying={isPlaying}
-                                    isOwner={user?.id === item.song.userId}
-                                    onPlay={() => onPlay(item.song)}
-                                    onSelect={() => onSelect(item.song)}
-                                    onToggleSelect={() => {
-                                        setSelectedIds(prev => {
-                                            const next = new Set(prev);
-                                            if (next.has(item.song.id)) next.delete(item.song.id);
-                                            else next.add(item.song.id);
-                                            return next;
-                                        });
-                                    }}
-                                    onToggleLike={() => onToggleLike(item.song.id)}
-                                    onAddToPlaylist={() => onAddToPlaylist(item.song)}
-                                    onOpenVideo={() => onOpenVideo && onOpenVideo(item.song)}
-                                    onShowDetails={() => onShowDetails && onShowDetails(item.song)}
-                                    onNavigateToProfile={onNavigateToProfile}
-                                    onReusePrompt={() => onReusePrompt?.(item.song)}
-                                    onDelete={() => onDelete?.(item.song)}
-                                    onSongUpdate={onSongUpdate}
-                                    onUseAsReference={() => onUseAsReference?.(item.song)}
-                                    onCoverSong={() => onCoverSong?.(item.song)}
-                                    onDownloadFormat={() => onDownloadFormat?.(item.song)}
-                                />
-                            ) : (
-                                <UploadItem
-                                    key={`upload_${item.id}`}
-                                    track={item.track}
-                                    onPlay={(audioUrl, title) => {
-                                        onPlay({
-                                            id: `upload_${item.id}`,
-                                            title,
-                                            lyrics: '',
-                                            style: 'Upload',
-                                            coverUrl: '',
-                                            duration: '0:00',
-                                            createdAt: item.createdAt,
-                                            tags: [],
-                                            audioUrl,
-                                            isPublic: false,
-                                        } as Song);
-                                    }}
-                                    onUseAsReference={() => onUseUploadAsReference?.(item.track)}
-                                    onCoverSong={() => onCoverUpload?.(item.track)}
-                                    onDelete={onDeleteUpload ? () => onDeleteUpload(item.id) : undefined}
-                                />
-                            )
-                        ))
+                        paginatedItems.map((item) => {
+                            if (item.type === 'upload') {
+                                return (
+                                    <UploadItem
+                                        key={`upload_${item.id}`}
+                                        track={item.track}
+                                        viewMode={viewMode}
+                                        onPlay={(audioUrl, title) => {
+                                            onPlay({
+                                                id: `upload_${item.id}`,
+                                                title,
+                                                lyrics: '',
+                                                style: 'Upload',
+                                                coverUrl: '',
+                                                duration: '0:00',
+                                                createdAt: item.createdAt,
+                                                tags: [],
+                                                audioUrl,
+                                                isPublic: false,
+                                            } as Song);
+                                        }}
+                                        onUseAsReference={() => onUseUploadAsReference?.(item.track)}
+                                        onCoverSong={() => onCoverUpload?.(item.track)}
+                                        onDelete={onDeleteUpload ? () => onDeleteUpload(item.id) : undefined}
+                                    />
+                                );
+                            }
+
+                            const songProps = {
+                                key: item.id,
+                                song: item.song,
+                                isCurrent: currentSong?.id === item.song.id,
+                                isSelected: selectedSong?.id === item.song.id,
+                                isSelectionMode: isSelecting,
+                                isChecked: selectedIds.has(item.song.id),
+                                isLiked: likedSongIds.has(item.song.id),
+                                isPlaying: isPlaying,
+                                isOwner: user?.id === item.song.userId,
+                                onPlay: () => onPlay(item.song),
+                                onSelect: () => onSelect(item.song),
+                                onToggleSelect: () => {
+                                    setSelectedIds(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(item.song.id)) next.delete(item.song.id);
+                                        else next.add(item.song.id);
+                                        return next;
+                                    });
+                                },
+                                onToggleLike: () => onToggleLike(item.song.id),
+                                onAddToPlaylist: () => onAddToPlaylist(item.song),
+                                onOpenVideo: () => onOpenVideo && onOpenVideo(item.song),
+                                onShowDetails: () => onShowDetails && onShowDetails(item.song),
+                                onNavigateToProfile: onNavigateToProfile,
+                                onReusePrompt: () => onReusePrompt?.(item.song),
+                                onDelete: () => onDelete?.(item.song),
+                                onSongUpdate: onSongUpdate,
+                                onUseAsReference: () => onUseAsReference?.(item.song),
+                                onCoverSong: () => onCoverSong?.(item.song),
+                                onDownloadFormat: () => onDownloadFormat?.(item.song),
+                            };
+
+                            if (viewMode === 'grid') return <SongCard {...songProps} />;
+                            if (viewMode === 'compact') return <SongItemCompact {...songProps} />;
+                            return <SongItem {...songProps} />;
+                        })
                     )}
                 </div>
 
@@ -918,48 +956,52 @@ const SongItem: React.FC<SongItemProps> = ({
 
 const UploadItem: React.FC<{
     track: { id: string; filename: string; audio_url: string; duration?: number | null };
+    viewMode?: ViewMode;
     onPlay: (audioUrl: string, title: string) => void;
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDelete?: () => void;
-}> = ({ track, onPlay, onUseAsReference, onCoverSong, onDelete }) => {
+}> = ({ track, viewMode = 'list', onPlay, onUseAsReference, onCoverSong, onDelete }) => {
     const title = track.filename.replace(/\.[^/.]+$/, '');
     const duration = track.duration
         ? `${Math.floor(track.duration / 60)}:${String(Math.floor(track.duration % 60)).padStart(2, '0')}`
         : '--:--';
-    return (
-        <SongItem
-            song={{
-                id: `upload_${track.id}`,
-                title,
-                lyrics: '',
-                style: 'Upload',
-                coverUrl: '',
-                duration,
-                createdAt: new Date(),
-                tags: [],
-                audioUrl: track.audio_url,
-                isPublic: false,
-            } as Song}
-            isCurrent={false}
-            isSelected={false}
-            isSelectionMode={false}
-            isChecked={false}
-            isLiked={false}
-            isPlaying={false}
-            isOwner={true}
-            onPlay={() => onPlay(track.audio_url, title)}
-            onSelect={() => onPlay(track.audio_url, title)}
-            onToggleSelect={() => undefined}
-            onToggleLike={() => undefined}
-            onAddToPlaylist={() => undefined}
-            onOpenVideo={() => undefined}
-            onShowDetails={() => undefined}
-            onNavigateToProfile={() => undefined}
-            onReusePrompt={undefined}
-            onDelete={onDelete}
-            onUseAsReference={onUseAsReference}
-            onCoverSong={onCoverSong}
-        />
-    );
+    const songData = {
+        id: `upload_${track.id}`,
+        title,
+        lyrics: '',
+        style: 'Upload',
+        coverUrl: '',
+        duration,
+        createdAt: new Date(),
+        tags: [],
+        audioUrl: track.audio_url,
+        isPublic: false,
+    } as Song;
+    const commonProps = {
+        song: songData,
+        isCurrent: false,
+        isSelected: false,
+        isSelectionMode: false,
+        isChecked: false,
+        isLiked: false,
+        isPlaying: false,
+        isOwner: true,
+        onPlay: () => onPlay(track.audio_url, title),
+        onSelect: () => onPlay(track.audio_url, title),
+        onToggleSelect: () => undefined,
+        onToggleLike: () => undefined,
+        onAddToPlaylist: () => undefined,
+        onOpenVideo: () => undefined,
+        onShowDetails: () => undefined,
+        onNavigateToProfile: () => undefined,
+        onReusePrompt: undefined,
+        onDelete: onDelete,
+        onUseAsReference: onUseAsReference,
+        onCoverSong: onCoverSong,
+    } as const;
+
+    if (viewMode === 'grid') return <SongCard {...commonProps} />;
+    if (viewMode === 'compact') return <SongItemCompact {...commonProps} />;
+    return <SongItem {...commonProps} />;
 };

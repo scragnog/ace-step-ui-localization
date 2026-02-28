@@ -89,6 +89,8 @@ export const translations = {
         // Mobile
         createSong: 'Create Song',
         viewList: 'View List',
+        viewGrid: 'Grid View',
+        viewCompact: 'Compact View',
 
         // CreatePanel - Modes
         simple: 'Simple',
