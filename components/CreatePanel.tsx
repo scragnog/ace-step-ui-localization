@@ -453,6 +453,14 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [referenceDuration, setReferenceDuration] = useState(0);
   const [sourceDuration, setSourceDuration] = useState(0);
 
+  // When 'Use Reference Audio' is toggled OFF, clear the loaded reference audio
+  useEffect(() => {
+    if (!useReferenceAudio) {
+      setReferenceAudioUrl('');
+      setReferenceAudioTitle('');
+    }
+  }, [useReferenceAudio]);
+
   // Reference tracks modal state
   const [referenceTracks, setReferenceTracks] = useState<ReferenceTrack[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState(false);
@@ -1545,9 +1553,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           steeringEnabled,
           steeringLoaded,
           steeringAlphas,
-          referenceAudioUrl: referenceAudioUrl.trim() || undefined,
+          referenceAudioUrl: (useReferenceAudio && referenceAudioUrl.trim()) || undefined,
           sourceAudioUrl: sourceAudioUrl.trim() || undefined,
-          referenceAudioTitle: referenceAudioTitle.trim() || undefined,
+          referenceAudioTitle: (useReferenceAudio && referenceAudioTitle.trim()) || undefined,
           sourceAudioTitle: sourceAudioTitle.trim() || undefined,
           audioCodes: audioCodes.trim() || undefined,
           repaintingStart,
