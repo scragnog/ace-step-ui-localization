@@ -698,6 +698,31 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
                 await storage.upload(storageKey, buffer, `audio/${ext.slice(1)}`);
                 const storedPath = storage.getPublicUrl(storageKey);
 
+                // Also download the .lrc file if it exists (synced lyrics)
+                try {
+                  // Derive LRC URL from audio URL by swapping extension in the path param
+                  let lrcUrl = audioUrl;
+                  if (audioUrl.includes('path=')) {
+                    lrcUrl = audioUrl.replace(/\.\w+$/, '.lrc');
+                  } else {
+                    lrcUrl = audioUrl.replace(/\.\w+(\?|$)/, '.lrc$1');
+                  }
+                  const lrcRes = await fetch(lrcUrl);
+                  if (lrcRes.ok) {
+                    const lrcText = await lrcRes.text();
+                    if (lrcText.includes('[')) {
+                      const lrcKey = `${req.user!.id}/${songId}.lrc`;
+                      const lrcDir = path.join(AUDIO_DIR, req.user!.id);
+                      await import('fs/promises').then(fs => fs.mkdir(lrcDir, { recursive: true }));
+                      await import('fs/promises').then(fs => fs.writeFile(path.join(AUDIO_DIR, lrcKey), lrcText, 'utf-8'));
+                      console.log(`[Generate] LRC saved alongside audio: ${lrcKey}`);
+                    }
+                  }
+                } catch (lrcErr) {
+                  // LRC download is best-effort, don't fail the song creation
+                  console.log('[Generate] LRC download skipped:', (lrcErr as Error).message);
+                }
+
                 await pool.query(
                   `INSERT INTO songs (id, user_id, title, lyrics, style, caption, audio_url,
                                       duration, bpm, key_scale, time_signature, tags, is_public, model, generation_params,

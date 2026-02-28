@@ -65,26 +65,35 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
 
     // Try to fetch .lrc file from server if no lrc prop provided
     useEffect(() => {
+        console.log('[LyricsOverlay] mount/update — lrcProp:', !!lrcProp, 'audioUrl:', audioUrl);
         if (lrcProp) {
             setFetchedLrc(null);
             return;
         }
-        if (!audioUrl) return;
+        if (!audioUrl) {
+            console.log('[LyricsOverlay] No audioUrl, skipping fetch');
+            return;
+        }
 
         let cancelled = false;
 
-        // Use the dedicated /api/lrc endpoint which resolves audio paths server-side
-        const lrcApiUrl = `/api/lrc?audioUrl=${encodeURIComponent(audioUrl)}`;
+        // The .lrc file is saved alongside the audio with the same path but .lrc extension
+        // e.g. /audio/userId/songId.flac → /audio/userId/songId.lrc
+        const directLrcUrl = audioUrl.replace(/\.\w+$/, '.lrc');
+        console.log('[LyricsOverlay] Fetching LRC from:', directLrcUrl);
 
-        fetch(lrcApiUrl)
+        fetch(directLrcUrl)
             .then(res => {
-                if (!res.ok) throw new Error('No LRC file');
+                console.log('[LyricsOverlay] Fetch response:', res.status, res.statusText);
+                if (!res.ok) throw new Error(`LRC fetch failed: ${res.status}`);
                 return res.text();
             })
             .then(text => {
+                console.log('[LyricsOverlay] LRC text received, length:', text.length, 'has brackets:', text.includes('['));
                 if (!cancelled && text.includes('[')) setFetchedLrc(text);
             })
-            .catch(() => {
+            .catch((err) => {
+                console.warn('[LyricsOverlay] Fetch error:', err.message);
                 if (!cancelled) setFetchedLrc(null);
             });
 
@@ -94,6 +103,8 @@ export const LyricsOverlay: React.FC<LyricsOverlayProps> = ({
     const rawLrc = lrcProp || fetchedLrc;
     const lines = useMemo(() => rawLrc ? parseLrc(rawLrc) : [], [rawLrc]);
     const currentIdx = findCurrentIndex(lines, currentTime);
+
+    console.log('[LyricsOverlay] render — lines:', lines.length, 'currentIdx:', currentIdx, 'rawLrc:', !!rawLrc);
 
     if (lines.length === 0) return null;
 
