@@ -483,6 +483,11 @@ export const generateApi = {
     folder: string;
   }> => api(`/api/lora/list-files?folder=${encodeURIComponent(folder)}`, { token }),
 
+  // Open native folder picker dialog
+  browseLoraFolder: (token: string): Promise<{
+    folder: string;
+  }> => api('/api/lora/browse-folder', { token }),
+
   // Advanced adapter: group scales
   setGroupScales: (params: {
     self_attn: number;

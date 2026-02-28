@@ -91,15 +91,15 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
     const [showBrowse, setShowBrowse] = useState(false);
     const [isBrowsing, setIsBrowsing] = useState(false);
 
-    // Extract folder from loraPath for scanning
+    // Open native folder picker dialog
     const handleBrowse = async () => {
-        const folder = loraPath.replace(/[\\/][^\\/]*$/, '') || './lokr_output';
+        if (!token) return;
         setIsBrowsing(true);
         try {
-            if (!token) return;
-            const result = await generateApi.listLoraFiles(folder, token);
-            setBrowsedFiles(result.files || []);
-            setShowBrowse(true);
+            const result = await generateApi.browseLoraFolder(token);
+            if (result.folder) {
+                onLoraPathChange(result.folder);
+            }
         } catch (err) {
             console.warn('Browse error:', err);
         } finally {
@@ -272,14 +272,13 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                     </button>
                                     <button
                                         onClick={async () => {
+                                            if (!token) return;
                                             setIsBrowsing(true);
                                             try {
-                                                if (!token) return;
-                                                const folder = adapterFolder.trim() || './lokr_output';
-                                                const result = await generateApi.listLoraFiles(folder, token);
-                                                setBrowsedFiles(result.files || []);
-                                                setShowBrowse(true);
-                                                if (!adapterFolder.trim()) onAdapterFolderChange(folder);
+                                                const result = await generateApi.browseLoraFolder(token);
+                                                if (result.folder) {
+                                                    onAdapterFolderChange(result.folder);
+                                                }
                                             } catch (e) { console.warn('Browse error:', e); } finally { setIsBrowsing(false); }
                                         }}
                                         disabled={isBrowsing}

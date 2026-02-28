@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 const router = Router();
 
@@ -56,6 +57,34 @@ async function proxyToAceStep(endpoint: string, method: string, data?: any) {
     throw new Error(error.message || 'Request failed');
   }
 }
+
+// Open native folder picker dialog (Windows)
+router.get('/browse-folder', authMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const psScript = `
+      Add-Type -AssemblyName System.Windows.Forms
+      $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+      $dialog.Description = 'Select adapter folder'
+      $dialog.ShowNewFolderButton = $false
+      $topmost = New-Object System.Windows.Forms.Form
+      $topmost.TopMost = $true
+      if ($dialog.ShowDialog($topmost) -eq 'OK') {
+        Write-Output $dialog.SelectedPath
+      }
+      $topmost.Dispose()
+    `.trim();
+
+    const result = execSync(
+      `powershell -NoProfile -Command "${psScript.replace(/"/g, '\\"').replace(/\n/g, '; ')}"`,
+      { encoding: 'utf-8', timeout: 60000 }
+    ).trim();
+
+    res.json({ folder: result || '' });
+  } catch (error: any) {
+    // User cancelled or timeout
+    res.json({ folder: '' });
+  }
+});
 
 // List .safetensors files in a folder
 router.get('/list-files', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {

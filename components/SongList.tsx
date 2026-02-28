@@ -272,311 +272,313 @@ export const SongList: React.FC<SongListProps> = ({
     const selectedSongs = selectableSongs.filter(song => selectedIds.has(song.id));
 
     return (
-        <div className="relative flex-1 bg-white dark:bg-black h-full overflow-y-auto custom-scrollbar p-6 pb-32 transition-colors duration-300">
-            {/* Background Visualizer — dimmed, behind content */}
-            {showVisualizerBg && isPlaying && (
-                <div className="absolute inset-0 z-0 pointer-events-none">
-                    <LiveVisualizer
-                        isPlaying={true}
-                        className="w-full h-full"
-                        dimmed={true}
-                        showControls={false}
-                    />
-                </div>
-            )}
-            <div className="relative z-[1] max-w-5xl mx-auto w-full"> {/* Container constraint */}
-
-                {/* Header */}
-                <div className="flex flex-col gap-6 mb-8">
-                    <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                        <span className="hover:text-black dark:hover:text-white cursor-pointer transition-colors">{t('workspaces')}</span>
-                        <span className="text-zinc-400 dark:text-zinc-600">›</span>
-                        <span className="text-zinc-900 dark:text-white font-medium">{t('myWorkspace')}</span>
+        <div className="relative flex-1 flex flex-col h-full bg-white dark:bg-black transition-colors duration-300">
+            <div className="relative flex-1 overflow-y-auto custom-scrollbar p-6 pb-32">
+                {/* Background Visualizer — dimmed, behind content */}
+                {showVisualizerBg && isPlaying && (
+                    <div className="absolute inset-0 z-0 pointer-events-none">
+                        <LiveVisualizer
+                            isPlaying={true}
+                            className="w-full h-full"
+                            dimmed={true}
+                            showControls={false}
+                        />
                     </div>
+                )}
+                <div className="relative z-[1] max-w-5xl mx-auto w-full"> {/* Container constraint */}
 
-                    <div className="flex items-center gap-3">
-                        <div className="relative group flex-1">
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder={t('searchYourSongs')}
-                                className="w-full bg-zinc-100 dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-white/20 placeholder-zinc-500 dark:placeholder-zinc-600 transition-colors"
-                            />
-                            <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-3 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
+                    {/* Header */}
+                    <div className="flex flex-col gap-6 mb-8">
+                        <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+                            <span className="hover:text-black dark:hover:text-white cursor-pointer transition-colors">{t('workspaces')}</span>
+                            <span className="text-zinc-400 dark:text-zinc-600">›</span>
+                            <span className="text-zinc-900 dark:text-white font-medium">{t('myWorkspace')}</span>
                         </div>
 
-                        <div className="relative" ref={filterRef}>
-                            <button
-                                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                                className={`
+                        <div className="flex items-center gap-3">
+                            <div className="relative group flex-1">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder={t('searchYourSongs')}
+                                    className="w-full bg-zinc-100 dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-white/20 placeholder-zinc-500 dark:placeholder-zinc-600 transition-colors"
+                                />
+                                <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-3 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
+                            </div>
+
+                            <div className="relative" ref={filterRef}>
+                                <button
+                                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                    className={`
                         border text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all select-none
                         ${isFilterOpen || activeFilters.size > 0
-                                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent'
-                                        : 'bg-zinc-100 dark:bg-[#121214] hover:bg-zinc-200 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-white'
-                                    }
+                                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent'
+                                            : 'bg-zinc-100 dark:bg-[#121214] hover:bg-zinc-200 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-white'
+                                        }
                     `}
-                            >
-                                <Filter size={14} fill={activeFilters.size > 0 ? "currentColor" : "none"} />
-                                <span>{t('filters')} {activeFilters.size > 0 && `(${activeFilters.size})`}</span>
-                            </button>
+                                >
+                                    <Filter size={14} fill={activeFilters.size > 0 ? "currentColor" : "none"} />
+                                    <span>{t('filters')} {activeFilters.size > 0 && `(${activeFilters.size})`}</span>
+                                </button>
 
-                            {/* Filter Dropdown */}
-                            {isFilterOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                                    <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                                        {t('refineBy')}
-                                    </div>
-                                    {FILTERS.map(filter => (
-                                        <button
-                                            key={filter.id}
-                                            onClick={() => toggleFilter(filter.id)}
-                                            className="w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors group"
-                                        >
-                                            <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-black dark:group-hover:text-white">
-                                                <span className="text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
-                                                    {filter.icon}
-                                                </span>
-                                                {filter.label}
-                                            </div>
-                                            <div className={`
+                                {/* Filter Dropdown */}
+                                {isFilterOpen && (
+                                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden py-1 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                        <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                                            {t('refineBy')}
+                                        </div>
+                                        {FILTERS.map(filter => (
+                                            <button
+                                                key={filter.id}
+                                                onClick={() => toggleFilter(filter.id)}
+                                                className="w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-black dark:group-hover:text-white">
+                                                    <span className="text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
+                                                        {filter.icon}
+                                                    </span>
+                                                    {filter.label}
+                                                </div>
+                                                <div className={`
                                      w-4 h-4 rounded border flex items-center justify-center transition-all
                                      ${activeFilters.has(filter.id)
-                                                    ? 'bg-pink-600 border-pink-600'
-                                                    : 'border-zinc-300 dark:border-zinc-600 group-hover:border-zinc-400 dark:group-hover:border-zinc-500'
-                                                }
+                                                        ? 'bg-pink-600 border-pink-600'
+                                                        : 'border-zinc-300 dark:border-zinc-600 group-hover:border-zinc-400 dark:group-hover:border-zinc-500'
+                                                    }
                                  `}>
-                                                {activeFilters.has(filter.id) && <Check size={10} className="text-white" strokeWidth={4} />}
-                                            </div>
-                                        </button>
-                                    ))}
+                                                    {activeFilters.has(filter.id) && <Check size={10} className="text-white" strokeWidth={4} />}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setIsSelecting(prev => !prev);
+                                    setSelectedIds(new Set());
+                                }}
+                                className={`border text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all select-none ${isSelecting
+                                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent'
+                                    : 'bg-zinc-100 dark:bg-[#121214] hover:bg-zinc-200 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-white'
+                                    }`}
+                            >
+                                {t('select')}
+                            </button>
+
+                            {onDeleteAll && songs.length > 0 && (
+                                <button
+                                    onClick={onDeleteAll}
+                                    title={t('deleteAllTracks')}
+                                    className="border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-[#121214] hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-red-300 dark:hover:border-red-500/30 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 p-2.5 rounded-lg transition-all"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            )}
+
+                            {/* View mode toggle */}
+                            <div className="flex items-center bg-zinc-100 dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden">
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    title={t('viewList') || 'List view'}
+                                    className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
+                                >
+                                    <LayoutList size={14} />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    title={t('viewGrid') || 'Grid view'}
+                                    className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
+                                >
+                                    <LayoutGrid size={14} />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('compact')}
+                                    title={t('viewCompact') || 'Compact view'}
+                                    className={`p-2.5 transition-colors ${viewMode === 'compact' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
+                                >
+                                    <List size={14} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {isSelecting && (
+                            <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 px-4 py-3">
+                                <div className="text-sm text-zinc-600 dark:text-zinc-300">
+                                    {t('selectedCount').replace('{count}', String(selectedSongs.length))}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const next = new Set<string>();
+                                            if (!allSelected) {
+                                                selectableSongs.forEach(song => next.add(song.id));
+                                            }
+                                            setSelectedIds(next);
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/20"
+                                    >
+                                        {allSelected ? t('clearAll') : t('selectAll')}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (!selectedSongs.length || !onDeleteMany) return;
+                                            onDeleteMany(selectedSongs, () => {
+                                                setIsSelecting(false);
+                                            });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${selectedSongs.length
+                                            ? 'border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10'
+                                            : 'border-zinc-200 dark:border-white/10 text-zinc-400 cursor-not-allowed'
+                                            }`}
+                                        disabled={!selectedSongs.length}
+                                    >
+                                        {t('delete')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Song items — view mode dependent */}
+                    <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-3' : viewMode === 'compact' ? 'space-y-0.5' : 'space-y-2'}>
+                        {listItems.length === 0 ? (
+                            <div className={`flex flex-col items-center justify-center h-64 text-zinc-500 space-y-4 border border-dashed border-zinc-200 dark:border-white/5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] ${viewMode === 'grid' ? 'col-span-full' : ''}`}>
+                                <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center">
+                                    <Filter size={32} />
+                                </div>
+                                <p className="font-medium">{t('noSongsMatchFilters')}</p>
+                                <button
+                                    onClick={() => { setActiveFilters(new Set()); setSearchQuery(''); }}
+                                    className="text-pink-600 dark:text-pink-500 text-sm font-bold hover:underline"
+                                >
+                                    {t('clearFilters')}
+                                </button>
+                            </div>
+                        ) : (
+                            paginatedItems.map((item) => {
+                                if (item.type === 'upload') {
+                                    return (
+                                        <UploadItem
+                                            key={`upload_${item.id}`}
+                                            track={item.track}
+                                            viewMode={viewMode}
+                                            onPlay={(audioUrl, title) => {
+                                                onPlay({
+                                                    id: `upload_${item.id}`,
+                                                    title,
+                                                    lyrics: '',
+                                                    style: 'Upload',
+                                                    coverUrl: '',
+                                                    duration: '0:00',
+                                                    createdAt: item.createdAt,
+                                                    tags: [],
+                                                    audioUrl,
+                                                    isPublic: false,
+                                                } as Song);
+                                            }}
+                                            onUseAsReference={() => onUseUploadAsReference?.(item.track)}
+                                            onCoverSong={() => onCoverUpload?.(item.track)}
+                                            onDelete={onDeleteUpload ? () => onDeleteUpload(item.id) : undefined}
+                                        />
+                                    );
+                                }
+
+                                const songProps = {
+                                    key: item.id,
+                                    song: item.song,
+                                    isCurrent: currentSong?.id === item.song.id,
+                                    isSelected: selectedSong?.id === item.song.id,
+                                    isSelectionMode: isSelecting,
+                                    isChecked: selectedIds.has(item.song.id),
+                                    isLiked: likedSongIds.has(item.song.id),
+                                    isPlaying: isPlaying,
+                                    isOwner: user?.id === item.song.userId,
+                                    onPlay: () => onPlay(item.song),
+                                    onSelect: () => onSelect(item.song),
+                                    onToggleSelect: () => {
+                                        setSelectedIds(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(item.song.id)) next.delete(item.song.id);
+                                            else next.add(item.song.id);
+                                            return next;
+                                        });
+                                    },
+                                    onToggleLike: () => onToggleLike(item.song.id),
+                                    onAddToPlaylist: () => onAddToPlaylist(item.song),
+                                    onOpenVideo: () => onOpenVideo && onOpenVideo(item.song),
+                                    onShowDetails: () => onShowDetails && onShowDetails(item.song),
+                                    onNavigateToProfile: onNavigateToProfile,
+                                    onReusePrompt: () => onReusePrompt?.(item.song),
+                                    onDelete: () => onDelete?.(item.song),
+                                    onSongUpdate: onSongUpdate,
+                                    onUseAsReference: () => onUseAsReference?.(item.song),
+                                    onCoverSong: () => onCoverSong?.(item.song),
+                                    onDownloadFormat: () => onDownloadFormat?.(item.song),
+                                    onSetAsTrackA: () => onSetAsTrackA?.(item.song),
+                                    onSetAsTrackB: () => onSetAsTrackB?.(item.song),
+                                    isTrackA: abTrackA?.id === item.song.id,
+                                    isTrackB: abTrackB?.id === item.song.id,
+                                };
+
+                                if (viewMode === 'grid') return <SongCard {...songProps} />;
+                                if (viewMode === 'compact') return <SongItemCompact {...songProps} />;
+                                return <SongItem {...songProps} />;
+                            })
+                        )}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalItems > 0 && (
+                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-zinc-200 dark:border-white/10">
+                            {/* Page size selector */}
+                            <div className="flex items-center gap-1">
+                                {[30, 60, 120, 0].map(size => (
+                                    <button
+                                        key={size}
+                                        onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${pageSize === size
+                                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
+                                            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {size === 0 ? t('all') || 'All' : size}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Page navigation */}
+                            {pageSize > 0 && totalPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                                        {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, totalItems)} of {totalItems}
+                                    </span>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={safePage <= 1}
+                                        className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={safePage >= totalPages}
+                                        className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
                                 </div>
                             )}
                         </div>
-
-                        <button
-                            onClick={() => {
-                                setIsSelecting(prev => !prev);
-                                setSelectedIds(new Set());
-                            }}
-                            className={`border text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all select-none ${isSelecting
-                                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent'
-                                : 'bg-zinc-100 dark:bg-[#121214] hover:bg-zinc-200 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-white'
-                                }`}
-                        >
-                            {t('select')}
-                        </button>
-
-                        {onDeleteAll && songs.length > 0 && (
-                            <button
-                                onClick={onDeleteAll}
-                                title={t('deleteAllTracks')}
-                                className="border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-[#121214] hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-red-300 dark:hover:border-red-500/30 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 p-2.5 rounded-lg transition-all"
-                            >
-                                <Trash2 size={14} />
-                            </button>
-                        )}
-
-                        {/* View mode toggle */}
-                        <div className="flex items-center bg-zinc-100 dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden">
-                            <button
-                                onClick={() => setViewMode('list')}
-                                title={t('viewList') || 'List view'}
-                                className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
-                            >
-                                <LayoutList size={14} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('grid')}
-                                title={t('viewGrid') || 'Grid view'}
-                                className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
-                            >
-                                <LayoutGrid size={14} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('compact')}
-                                title={t('viewCompact') || 'Compact view'}
-                                className={`p-2.5 transition-colors ${viewMode === 'compact' ? 'bg-zinc-900 dark:bg-white text-white dark:text-black' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-white'}`}
-                            >
-                                <List size={14} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {isSelecting && (
-                        <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 px-4 py-3">
-                            <div className="text-sm text-zinc-600 dark:text-zinc-300">
-                                {t('selectedCount').replace('{count}', String(selectedSongs.length))}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        const next = new Set<string>();
-                                        if (!allSelected) {
-                                            selectableSongs.forEach(song => next.add(song.id));
-                                        }
-                                        setSelectedIds(next);
-                                    }}
-                                    className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/20"
-                                >
-                                    {allSelected ? t('clearAll') : t('selectAll')}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (!selectedSongs.length || !onDeleteMany) return;
-                                        onDeleteMany(selectedSongs, () => {
-                                            setIsSelecting(false);
-                                        });
-                                    }}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${selectedSongs.length
-                                        ? 'border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10'
-                                        : 'border-zinc-200 dark:border-white/10 text-zinc-400 cursor-not-allowed'
-                                        }`}
-                                    disabled={!selectedSongs.length}
-                                >
-                                    {t('delete')}
-                                </button>
-                            </div>
-                        </div>
                     )}
-                </div>
+                </div> {/* End container */}
+            </div> {/* End scroll area */}
 
-                {/* Song items — view mode dependent */}
-                <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-3' : viewMode === 'compact' ? 'space-y-0.5' : 'space-y-2'}>
-                    {listItems.length === 0 ? (
-                        <div className={`flex flex-col items-center justify-center h-64 text-zinc-500 space-y-4 border border-dashed border-zinc-200 dark:border-white/5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] ${viewMode === 'grid' ? 'col-span-full' : ''}`}>
-                            <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center">
-                                <Filter size={32} />
-                            </div>
-                            <p className="font-medium">{t('noSongsMatchFilters')}</p>
-                            <button
-                                onClick={() => { setActiveFilters(new Set()); setSearchQuery(''); }}
-                                className="text-pink-600 dark:text-pink-500 text-sm font-bold hover:underline"
-                            >
-                                {t('clearFilters')}
-                            </button>
-                        </div>
-                    ) : (
-                        paginatedItems.map((item) => {
-                            if (item.type === 'upload') {
-                                return (
-                                    <UploadItem
-                                        key={`upload_${item.id}`}
-                                        track={item.track}
-                                        viewMode={viewMode}
-                                        onPlay={(audioUrl, title) => {
-                                            onPlay({
-                                                id: `upload_${item.id}`,
-                                                title,
-                                                lyrics: '',
-                                                style: 'Upload',
-                                                coverUrl: '',
-                                                duration: '0:00',
-                                                createdAt: item.createdAt,
-                                                tags: [],
-                                                audioUrl,
-                                                isPublic: false,
-                                            } as Song);
-                                        }}
-                                        onUseAsReference={() => onUseUploadAsReference?.(item.track)}
-                                        onCoverSong={() => onCoverUpload?.(item.track)}
-                                        onDelete={onDeleteUpload ? () => onDeleteUpload(item.id) : undefined}
-                                    />
-                                );
-                            }
-
-                            const songProps = {
-                                key: item.id,
-                                song: item.song,
-                                isCurrent: currentSong?.id === item.song.id,
-                                isSelected: selectedSong?.id === item.song.id,
-                                isSelectionMode: isSelecting,
-                                isChecked: selectedIds.has(item.song.id),
-                                isLiked: likedSongIds.has(item.song.id),
-                                isPlaying: isPlaying,
-                                isOwner: user?.id === item.song.userId,
-                                onPlay: () => onPlay(item.song),
-                                onSelect: () => onSelect(item.song),
-                                onToggleSelect: () => {
-                                    setSelectedIds(prev => {
-                                        const next = new Set(prev);
-                                        if (next.has(item.song.id)) next.delete(item.song.id);
-                                        else next.add(item.song.id);
-                                        return next;
-                                    });
-                                },
-                                onToggleLike: () => onToggleLike(item.song.id),
-                                onAddToPlaylist: () => onAddToPlaylist(item.song),
-                                onOpenVideo: () => onOpenVideo && onOpenVideo(item.song),
-                                onShowDetails: () => onShowDetails && onShowDetails(item.song),
-                                onNavigateToProfile: onNavigateToProfile,
-                                onReusePrompt: () => onReusePrompt?.(item.song),
-                                onDelete: () => onDelete?.(item.song),
-                                onSongUpdate: onSongUpdate,
-                                onUseAsReference: () => onUseAsReference?.(item.song),
-                                onCoverSong: () => onCoverSong?.(item.song),
-                                onDownloadFormat: () => onDownloadFormat?.(item.song),
-                                onSetAsTrackA: () => onSetAsTrackA?.(item.song),
-                                onSetAsTrackB: () => onSetAsTrackB?.(item.song),
-                                isTrackA: abTrackA?.id === item.song.id,
-                                isTrackB: abTrackB?.id === item.song.id,
-                            };
-
-                            if (viewMode === 'grid') return <SongCard {...songProps} />;
-                            if (viewMode === 'compact') return <SongItemCompact {...songProps} />;
-                            return <SongItem {...songProps} />;
-                        })
-                    )}
-                </div>
-
-                {/* Pagination Controls */}
-                {totalItems > 0 && (
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-zinc-200 dark:border-white/10">
-                        {/* Page size selector */}
-                        <div className="flex items-center gap-1">
-                            {[30, 60, 120, 0].map(size => (
-                                <button
-                                    key={size}
-                                    onClick={() => { setPageSize(size); setCurrentPage(1); }}
-                                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${pageSize === size
-                                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-black'
-                                        : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'
-                                        }`}
-                                >
-                                    {size === 0 ? t('all') || 'All' : size}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Page navigation */}
-                        {pageSize > 0 && totalPages > 1 && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                                    {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, totalItems)} of {totalItems}
-                                </span>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={safePage <= 1}
-                                    className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <ChevronLeft size={16} />
-                                </button>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={safePage >= totalPages}
-                                    className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <ChevronRight size={16} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div> {/* End container */}
-
-            {/* A/B Comparison Bar — sticky at bottom of scroll area */}
+            {/* A/B Comparison Bar — fixed footer below scroll area */}
             {abTrackA && abTrackB && (
-                <div className="sticky bottom-0 -mx-6 -mb-32 bg-zinc-100/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-white/10 px-6 py-2.5 z-30">
+                <div className="flex-shrink-0 bg-zinc-100 dark:bg-zinc-900 border-t border-zinc-200 dark:border-white/10 px-6 py-2.5 z-30">
                     <div className="flex items-center gap-3">
                         {/* Track labels */}
                         <div className="flex items-center gap-2 flex-1 min-w-0">
