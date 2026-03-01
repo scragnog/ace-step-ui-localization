@@ -303,6 +303,8 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         steering_loaded: params.steeringLoaded || [],
         steering_alphas: params.steeringAlphas || {},
         get_lrc: params.getLrc || false,
+        get_scores: params.getScores || false,
+        score_scale: params.scoreScale ?? 0.1,
         lm_repetition_penalty: params.lmRepetitionPenalty ?? 1.0,
         // Always send LM model selection (enables hot-switching regardless of thinking mode)
         lm_model_path: params.lmModel || undefined,
@@ -520,6 +522,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
             generationInfo: firstResult?.generation_info,
             lmModel: firstResult?.lm_model,
             lrc: firstResult?.lrc,
+            scores: firstResult?.scores,
             status: 'succeeded',
           };
         }
