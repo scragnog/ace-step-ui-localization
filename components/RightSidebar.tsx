@@ -296,6 +296,44 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                             </div>
                         </div>
 
+                        {/* Quality Scores */}
+                        {(() => {
+                            const gi = song.generationParams?.generationInfo;
+                            if (!gi || typeof gi !== 'string' || !gi.includes('Quality Scores')) return null;
+                            const pmiMatch = gi.match(/PMI Global:\s*([\d.]+)/);
+                            const ditLmMatch = gi.match(/DiT Alignment \(LM\):\s*([\d.]+)/);
+                            const ditDitMatch = gi.match(/DiT Alignment \(DiT\):\s*([\d.]+)/);
+                            if (!pmiMatch && !ditLmMatch && !ditDitMatch) return null;
+                            return (
+                                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    {pmiMatch && (
+                                        <span
+                                            title="PMI (Pointwise Mutual Information): Measures how well the generated audio codes match your prompt. Higher = better prompt adherence. Only available with Thinking ON."
+                                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700/50 shadow-sm"
+                                        >
+                                            <Activity size={11} /> PMI {parseFloat(pmiMatch[1]).toFixed(3)}
+                                        </span>
+                                    )}
+                                    {ditLmMatch && (
+                                        <span
+                                            title="DiT Alignment (LM): Cross-attention alignment between lyrics and audio from the Language Model pathway. Higher = better lyric-to-music alignment."
+                                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/30 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-700/50 shadow-sm"
+                                        >
+                                            <AudioWaveform size={11} /> LM {parseFloat(ditLmMatch[1]).toFixed(3)}
+                                        </span>
+                                    )}
+                                    {ditDitMatch && (
+                                        <span
+                                            title="DiT Alignment (DiT): Cross-attention alignment between lyrics and audio from the Diffusion Transformer. Higher = better lyric-to-music alignment."
+                                            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/30 dark:to-purple-900/30 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-700/50 shadow-sm"
+                                        >
+                                            <Zap size={11} /> DiT {parseFloat(ditDitMatch[1]).toFixed(3)}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-white dark:ring-black">
                                 {song.creator ? song.creator[0].toUpperCase() : 'A'}
