@@ -70,7 +70,10 @@ export function usePersistedState<T>(
         try {
             const stored = localStorage.getItem(key);
             if (stored === null) return defaultValue;
-            return JSON.parse(stored) as T;
+            const parsed = JSON.parse(stored) as T;
+            // Guard against JSON null stored by a previous crash — treat as missing
+            if (parsed === null || parsed === undefined) return defaultValue;
+            return parsed;
         } catch {
             return defaultValue;
         }
