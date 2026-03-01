@@ -305,34 +305,55 @@ export const SongCard: React.FC<SongCardProps> = ({
                     {(() => {
                         const gi = song.generationParams?.generationInfo;
                         if (!gi || typeof gi !== 'string' || !gi.includes('Quality Scores')) return null;
-                        const pmiMatch = gi.match(/PMI Global:\s*([\d.]+)/);
-                        const ditLmMatch = gi.match(/DiT Alignment \(LM\):\s*([\d.]+)/);
-                        const ditDitMatch = gi.match(/DiT Alignment \(DiT\):\s*([\d.]+)/);
-                        if (!pmiMatch && !ditLmMatch && !ditDitMatch) return null;
+
+                        // Parse PMI: new "PMI: 57%" or old "PMI Global: 0.5670"
+                        const pmiNewMatch = gi.match(/PMI:\s*(\d+)%/);
+                        const pmiOldMatch = !pmiNewMatch ? gi.match(/PMI Global:\s*([\d.]+)/) : null;
+                        const pmiPct = pmiNewMatch ? pmiNewMatch[1] : pmiOldMatch ? Math.round(parseFloat(pmiOldMatch[1]) * 100).toString() : null;
+
+                        // Parse DiT: new "Lyric Alignment (X): ★★★ Good (0.081)" or old "DiT Alignment (X): 0.081"
+                        const ditStarsFromVal = (v: number) => {
+                            if (v >= 0.25) return '★★★★★';
+                            if (v >= 0.15) return '★★★★';
+                            if (v >= 0.08) return '★★★';
+                            if (v >= 0.04) return '★★';
+                            return '★';
+                        };
+                        const starsOnly = (s: string) => s.replace(/[^★]/g, '');
+
+                        const lmNewMatch = gi.match(/Lyric Alignment \(LM\):\s*(★[^(]+)\([\d.]+\)/);
+                        const lmOldMatch = !lmNewMatch ? gi.match(/DiT Alignment \(LM\):\s*([\d.]+)/) : null;
+                        const lmDisplay = lmNewMatch ? starsOnly(lmNewMatch[1]) : lmOldMatch ? ditStarsFromVal(parseFloat(lmOldMatch[1])) : null;
+
+                        const ditNewMatch = gi.match(/Lyric Alignment \(DiT\):\s*(★[^(]+)\([\d.]+\)/);
+                        const ditOldMatch = !ditNewMatch ? gi.match(/DiT Alignment \(DiT\):\s*([\d.]+)/) : null;
+                        const ditDisplay = ditNewMatch ? starsOnly(ditNewMatch[1]) : ditOldMatch ? ditStarsFromVal(parseFloat(ditOldMatch[1])) : null;
+
+                        if (!pmiPct && !lmDisplay && !ditDisplay) return null;
                         return (
                             <div className="flex flex-wrap items-center gap-1 mt-0.5">
-                                {pmiMatch && (
+                                {pmiPct && (
                                     <span
-                                        title="PMI (Pointwise Mutual Information): Measures how well the generated audio codes match your prompt. Higher = better prompt adherence. Only available when Thinking is ON."
+                                        title="PMI: How well audio matches your prompt. 50% = neutral, higher = better."
                                         className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700/50"
                                     >
-                                        PMI {parseFloat(pmiMatch[1]).toFixed(3)}
+                                        PMI {pmiPct}%
                                     </span>
                                 )}
-                                {ditLmMatch && (
+                                {lmDisplay && (
                                     <span
-                                        title="DiT Alignment (LM): Cross-attention alignment between lyrics and audio from the Language Model pathway. Higher = better lyric-to-music alignment."
+                                        title="Lyric Alignment (LM)"
                                         className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-700/50"
                                     >
-                                        LM {parseFloat(ditLmMatch[1]).toFixed(3)}
+                                        LM {lmDisplay}
                                     </span>
                                 )}
-                                {ditDitMatch && (
+                                {ditDisplay && (
                                     <span
-                                        title="DiT Alignment (DiT): Cross-attention alignment between lyrics and audio from the Diffusion Transformer. Higher = better lyric-to-music alignment. Available for all generations."
+                                        title="Lyric Alignment (DiT)"
                                         className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-700/50"
                                     >
-                                        DiT {parseFloat(ditDitMatch[1]).toFixed(3)}
+                                        DiT {ditDisplay}
                                     </span>
                                 )}
                             </div>

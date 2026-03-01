@@ -300,34 +300,61 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                         {(() => {
                             const gi = song.generationParams?.generationInfo;
                             if (!gi || typeof gi !== 'string' || !gi.includes('Quality Scores')) return null;
-                            const pmiMatch = gi.match(/PMI Global:\s*([\d.]+)/);
-                            const ditLmMatch = gi.match(/DiT Alignment \(LM\):\s*([\d.]+)/);
-                            const ditDitMatch = gi.match(/DiT Alignment \(DiT\):\s*([\d.]+)/);
-                            if (!pmiMatch && !ditLmMatch && !ditDitMatch) return null;
+
+                            // Parse PMI: new format "PMI: 57%" or old "PMI Global: 0.5670"
+                            const pmiNewMatch = gi.match(/PMI:\s*(\d+)%/);
+                            const pmiOldMatch = !pmiNewMatch ? gi.match(/PMI Global:\s*([\d.]+)/) : null;
+                            const pmiPct = pmiNewMatch ? pmiNewMatch[1] : pmiOldMatch ? Math.round(parseFloat(pmiOldMatch[1]) * 100).toString() : null;
+
+                            // Parse DiT: new format "Lyric Alignment (X): ★★★ Good (0.081)" or old "DiT Alignment (X): 0.081"
+                            const ditLabel = (v: number) => {
+                                if (v >= 0.25) return '★★★★★';
+                                if (v >= 0.15) return '★★★★';
+                                if (v >= 0.08) return '★★★';
+                                if (v >= 0.04) return '★★';
+                                return '★';
+                            };
+                            const ditFullLabel = (v: number) => {
+                                if (v >= 0.25) return '★★★★★ Excellent';
+                                if (v >= 0.15) return '★★★★ Great';
+                                if (v >= 0.08) return '★★★ Good';
+                                if (v >= 0.04) return '★★ Fair';
+                                return '★ Low';
+                            };
+
+                            const lmNewMatch = gi.match(/Lyric Alignment \(LM\):\s*(★[^(]+)\(([\d.]+)\)/);
+                            const lmOldMatch = !lmNewMatch ? gi.match(/DiT Alignment \(LM\):\s*([\d.]+)/) : null;
+                            const lmStars = lmNewMatch ? lmNewMatch[1].trim() : lmOldMatch ? ditFullLabel(parseFloat(lmOldMatch[1])) : null;
+
+                            const ditNewMatch = gi.match(/Lyric Alignment \(DiT\):\s*(★[^(]+)\(([\d.]+)\)/);
+                            const ditOldMatch = !ditNewMatch ? gi.match(/DiT Alignment \(DiT\):\s*([\d.]+)/) : null;
+                            const ditStars = ditNewMatch ? ditNewMatch[1].trim() : ditOldMatch ? ditFullLabel(parseFloat(ditOldMatch[1])) : null;
+
+                            if (!pmiPct && !lmStars && !ditStars) return null;
                             return (
                                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                    {pmiMatch && (
+                                    {pmiPct && (
                                         <span
-                                            title="PMI (Pointwise Mutual Information): Measures how well the generated audio codes match your prompt. Higher = better prompt adherence. Only available with Thinking ON."
+                                            title="PMI (Pointwise Mutual Information): How well audio codes match your prompt. 50% = neutral, higher = better. Only with Thinking ON."
                                             className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700/50 shadow-sm"
                                         >
-                                            <Activity size={11} /> PMI {parseFloat(pmiMatch[1]).toFixed(3)}
+                                            <Activity size={11} /> PMI {pmiPct}%
                                         </span>
                                     )}
-                                    {ditLmMatch && (
+                                    {lmStars && (
                                         <span
-                                            title="DiT Alignment (LM): Cross-attention alignment between lyrics and audio from the Language Model pathway. Higher = better lyric-to-music alignment."
+                                            title="Lyric Alignment (LM): How well lyrics sync with audio via the Language Model cross-attention. Uses coverage, monotonicity and path confidence."
                                             className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/30 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-700/50 shadow-sm"
                                         >
-                                            <AudioWaveform size={11} /> LM {parseFloat(ditLmMatch[1]).toFixed(3)}
+                                            <AudioWaveform size={11} /> LM {lmStars}
                                         </span>
                                     )}
-                                    {ditDitMatch && (
+                                    {ditStars && (
                                         <span
-                                            title="DiT Alignment (DiT): Cross-attention alignment between lyrics and audio from the Diffusion Transformer. Higher = better lyric-to-music alignment."
+                                            title="Lyric Alignment (DiT): How well lyrics sync with audio via the Diffusion Transformer cross-attention. Uses coverage, monotonicity and path confidence."
                                             className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/30 dark:to-purple-900/30 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-700/50 shadow-sm"
                                         >
-                                            <Zap size={11} /> DiT {parseFloat(ditDitMatch[1]).toFixed(3)}
+                                            <Zap size={11} /> DiT {ditStars}
                                         </span>
                                     )}
                                 </div>
