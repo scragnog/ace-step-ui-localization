@@ -899,7 +899,69 @@ router.delete('/job/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
   }
 });
 
+// Cancel a single queued or running job
+router.post('/cancel/:jobId', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const jobId = req.params.jobId;
+    if (!jobId) { res.status(400).json({ error: 'Job ID is required' }); return; }
+
+    const jobResult = await pool.query(
+      `SELECT id, user_id, acestep_task_id, status FROM generation_jobs WHERE id = ?`,
+      [jobId]
+    );
+    if (jobResult.rows.length === 0) { res.status(404).json({ error: 'Job not found' }); return; }
+
+    const job = jobResult.rows[0];
+    if (job.user_id !== req.user!.id) { res.status(403).json({ error: 'Access denied' }); return; }
+
+    // Mark as failed in SQLite immediately
+    await pool.query(
+      `UPDATE generation_jobs SET status = 'failed', error = 'Cancelled by user', updated_at = datetime('now') WHERE id = ?`,
+      [jobId]
+    );
+
+    // Also tell Python to cancel it (if Python knows about this task)
+    if (job.acestep_task_id && ['queued', 'running', 'pending'].includes(job.status)) {
+      try {
+        await fetch(`${process.env.ACESTEP_API_URL || 'http://localhost:8001'}/cancel_task`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ACESTEP_API_KEY || '',
+          },
+          body: JSON.stringify({ job_id: job.acestep_task_id }),
+        });
+      } catch {
+        // Best-effort — SQLite already marked it cancelled
+      }
+    }
+
+    res.json({ success: true, jobId });
+  } catch (error) {
+    console.error('Cancel job error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Clear all stuck queued/running jobs for the current user (e.g. after a server restart)
+router.post('/cancel-all', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await pool.query(
+      `UPDATE generation_jobs
+       SET status = 'failed', error = 'Cancelled by user', updated_at = datetime('now')
+       WHERE user_id = ? AND status IN ('queued', 'running', 'pending')`,
+      [req.user!.id]
+    );
+    const count = (result as any).changes ?? 0;
+    res.json({ success: true, cancelled: count });
+  } catch (error) {
+    console.error('Cancel-all error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Audio proxy endpoint
+
 router.get('/audio', async (req, res: Response) => {
   try {
     const audioPath = req.query.path as string;

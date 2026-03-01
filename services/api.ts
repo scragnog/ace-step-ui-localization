@@ -390,6 +390,12 @@ export const generateApi = {
   deleteJob: (jobId: string, token: string): Promise<{ success: boolean }> =>
     api(`/api/generate/job/${jobId}`, { method: 'DELETE', token }),
 
+  cancelJob: (jobId: string, token: string): Promise<{ success: boolean; jobId: string }> =>
+    api(`/api/generate/cancel/${jobId}`, { method: 'POST', token }),
+
+  cancelAllJobs: (token: string): Promise<{ success: boolean; cancelled: number }> =>
+    api('/api/generate/cancel-all', { method: 'POST', token }),
+
   uploadAudio: async (file: File, token: string): Promise<{ url: string; key: string }> => {
     const formData = new FormData();
     formData.append('audio', file);

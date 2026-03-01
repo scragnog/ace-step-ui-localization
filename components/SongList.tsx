@@ -57,6 +57,9 @@ interface SongListProps {
     diffPinnedB?: Song | null;
     onPinDiffA?: (song: Song) => void;
     onPinDiffB?: (song: Song) => void;
+    // Cancel a queued/running generation
+    onCancelJob?: (song: Song) => void;
+    onCancelAll?: () => void;
 }
 
 // ... existing code ...
@@ -154,6 +157,8 @@ export const SongList: React.FC<SongListProps> = ({
     diffPinnedB,
     onPinDiffA,
     onPinDiffB,
+    onCancelJob,
+    onCancelAll,
 }) => {
     const { user } = useAuth();
     const { t } = useI18n();
@@ -393,6 +398,17 @@ export const SongList: React.FC<SongListProps> = ({
                                 </button>
                             )}
 
+                            {/* Clear stuck / generating jobs */}
+                            {onCancelAll && songs.some(s => s.isGenerating) && (
+                                <button
+                                    onClick={onCancelAll}
+                                    title="Clear all queued/running jobs"
+                                    className="border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold px-3 py-2.5 rounded-lg flex items-center gap-1.5 transition-all"
+                                >
+                                    <X size={12} /> Clear Queue
+                                </button>
+                            )}
+
                             {/* View mode toggle */}
                             <div className="flex items-center bg-zinc-100 dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden">
                                 <button
@@ -542,6 +558,8 @@ export const SongList: React.FC<SongListProps> = ({
                                     isDiffPinnedB: diffPinnedB?.id === item.song.id,
                                     onPinDiffA: () => onPinDiffA?.(item.song),
                                     onPinDiffB: () => onPinDiffB?.(item.song),
+                                    // Cancel (only for generating songs in grid view)
+                                    onCancel: item.song.isGenerating && onCancelJob ? () => onCancelJob(item.song) : undefined,
                                 };
 
                                 if (viewMode === 'grid') return <SongCard {...songProps} />;

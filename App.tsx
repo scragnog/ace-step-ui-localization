@@ -1419,6 +1419,34 @@ function AppContent() {
     });
   };
 
+  const handleCancelJob = async (song: Song) => {
+    if (!token || !song.isGenerating) return;
+    // Generating placeholder IDs are 'job_<dbJobId>' — extract the DB job ID
+    const jobId = song.id.startsWith('job_') ? song.id.slice(4) : song.id;
+    try {
+      await generateApi.cancelJob(jobId, token);
+      // Remove the generating placeholder from the song list
+      setSongs(prev => prev.filter(s => s.id !== song.id));
+      showToast('Generation cancelled');
+    } catch (error) {
+      console.error('Cancel job error:', error);
+      showToast('Failed to cancel generation', 'error');
+    }
+  };
+
+  const handleCancelAll = async () => {
+    if (!token) return;
+    try {
+      const result = await generateApi.cancelAllJobs(token);
+      // Remove all generating placeholders from the song list
+      setSongs(prev => prev.filter(s => !s.isGenerating));
+      showToast(`Cleared ${result.cancelled || 0} stuck job(s)`);
+    } catch (error) {
+      console.error('Cancel all error:', error);
+      showToast('Failed to clear queue', 'error');
+    }
+  };
+
   const handleDeleteReferenceTrack = (trackId: string) => {
     if (!token) return;
 
@@ -1866,6 +1894,8 @@ function AppContent() {
                 diffPinnedB={diffPinnedB}
                 onPinDiffA={(song: Song) => setDiffPinnedA(prev => prev?.id === song.id ? null : song)}
                 onPinDiffB={(song: Song) => setDiffPinnedB(prev => prev?.id === song.id ? null : song)}
+                onCancelJob={handleCancelJob}
+                onCancelAll={handleCancelAll}
               />
             </div>
 
