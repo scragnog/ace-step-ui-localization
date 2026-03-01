@@ -116,6 +116,7 @@ interface GenerateBody {
   lmNegativePrompt?: string;
   lmBackend?: 'pt' | 'vllm';
   lmModel?: string;
+  lmRepetitionPenalty?: number;
 
   // Expert Parameters
   referenceAudioUrl?: string;
@@ -302,6 +303,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         steering_loaded: params.steeringLoaded || [],
         steering_alphas: params.steeringAlphas || {},
         get_lrc: params.getLrc || false,
+        lm_repetition_penalty: params.lmRepetitionPenalty ?? 1.0,
         // Always send LM model selection (enables hot-switching regardless of thinking mode)
         lm_model_path: params.lmModel || undefined,
         lm_backend: params.lmBackend || 'pt',

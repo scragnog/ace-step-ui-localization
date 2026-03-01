@@ -207,6 +207,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [lmCfgScale, setLmCfgScale] = usePersistedState('ace-lmCfgScale', 2.2);
   const [lmTopK, setLmTopK] = usePersistedState('ace-lmTopK', 0);
   const [lmTopP, setLmTopP] = usePersistedState('ace-lmTopP', 0.92);
+  const [lmRepetitionPenalty, setLmRepetitionPenalty] = usePersistedState('ace-lmRepetitionPenalty', 1.0);
   const [lmNegativePrompt, setLmNegativePrompt] = usePersistedState('ace-lmNegativePrompt', 'NO USER INPUT');
 
   // Expert Parameters — session-specific audio state (NOT persisted)
@@ -1792,6 +1793,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           lmCfgScale,
           lmTopK,
           lmTopP,
+          lmRepetitionPenalty,
           lmNegativePrompt,
           steeringEnabled,
           steeringLoaded,
@@ -2512,6 +2514,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onLmTopKChange={setLmTopK}
           lmTopP={lmTopP}
           onLmTopPChange={setLmTopP}
+          lmRepetitionPenalty={lmRepetitionPenalty}
+          onLmRepetitionPenaltyChange={setLmRepetitionPenalty}
           lmNegativePrompt={lmNegativePrompt}
           onLmNegativePromptChange={setLmNegativePrompt}
           allowLmBatch={allowLmBatch}

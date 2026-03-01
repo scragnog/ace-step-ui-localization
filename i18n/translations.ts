@@ -295,6 +295,9 @@ export const translations = {
         useWhenCfgScaleGreater: 'Use when LM CFG Scale > 1.0',
         lmTopK: 'LM Top-K',
         lmTopP: 'LM Top-P',
+        lmRepetitionPenalty: 'Melodic Variation',
+        lmRepetitionPenaltyHelp: 'Reduces repetitive audio patterns. Higher = more melodic variation. 1.0 = off.',
+        lmRepetitionPenaltyTooltip: 'Applies repetition penalty to audio code tokens during 5Hz LM generation. Penalises repeated patterns, encouraging more varied and interesting vocal melodies.',
 
         // Guidance section
         guidance: 'GUIDANCE',
@@ -1234,6 +1237,9 @@ export const translations = {
         useWhenCfgScaleGreater: '当 LM CFG 强度 > 1.0 时使用',
         lmTopK: 'LM Top-K',
         lmTopP: 'LM Top-P',
+        lmRepetitionPenalty: '旋律变化',
+        lmRepetitionPenaltyHelp: '减少重复的音频模式。越高 = 旋律变化越多。1.0 = 关闭。',
+        lmRepetitionPenaltyTooltip: '在5Hz LM生成过程中对音频码令牌应用重复惩罚，鼓励更丰富的旋律变化。',
 
         // Guidance section
         guidance: '引导控制(guidance)',
@@ -2129,6 +2135,9 @@ export const translations = {
         useWhenCfgScaleGreater: 'LM CFGスケール > 1.0の場合に使用',
         lmTopK: 'LM Top-K',
         lmTopP: 'LM Top-P',
+        lmRepetitionPenalty: 'メロディ変化',
+        lmRepetitionPenaltyHelp: '繰り返しの少ない音楽パターンを促します。高いほどメロディの変化が増えます。1.0 = オフ。',
+        lmRepetitionPenaltyTooltip: '5Hz LM生成中に音声コードトークンに繰り返しペナルティを適用し、より変化に富んだメロディを促します。',
 
         // Guidance section
         guidance: 'ガイダンス',
@@ -3042,6 +3051,9 @@ export const translations = {
         useWhenCfgScaleGreater: 'LM CFG 스케일 > 1.0일 때 사용',
         lmTopK: 'LM Top-K',
         lmTopP: 'LM Top-P',
+        lmRepetitionPenalty: '멜로디 변화',
+        lmRepetitionPenaltyHelp: '반복적인 오디오 패턴을 줄입니다. 높을수록 멜로디 변화가 많아집니다. 1.0 = 꺼짐.',
+        lmRepetitionPenaltyTooltip: '5Hz LM 생성 중 오디오 코드 토큰에 반복 패널티를 적용하여 더 다양한 멜로디를 생성합니다.',
 
         // Guidance section
         guidance: '가이던스',
