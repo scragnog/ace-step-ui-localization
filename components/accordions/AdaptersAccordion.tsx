@@ -57,6 +57,8 @@ interface AdaptersAccordionProps {
     onSlotScaleChange: (slotNum: number, scale: number) => void;
     onSlotGroupScaleChange: (slotNum: number, group: string, scale: number) => void;
     onSlotLayerScaleChange?: (slotNum: number, layer: number, scale: number) => void;
+    temporalScheduleActive?: boolean;
+    onTemporalSchedulePreset?: (preset: 'switch' | 'verse-chorus' | null) => void;
 }
 
 export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
@@ -87,6 +89,8 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
     onSlotScaleChange,
     onSlotGroupScaleChange,
     onSlotLayerScaleChange,
+    temporalScheduleActive,
+    onTemporalSchedulePreset,
 }) => {
     const { t } = useI18n();
     const { token } = useAuth();
@@ -518,6 +522,50 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                             )}
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* Temporal Schedule Section — only when 2+ adapters loaded */}
+                            {adapterSlots.length >= 2 && (
+                                <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-white/5">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Temporal Schedule</span>
+                                            {temporalScheduleActive && (
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 animate-pulse">
+                                                    ACTIVE
+                                                </span>
+                                            )}
+                                        </div>
+                                        {temporalScheduleActive && (
+                                            <button
+                                                onClick={() => onTemporalSchedulePreset?.(null)}
+                                                className="text-[10px] text-red-500 hover:text-red-400 transition-colors"
+                                            >
+                                                Clear
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-tight">
+                                        Switch between adapters during generation. The first two loaded adapters will be used as A and B.
+                                    </p>
+                                    <div className="flex gap-1.5">
+                                        <button
+                                            onClick={() => onTemporalSchedulePreset?.('switch')}
+                                            className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${temporalScheduleActive
+                                                    ? 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
+                                                    : 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
+                                                }`}
+                                        >
+                                            🔀 A→B Switch
+                                        </button>
+                                        <button
+                                            onClick={() => onTemporalSchedulePreset?.('verse-chorus')}
+                                            className="flex-1 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10"
+                                        >
+                                            🎵 Verse/Chorus
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 

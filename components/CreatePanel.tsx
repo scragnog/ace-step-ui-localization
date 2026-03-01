@@ -748,6 +748,48 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
+  const [temporalScheduleActive, setTemporalScheduleActive] = useState(false);
+
+  const handleTemporalSchedulePreset = async (preset: 'switch' | 'verse-chorus' | null) => {
+    if (!token) return;
+    try {
+      if (preset === null) {
+        await generateApi.setTemporalSchedule({ clear: true }, token);
+        setTemporalScheduleActive(false);
+        return;
+      }
+      // Use first two loaded adapter slots
+      const slotA = adapterSlots[0]?.slot;
+      const slotB = adapterSlots[1]?.slot;
+      if (slotA === undefined || slotB === undefined) return;
+
+      let slot_segments: Record<number, Array<{ start: number; end: number; scale?: number; fade_in?: number; fade_out?: number }>>;
+
+      if (preset === 'switch') {
+        // A plays 0-55%, B plays 45-100%, crossfade 45-55%
+        slot_segments = {
+          [slotA]: [{ start: 0.0, end: 0.55, scale: 1.0, fade_out: 0.1 }],
+          [slotB]: [{ start: 0.45, end: 1.0, scale: 1.0, fade_in: 0.1 }],
+        };
+      } else {
+        // verse-chorus: A=0-30%, B=25-70%, A=65-100% with crossfades
+        slot_segments = {
+          [slotA]: [
+            { start: 0.0, end: 0.30, scale: 1.0, fade_out: 0.05 },
+            { start: 0.65, end: 1.0, scale: 1.0, fade_in: 0.05 },
+          ],
+          [slotB]: [
+            { start: 0.25, end: 0.70, scale: 1.0, fade_in: 0.05, fade_out: 0.05 },
+          ],
+        };
+      }
+      await generateApi.setTemporalSchedule({ slot_segments }, token);
+      setTemporalScheduleActive(true);
+    } catch (err) {
+      console.error('Failed to set temporal schedule:', err);
+    }
+  };
+
   // Reuse Effect - must be after all state declarations
   useEffect(() => {
     if (initialData) {
@@ -2348,6 +2390,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onSlotScaleChange={handleSlotScaleChange}
           onSlotGroupScaleChange={handleSlotGroupScaleChange}
           onSlotLayerScaleChange={handleSlotLayerScaleChange}
+          temporalScheduleActive={temporalScheduleActive}
+          onTemporalSchedulePreset={handleTemporalSchedulePreset}
         />
 
         {/* ACTIVATION STEERING */}
