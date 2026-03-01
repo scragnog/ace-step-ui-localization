@@ -558,7 +558,7 @@ export const SongList: React.FC<SongListProps> = ({
                                     isDiffPinnedB: diffPinnedB?.id === item.song.id,
                                     onPinDiffA: () => onPinDiffA?.(item.song),
                                     onPinDiffB: () => onPinDiffB?.(item.song),
-                                    // Cancel (only for generating songs in grid view)
+                                    // Cancel generating songs
                                     onCancel: item.song.isGenerating && onCancelJob ? () => onCancelJob(item.song) : undefined,
                                 };
 
@@ -725,6 +725,7 @@ interface SongItemProps {
     onSetAsTrackB?: () => void;
     isTrackA?: boolean;
     isTrackB?: boolean;
+    onCancel?: () => void;
 }
 
 const SongItem: React.FC<SongItemProps> = ({
@@ -753,7 +754,8 @@ const SongItem: React.FC<SongItemProps> = ({
     onSetAsTrackA,
     onSetAsTrackB,
     isTrackA,
-    isTrackB
+    isTrackB,
+    onCancel
 }) => {
     const { token } = useAuth();
     const { t } = useI18n();
@@ -982,6 +984,15 @@ const SongItem: React.FC<SongItemProps> = ({
                                         </span>
                                     )}
                                 </div>
+                                {onCancel && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); onCancel(); }}
+                                        className="text-[10px] font-medium text-red-400 hover:text-red-500 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

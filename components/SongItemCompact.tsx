@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Song } from '../types';
-import { Play, Pause, ThumbsUp, MoreHorizontal, Lock, Clock } from 'lucide-react';
+import { Play, Pause, ThumbsUp, MoreHorizontal, Lock, Clock, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
@@ -44,6 +44,7 @@ export interface SongItemCompactProps {
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDownloadFormat?: () => void;
+    onCancel?: () => void;
 }
 
 export const SongItemCompact: React.FC<SongItemCompactProps> = ({
@@ -65,7 +66,8 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
     onDelete,
     onUseAsReference,
     onCoverSong,
-    onDownloadFormat
+    onDownloadFormat,
+    onCancel
 }) => {
     const { t } = useI18n();
     const [showDropdown, setShowDropdown] = useState(false);
@@ -189,6 +191,18 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
                 <span className="text-[10px] text-zinc-400 dark:text-zinc-600 flex-shrink-0 w-12 text-right hidden lg:block">
                     {formatDate()}
                 </span>
+
+                {/* Stop button for generating songs */}
+                {song.isGenerating && onCancel && (
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onCancel(); }}
+                        title="Cancel generation"
+                        className="flex-shrink-0 p-1 rounded text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                        <X size={14} />
+                    </button>
+                )}
 
                 {/* Dropdown menu */}
                 {!song.isGenerating && (
