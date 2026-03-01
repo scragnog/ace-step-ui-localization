@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Song } from '../types';
-import { Play, Pause, ThumbsUp, MoreHorizontal, Lock, Clock } from 'lucide-react';
+import { Play, Pause, ThumbsUp, MoreHorizontal, Lock, Clock, FlaskConical } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
@@ -45,6 +45,12 @@ export interface SongCardProps {
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
     onDownloadFormat?: () => void;
+    // Ablation diff pins
+    devMode?: boolean;
+    isDiffPinnedA?: boolean;
+    isDiffPinnedB?: boolean;
+    onPinDiffA?: () => void;
+    onPinDiffB?: () => void;
 }
 
 export const SongCard: React.FC<SongCardProps> = ({
@@ -69,7 +75,12 @@ export const SongCard: React.FC<SongCardProps> = ({
     onSongUpdate,
     onUseAsReference,
     onCoverSong,
-    onDownloadFormat
+    onDownloadFormat,
+    devMode,
+    isDiffPinnedA,
+    isDiffPinnedB,
+    onPinDiffA,
+    onPinDiffB,
 }) => {
     const { token } = useAuth();
     const { t } = useI18n();
@@ -216,6 +227,32 @@ export const SongCard: React.FC<SongCardProps> = ({
                         <span className="absolute bottom-2 right-2 text-[10px] font-mono text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded z-10">
                             {song.duration}
                         </span>
+                    )}
+
+                    {/* Ablation Diff Pin buttons — visible in Dev Mode when song has audio */}
+                    {devMode && !song.isGenerating && song.audioUrl && (
+                        <div className="absolute bottom-2 left-2 flex gap-1 z-10">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onPinDiffA?.(); }}
+                                title={isDiffPinnedA ? 'Unpin from Diff A' : 'Pin as Diff A (reference)'}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${isDiffPinnedA
+                                        ? 'bg-blue-500 text-white border-blue-600 shadow-sm'
+                                        : 'bg-black/60 text-blue-300 border-blue-400/40 hover:bg-blue-500/70 hover:text-white backdrop-blur-sm'
+                                    }`}
+                            >
+                                A
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onPinDiffB?.(); }}
+                                title={isDiffPinnedB ? 'Unpin from Diff B' : 'Pin as Diff B (ablated)'}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${isDiffPinnedB
+                                        ? 'bg-orange-500 text-white border-orange-600 shadow-sm'
+                                        : 'bg-black/60 text-orange-300 border-orange-400/40 hover:bg-orange-500/70 hover:text-white backdrop-blur-sm'
+                                    }`}
+                            >
+                                B
+                            </button>
+                        </div>
                     )}
                 </div>
 

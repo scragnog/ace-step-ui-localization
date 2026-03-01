@@ -51,6 +51,12 @@ interface SongListProps {
     onABClear?: () => void;
     abActive?: 'A' | 'B' | null;
     onABToggle?: () => void;
+    // Ablation diff pins
+    devMode?: boolean;
+    diffPinnedA?: Song | null;
+    diffPinnedB?: Song | null;
+    onPinDiffA?: (song: Song) => void;
+    onPinDiffB?: (song: Song) => void;
 }
 
 // ... existing code ...
@@ -142,7 +148,12 @@ export const SongList: React.FC<SongListProps> = ({
     onABPlay,
     onABClear,
     abActive,
-    onABToggle
+    onABToggle,
+    devMode,
+    diffPinnedA,
+    diffPinnedB,
+    onPinDiffA,
+    onPinDiffB,
 }) => {
     const { user } = useAuth();
     const { t } = useI18n();
@@ -525,6 +536,12 @@ export const SongList: React.FC<SongListProps> = ({
                                     onSetAsTrackB: () => onSetAsTrackB?.(item.song),
                                     isTrackA: abTrackA?.id === item.song.id,
                                     isTrackB: abTrackB?.id === item.song.id,
+                                    // Ablation diff pins
+                                    devMode,
+                                    isDiffPinnedA: diffPinnedA?.id === item.song.id,
+                                    isDiffPinnedB: diffPinnedB?.id === item.song.id,
+                                    onPinDiffA: () => onPinDiffA?.(item.song),
+                                    onPinDiffB: () => onPinDiffB?.(item.song),
                                 };
 
                                 if (viewMode === 'grid') return <SongCard {...songProps} />;

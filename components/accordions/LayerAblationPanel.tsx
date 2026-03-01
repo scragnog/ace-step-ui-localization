@@ -1,13 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, FlaskConical } from 'lucide-react';
+import { ChevronDown, FlaskConical, Play, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { generateApi } from '../../services/api';
+import { Song } from '../../types';
 
 interface LayerAblationPanelProps {
     customMode: boolean;
     hasLoadedAdapters: boolean;
     onLayerScaleChange?: (slot: number, layer: number, scale: number) => void;
     onBulkLayerScalesChange?: (slot: number, layerScales: Record<number, number>) => void;
+    // Ablation sweep
+    onRunSweep?: () => void;
+    isSweepRunning?: boolean;
+    sweepProgress?: { current: number; total: number } | null;
+    onCancelSweep?: () => void;
+    isGenerating?: boolean;
+    // Diff pin
+    diffPinnedA?: Song | null;
+    diffPinnedB?: Song | null;
+    onClearDiffA?: () => void;
+    onClearDiffB?: () => void;
 }
 
 export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
@@ -15,6 +27,15 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
     hasLoadedAdapters,
     onLayerScaleChange,
     onBulkLayerScalesChange,
+    onRunSweep,
+    isSweepRunning,
+    sweepProgress,
+    onCancelSweep,
+    isGenerating,
+    diffPinnedA,
+    diffPinnedB,
+    onClearDiffA,
+    onClearDiffB,
 }) => {
     const { token } = useAuth();
     const [devMode, setDevMode] = useState(() => {
@@ -23,6 +44,7 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
     const [isOpen, setIsOpen] = useState(false);
     const [selectedLayers, setSelectedLayers] = useState<Set<number>>(new Set());
     const [diffAmplify, setDiffAmplify] = useState(3.0);
+    // Manual path fields — used as fallback when no song is pinned
     const [referencePath, setReferencePath] = useState('');
     const [ablatedPath, setAblatedPath] = useState('');
     const [diffResult, setDiffResult] = useState<{
@@ -50,15 +72,19 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
     const selectAll = () => setSelectedLayers(new Set(Array.from({ length: 24 }, (_, i) => i)));
     const selectNone = () => setSelectedLayers(new Set());
 
+    // Resolve paths: prefer pinned song's audioUrl, fall back to manual input
+    const resolvedReferencePath = diffPinnedA?.audioUrl ?? referencePath;
+    const resolvedAblatedPath = diffPinnedB?.audioUrl ?? ablatedPath;
+
     const handleComputeDiff = async () => {
-        if (!token || !referencePath || !ablatedPath) return;
+        if (!token || !resolvedReferencePath || !resolvedAblatedPath) return;
         setIsDiffing(true);
         setDiffError(null);
         setDiffResult(null);
         try {
             const result = await generateApi.computeAudioDiff({
-                reference_path: referencePath,
-                ablated_path: ablatedPath,
+                reference_path: resolvedReferencePath,
+                ablated_path: resolvedAblatedPath,
                 amplify: diffAmplify,
             }, token);
             setDiffResult(result);
@@ -69,19 +95,12 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
         }
     };
 
-    const handleSetLayerScale = async (layer: number, scale: number) => {
-        if (onLayerScaleChange) {
-            onLayerScaleChange(0, layer, scale);
-        }
-    };
-
     const handleZeroSelectedLayers = async () => {
         if (!token || selectedLayers.size === 0) return;
         const layerScales: Record<number, number> = {};
         for (const layer of selectedLayers) {
             layerScales[layer] = 0.0;
         }
-        // Batch: single API call + single state update
         if (onBulkLayerScalesChange) {
             onBulkLayerScalesChange(0, layerScales);
         } else {
@@ -110,6 +129,8 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
         }
     };
 
+    const sweepDisabled = !hasLoadedAdapters || !!isGenerating || !!isSweepRunning;
+
     return (
         <div>
             {/* Dev Mode Toggle */}
@@ -135,6 +156,11 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
                         <div className="flex items-center gap-2">
                             <FlaskConical size={16} className="text-purple-500" />
                             <span>Layer Ablation Lab</span>
+                            {isSweepRunning && sweepProgress && (
+                                <span className="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded-full font-semibold">
+                                    {sweepProgress.current}/{sweepProgress.total}
+                                </span>
+                            )}
                         </div>
                         <ChevronDown size={18} className={`text-purple-500 chevron-icon ${isOpen ? 'rotated' : ''}`} />
                     </button>
@@ -194,27 +220,97 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
                                         </button>
                                     </div>
 
+                                    {/* Ablation Sweep */}
+                                    <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-white/5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Ablation Sweep</span>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-tight">
+                                            Auto-generates 24 tracks, zeroing one layer at a time. Uses the current prompt + fixed seed. Tracks are named <em>Title - layer00</em> through <em>layer23</em>.
+                                        </p>
+
+                                        {isSweepRunning && sweepProgress ? (
+                                            <div className="space-y-1.5">
+                                                {/* Progress bar */}
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] text-purple-500 font-semibold">
+                                                        Layer {sweepProgress.current} / {sweepProgress.total}
+                                                    </span>
+                                                    <span className="text-[10px] text-zinc-400">
+                                                        {Math.round((sweepProgress.current / sweepProgress.total) * 100)}%
+                                                    </span>
+                                                </div>
+                                                <div className="h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
+                                                        style={{ width: `${(sweepProgress.current / sweepProgress.total) * 100}%` }}
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={onCancelSweep}
+                                                    className="w-full px-2 py-1.5 rounded-lg text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/10 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/30 transition-colors"
+                                                >
+                                                    Cancel (finishes current gen)
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={onRunSweep}
+                                                disabled={sweepDisabled}
+                                                title={!hasLoadedAdapters ? 'Load an adapter first' : isGenerating ? 'Wait for current generation to finish' : ''}
+                                                className="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <Play size={12} fill="currentColor" />
+                                                Run Ablation Sweep (24 layers)
+                                            </button>
+                                        )}
+                                    </div>
+
                                     {/* Audio Diff Section */}
                                     <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-white/5">
                                         <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Audio Diff</span>
                                         <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-tight">
-                                            Paste paths to a reference track and an ablated track. The diff isolates what changed.
+                                            Pin tracks using [A] / [B] buttons on song cards, or paste paths manually.
                                         </p>
                                         <div className="space-y-1.5">
-                                            <input
-                                                type="text"
-                                                value={referencePath}
-                                                onChange={(e) => setReferencePath(e.target.value)}
-                                                placeholder="Reference audio path (full adapter)"
-                                                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-purple-500"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={ablatedPath}
-                                                onChange={(e) => setAblatedPath(e.target.value)}
-                                                placeholder="Ablated audio path (layer zeroed)"
-                                                className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-purple-500"
-                                            />
+                                            {/* Reference (A) */}
+                                            {diffPinnedA ? (
+                                                <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-lg px-2.5 py-1.5">
+                                                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex-shrink-0">A</span>
+                                                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300 truncate flex-1">{diffPinnedA.title || 'Untitled'}</span>
+                                                    <button onClick={onClearDiffA} className="text-zinc-400 hover:text-red-500 flex-shrink-0 transition-colors">
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    value={referencePath}
+                                                    onChange={(e) => setReferencePath(e.target.value)}
+                                                    placeholder="[A] Reference audio path (or pin from song list)"
+                                                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                                                />
+                                            )}
+
+                                            {/* Ablated (B) */}
+                                            {diffPinnedB ? (
+                                                <div className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 rounded-lg px-2.5 py-1.5">
+                                                    <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 flex-shrink-0">B</span>
+                                                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300 truncate flex-1">{diffPinnedB.title || 'Untitled'}</span>
+                                                    <button onClick={onClearDiffB} className="text-zinc-400 hover:text-red-500 flex-shrink-0 transition-colors">
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    value={ablatedPath}
+                                                    onChange={(e) => setAblatedPath(e.target.value)}
+                                                    placeholder="[B] Ablated audio path (or pin from song list)"
+                                                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                                                />
+                                            )}
+
                                             <div className="flex items-center gap-2">
                                                 <label className="text-[10px] text-zinc-500 whitespace-nowrap">Amplify:</label>
                                                 <input
@@ -230,11 +326,11 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
                                             </div>
                                             <button
                                                 onClick={handleComputeDiff}
-                                                disabled={isDiffing || !referencePath || !ablatedPath}
+                                                disabled={isDiffing || !resolvedReferencePath || !resolvedAblatedPath}
                                                 className="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:brightness-110 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
                                             >
                                                 {isDiffing ? (
-                                                    <><span className="inline-block w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin" /> Computing...</>
+                                                    <><span className="inline-block w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />Computing...</>
                                                 ) : (
                                                     <>🔬 Compute Diff</>
                                                 )}
@@ -253,7 +349,7 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
                                             <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-3 space-y-2 border border-purple-200 dark:border-purple-800/30">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Diff Result</span>
-                                                    <span className="text-[10px] text-zinc-500">{diffResult.duration_match ? '✓ Length match' : '⚠ Length mismatch'}</span>
+                                                    <span className="text-[10px] text-zinc-500">{(diffResult as any).duration_match ? '✓ Length match' : '⚠ Length mismatch'}</span>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-2 text-[10px]">
                                                     <div>

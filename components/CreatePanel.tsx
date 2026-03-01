@@ -45,6 +45,11 @@ interface CreatePanelProps {
   createdSongs?: Song[];
   pendingAudioSelection?: { target: 'reference' | 'source'; url: string; title?: string } | null;
   onAudioSelectionApplied?: () => void;
+  // Ablation diff pins (lifted from App.tsx)
+  diffPinnedA?: Song | null;
+  diffPinnedB?: Song | null;
+  onClearDiffA?: () => void;
+  onClearDiffB?: () => void;
 }
 
 export const KEY_SIGNATURES = [
@@ -132,6 +137,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   createdSongs = [],
   pendingAudioSelection,
   onAudioSelectionApplied,
+  diffPinnedA,
+  diffPinnedB,
+  onClearDiffA,
+  onClearDiffB,
 }) => {
   const { isAuthenticated, token, user } = useAuth();
   const { t } = useI18n();
@@ -790,6 +799,140 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   };
 
   const [temporalScheduleActive, setTemporalScheduleActive] = useState(false);
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Ablation Sweep state
+  // ────────────────────────────────────────────────────────────────────────────
+  const [sweepRunning, setSweepRunning] = useState(false);
+  const [sweepProgress, setSweepProgress] = useState<{ current: number; total: number } | null>(null);
+  const sweepCancelledRef = useRef(false);
+  // Resolver that the sweep loop waits on; resolved when isGenerating → false
+  const generationDoneResolverRef = useRef<(() => void) | null>(null);
+  const sweepIsGeneratingRef = useRef(isGenerating);
+
+  // Keep the ref in sync with the prop
+  useEffect(() => {
+    sweepIsGeneratingRef.current = isGenerating;
+  }, [isGenerating]);
+
+  // When sweep is active and isGenerating transitions true→false, resolve the waiter
+  const prevSweepGeneratingRef = useRef(false);
+  useEffect(() => {
+    if (!sweepRunning) return;
+    if (prevSweepGeneratingRef.current && !isGenerating) {
+      // Generation just completed
+      generationDoneResolverRef.current?.();
+      generationDoneResolverRef.current = null;
+    }
+    prevSweepGeneratingRef.current = isGenerating;
+  }, [isGenerating, sweepRunning]);
+
+  const waitForGenerationDone = (): Promise<void> => {
+    return new Promise((resolve) => {
+      // If not currently generating, resolve immediately
+      if (!sweepIsGeneratingRef.current) {
+        resolve();
+        return;
+      }
+      generationDoneResolverRef.current = resolve;
+    });
+  };
+
+  const handleStartSweep = async () => {
+    if (!adapterSlots.length) return;
+    const slot = adapterSlots[0].slot;
+    const totalLayers = 24;
+    sweepCancelledRef.current = false;
+    setSweepRunning(true);
+    setSweepProgress({ current: 0, total: totalLayers });
+
+    for (let layer = 0; layer < totalLayers; layer++) {
+      if (sweepCancelledRef.current) break;
+
+      // Build layer scales: all 1.0 except target layer = 0.0
+      const layerScales: Record<number, number> = {};
+      for (let i = 0; i < totalLayers; i++) {
+        layerScales[i] = i === layer ? 0.0 : 1.0;
+      }
+
+      try {
+        await handleBulkLayerScalesChange(slot, layerScales);
+      } catch (err) {
+        console.error(`[Sweep] Failed to set layer scales for layer ${layer}:`, err);
+      }
+
+      if (sweepCancelledRef.current) break;
+
+      // Build title: pad layer index to 2 digits
+      const layerSuffix = ` - layer${String(layer).padStart(2, '0')}`;
+      const sweepTitle = (title || 'Ablation').trim() + layerSuffix;
+
+      // Trigger generation (uses current form state, but overrides title)
+      const styleWithGender = (() => {
+        if (!vocalGender) return style;
+        const genderHint = vocalGender === 'male' ? t('maleVocals') : t('femaleVocals');
+        const trimmed = style.trim();
+        return trimmed ? `${trimmed}\n${genderHint}` : genderHint;
+      })();
+
+      onGenerate({
+        customMode,
+        prompt: lyrics,
+        lyrics,
+        style: styleWithGender,
+        title: sweepTitle,
+        ditModel: selectedModel,
+        instrumental,
+        vocalLanguage,
+        bpm,
+        keyScale,
+        timeSignature,
+        duration,
+        inferenceSteps,
+        guidanceScale,
+        batchSize: 1,
+        randomSeed: false, // Fixed seed so all 24 are comparable
+        seed,
+        thinking,
+        audioFormat,
+        inferMethod,
+        lmBackend,
+        lmModel,
+        shift,
+        lmTemperature,
+        lmCfgScale,
+        lmTopK,
+        lmTopP,
+        lmNegativePrompt,
+        steeringEnabled,
+        steeringLoaded,
+        steeringAlphas,
+        referenceAudioUrl: (useReferenceAudio && referenceAudioUrl.trim()) || undefined,
+        sourceAudioUrl: sourceAudioUrl.trim() || undefined,
+        taskType: 'text2music',
+        loraLoaded,
+        advancedAdapters,
+        adapterSlots: adapterSlots.map(s => ({ ...s })),
+      });
+
+      // Wait for this generation to complete before proceeding
+      await waitForGenerationDone();
+
+      setSweepProgress({ current: layer + 1, total: totalLayers });
+    }
+
+    // Restore all layers to 1.0 after sweep
+    const resetScales: Record<number, number> = {};
+    for (let i = 0; i < 24; i++) resetScales[i] = 1.0;
+    await handleBulkLayerScalesChange(slot, resetScales).catch(() => undefined);
+
+    setSweepRunning(false);
+    setSweepProgress(null);
+  };
+
+  const handleCancelSweep = () => {
+    sweepCancelledRef.current = true;
+  };
 
   const handleTemporalSchedulePreset = async (preset: 'switch' | 'verse-chorus' | null) => {
     if (!token) return;
@@ -2441,6 +2584,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           hasLoadedAdapters={advancedAdapters && adapterSlots.length > 0}
           onLayerScaleChange={handleSlotLayerScaleChange}
           onBulkLayerScalesChange={handleBulkLayerScalesChange}
+          onRunSweep={handleStartSweep}
+          isSweepRunning={sweepRunning}
+          sweepProgress={sweepProgress}
+          onCancelSweep={handleCancelSweep}
+          isGenerating={isGenerating}
+          diffPinnedA={diffPinnedA}
+          diffPinnedB={diffPinnedB}
+          onClearDiffA={onClearDiffA}
+          onClearDiffB={onClearDiffB}
         />
 
         {/* ACTIVATION STEERING */}

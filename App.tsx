@@ -204,6 +204,21 @@ function AppContent() {
   const [showABCompare, setShowABCompare] = useState(false);
   const abAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Ablation diff pin state — shared between CreatePanel (labels in ablation panel)
+  // and SongList (highlights [A]/[B] on cards). Pinning A twice = toggle off.
+  const [diffPinnedA, setDiffPinnedA] = useState<Song | null>(null);
+  const [diffPinnedB, setDiffPinnedB] = useState<Song | null>(null);
+
+  // Dev mode (synced from localStorage so SongCard buttons light up correctly)
+  const [devMode, setDevMode] = useState(() => {
+    try { return localStorage.getItem('ace_dev_mode') === 'true'; } catch { return false; }
+  });
+  useEffect(() => {
+    const check = () => setDevMode(localStorage.getItem('ace_dev_mode') === 'true');
+    const id = setInterval(check, 500);
+    return () => clearInterval(id);
+  }, []);
+
   // A/B Comparison Handlers
   const handleABPlay = useCallback(() => {
     if (!abTrackA || !abTrackB) return;
@@ -1747,6 +1762,10 @@ function AppContent() {
                 createdSongs={songs}
                 pendingAudioSelection={pendingAudioSelection}
                 onAudioSelectionApplied={() => setPendingAudioSelection(null)}
+                diffPinnedA={diffPinnedA}
+                diffPinnedB={diffPinnedB}
+                onClearDiffA={() => setDiffPinnedA(null)}
+                onClearDiffB={() => setDiffPinnedB(null)}
               />
             </div>
             {/* Left resize handle — outside scrollable area so it doesn't overlap the scrollbar */}
@@ -1841,6 +1860,12 @@ function AppContent() {
                 onABPlay={handleABPlay}
                 onABClear={handleABClear}
                 onABToggle={handleABToggle}
+                // Ablation diff pins
+                devMode={devMode}
+                diffPinnedA={diffPinnedA}
+                diffPinnedB={diffPinnedB}
+                onPinDiffA={(song: Song) => setDiffPinnedA(prev => prev?.id === song.id ? null : song)}
+                onPinDiffB={(song: Song) => setDiffPinnedB(prev => prev?.id === song.id ? null : song)}
               />
             </div>
 
