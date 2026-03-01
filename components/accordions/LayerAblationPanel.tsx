@@ -7,12 +7,14 @@ interface LayerAblationPanelProps {
     customMode: boolean;
     hasLoadedAdapters: boolean;
     onLayerScaleChange?: (slot: number, layer: number, scale: number) => void;
+    onBulkLayerScalesChange?: (slot: number, layerScales: Record<number, number>) => void;
 }
 
 export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
     customMode,
     hasLoadedAdapters,
     onLayerScaleChange,
+    onBulkLayerScalesChange,
 }) => {
     const { token } = useAuth();
     const [devMode, setDevMode] = useState(() => {
@@ -69,29 +71,42 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
 
     const handleSetLayerScale = async (layer: number, scale: number) => {
         if (onLayerScaleChange) {
-            // Use parent callback to update both React state and API
             onLayerScaleChange(0, layer, scale);
-        } else if (token) {
-            // Fallback: direct API call
-            try {
-                await generateApi.setSlotLayerScale({ slot: 0, layer, scale }, token);
-            } catch (err) {
-                console.error('Failed to set layer scale:', err);
-            }
         }
     };
 
     const handleZeroSelectedLayers = async () => {
-        if (!token) return;
+        if (!token || selectedLayers.size === 0) return;
+        const layerScales: Record<number, number> = {};
         for (const layer of selectedLayers) {
-            await handleSetLayerScale(layer, 0.0);
+            layerScales[layer] = 0.0;
+        }
+        // Batch: single API call + single state update
+        if (onBulkLayerScalesChange) {
+            onBulkLayerScalesChange(0, layerScales);
+        } else {
+            try {
+                await generateApi.setSlotLayerScales({ slot: 0, layer_scales: layerScales }, token);
+            } catch (err) {
+                console.error('Failed to set layer scales:', err);
+            }
         }
     };
 
     const handleResetAllLayers = async () => {
         if (!token) return;
+        const layerScales: Record<number, number> = {};
         for (let i = 0; i < 24; i++) {
-            await handleSetLayerScale(i, 1.0);
+            layerScales[i] = 1.0;
+        }
+        if (onBulkLayerScalesChange) {
+            onBulkLayerScalesChange(0, layerScales);
+        } else {
+            try {
+                await generateApi.setSlotLayerScales({ slot: 0, layer_scales: layerScales }, token);
+            } catch (err) {
+                console.error('Failed to set layer scales:', err);
+            }
         }
     };
 

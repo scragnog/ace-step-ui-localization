@@ -749,6 +749,29 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
+  const handleBulkLayerScalesChange = async (slot: number, layerScales: Record<number, number>) => {
+    if (!token) return;
+    // Single state update for all layers
+    setAdapterSlots(prev => prev.map(s => {
+      if (s.slot !== slot) return s;
+      const newLayerScales = { ...(s.layer_scales || {}) };
+      for (const [layer, scale] of Object.entries(layerScales)) {
+        if (Math.abs(scale - 1.0) < 0.01) {
+          delete newLayerScales[Number(layer)];
+        } else {
+          newLayerScales[Number(layer)] = scale;
+        }
+      }
+      return { ...s, layer_scales: newLayerScales };
+    }));
+    // Single API call
+    try {
+      await generateApi.setSlotLayerScales({ slot, layer_scales: layerScales }, token);
+    } catch (err) {
+      console.error('Failed to set slot layer scales:', err);
+    }
+  };
+
   const [temporalScheduleActive, setTemporalScheduleActive] = useState(false);
 
   const handleTemporalSchedulePreset = async (preset: 'switch' | 'verse-chorus' | null) => {
@@ -2400,6 +2423,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           customMode={customMode}
           hasLoadedAdapters={advancedAdapters && adapterSlots.length > 0}
           onLayerScaleChange={handleSlotLayerScaleChange}
+          onBulkLayerScalesChange={handleBulkLayerScalesChange}
         />
 
         {/* ACTIVATION STEERING */}
