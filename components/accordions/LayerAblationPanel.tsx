@@ -6,11 +6,13 @@ import { generateApi } from '../../services/api';
 interface LayerAblationPanelProps {
     customMode: boolean;
     hasLoadedAdapters: boolean;
+    onLayerScaleChange?: (slot: number, layer: number, scale: number) => void;
 }
 
 export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
     customMode,
     hasLoadedAdapters,
+    onLayerScaleChange,
 }) => {
     const { token } = useAuth();
     const [devMode, setDevMode] = useState(() => {
@@ -66,12 +68,16 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
     };
 
     const handleSetLayerScale = async (layer: number, scale: number) => {
-        if (!token) return;
-        try {
-            // Use slot 0 by default for ablation
-            await generateApi.setSlotLayerScale({ slot: 0, layer, scale }, token);
-        } catch (err) {
-            console.error('Failed to set layer scale:', err);
+        if (onLayerScaleChange) {
+            // Use parent callback to update both React state and API
+            onLayerScaleChange(0, layer, scale);
+        } else if (token) {
+            // Fallback: direct API call
+            try {
+                await generateApi.setSlotLayerScale({ slot: 0, layer, scale }, token);
+            } catch (err) {
+                console.error('Failed to set layer scale:', err);
+            }
         }
     };
 
@@ -146,8 +152,8 @@ export const LayerAblationPanel: React.FC<LayerAblationPanelProps> = ({
                                                     key={i}
                                                     onClick={() => toggleLayer(i)}
                                                     className={`px-1 py-1 rounded text-[10px] font-mono font-semibold border transition-colors ${selectedLayers.has(i)
-                                                            ? 'bg-purple-500 text-white border-purple-600'
-                                                            : 'bg-zinc-100 dark:bg-black/20 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-white/10 hover:border-purple-300'
+                                                        ? 'bg-purple-500 text-white border-purple-600'
+                                                        : 'bg-zinc-100 dark:bg-black/20 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-white/10 hover:border-purple-300'
                                                         }`}
                                                 >
                                                     {i}

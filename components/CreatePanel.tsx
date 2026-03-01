@@ -2399,6 +2399,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         <LayerAblationPanel
           customMode={customMode}
           hasLoadedAdapters={advancedAdapters && adapterSlots.length > 0}
+          onLayerScaleChange={handleSlotLayerScaleChange}
         />
 
         {/* ACTIVATION STEERING */}
