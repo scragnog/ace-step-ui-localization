@@ -9,6 +9,7 @@ interface EditableSliderProps {
   onChange: (value: number) => void;
   formatDisplay?: (value: number) => string;
   helpText?: string;
+  tooltip?: string;
   title?: string;
   autoLabel?: string;
   disabled?: boolean;
@@ -24,6 +25,7 @@ export const EditableSlider: React.FC<EditableSliderProps> = ({
   onChange,
   formatDisplay,
   helpText,
+  tooltip,
   title = '',
   autoLabel = 'Auto',
   disabled = false,
@@ -68,7 +70,14 @@ export const EditableSlider: React.FC<EditableSliderProps> = ({
   return (
     <div className={`space-y-2 ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300" title={title}>{label}</label>
+        <div className="relative flex items-center group/tip">
+          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 cursor-default" title={title}>{label}</label>
+          {tooltip && (
+            <div className="absolute left-0 bottom-full mb-1.5 hidden group-hover/tip:block z-50 w-56 bg-zinc-900 dark:bg-zinc-800 text-zinc-100 text-[10px] leading-relaxed rounded-lg px-2.5 py-2 shadow-xl border border-white/10 pointer-events-none">
+              {tooltip}
+            </div>
+          )}
+        </div>
         {isEditing && !disabled ? (
           <input
             type="number"

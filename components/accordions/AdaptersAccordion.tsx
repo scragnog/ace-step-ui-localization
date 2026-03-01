@@ -461,18 +461,40 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                             {/* Per-group sliders (expandable) */}
                                             {expandedSlots.has(slot.slot) && (
                                                 <div className="space-y-1 pl-2 border-l-2 border-pink-500/20">
-                                                    {(['self_attn', 'cross_attn', 'mlp'] as const).map((group) => (
-                                                        <EditableSlider
-                                                            key={group}
-                                                            label={group === 'self_attn' ? 'Self-Attn' : group === 'cross_attn' ? 'Cross-Attn' : 'MLP'}
-                                                            value={slot.group_scales[group]}
-                                                            min={0}
-                                                            max={2}
-                                                            step={0.05}
-                                                            onChange={(v) => onSlotGroupScaleChange(slot.slot, group, v)}
-                                                            formatDisplay={(v) => v.toFixed(2)}
-                                                        />
-                                                    ))}
+                                                    {(['self_attn', 'cross_attn', 'mlp'] as const).map((group) => {
+                                                        const groupInfo = {
+                                                            self_attn: {
+                                                                label: 'Self-Attn',
+                                                                helpText: 'Controls how audio frames relate to each other over time.',
+                                                                tooltip: 'Self-Attention: each audio frame attends to all other frames in the sequence. Controls internal temporal coherence — how rhythmic patterns, melodic phrases, and structural transitions hold together over time. Reducing this loosens the temporal "glue" within the adapter\'s influence.',
+                                                            },
+                                                            cross_attn: {
+                                                                label: 'Cross-Attn',
+                                                                helpText: 'How strongly your text prompt shapes the output vs. the adapter\'s baked-in character.',
+                                                                tooltip: 'Cross-Attention: audio frames attend to the text/style conditioning — the bridge between your prompt and the output. Lowering this lets the adapter\'s baked-in character dominate over explicit prompt instructions like genre tags, mood, and lyrics.',
+                                                            },
+                                                            mlp: {
+                                                                label: 'MLP',
+                                                                helpText: 'Controls the adapter\'s stored timbre, tonal texture, and sonic character.',
+                                                                tooltip: 'Feed-Forward Network (MLP): per-frame feature transformation — the "knowledge store" of learned audio patterns. Vocal timbre, tonal texture, and specific sonic character are thought to live primarily here. Reducing MLP strips specific character while preserving rhythmic and structural patterns.',
+                                                            },
+                                                        };
+                                                        const info = groupInfo[group];
+                                                        return (
+                                                            <EditableSlider
+                                                                key={group}
+                                                                label={info.label}
+                                                                value={slot.group_scales[group]}
+                                                                min={0}
+                                                                max={2}
+                                                                step={0.05}
+                                                                onChange={(v) => onSlotGroupScaleChange(slot.slot, group, v)}
+                                                                formatDisplay={(v) => v.toFixed(2)}
+                                                                helpText={info.helpText}
+                                                                tooltip={info.tooltip}
+                                                            />
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
 
