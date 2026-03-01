@@ -66,6 +66,8 @@ interface GenerationSettingsAccordionProps {
     onLmTopKChange: (val: number) => void;
     lmTopP: number;
     onLmTopPChange: (val: number) => void;
+    lmRepetitionPenalty: number;
+    onLmRepetitionPenaltyChange: (val: number) => void;
     lmNegativePrompt: string;
     onLmNegativePromptChange: (val: string) => void;
     allowLmBatch: boolean;
@@ -309,6 +311,8 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                         onLmTopKChange={props.onLmTopKChange}
                         lmTopP={props.lmTopP}
                         onLmTopPChange={props.onLmTopPChange}
+                        lmRepetitionPenalty={props.lmRepetitionPenalty}
+                        onLmRepetitionPenaltyChange={props.onLmRepetitionPenaltyChange}
                         lmNegativePrompt={props.lmNegativePrompt}
                         onLmNegativePromptChange={props.onLmNegativePromptChange}
                         allowLmBatch={props.allowLmBatch}
