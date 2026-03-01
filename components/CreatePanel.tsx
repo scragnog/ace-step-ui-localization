@@ -548,16 +548,17 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     previousModelRef.current = selectedModel;
   }, [selectedModel, loraLoaded]);
 
-  // Auto-disable advanced guidance modes when LoRA is loaded (technical limitation)
+  // Auto-disable advanced guidance modes when basic LoRA is loaded (PEFT hook limitation).
+  // Advanced multi-adapter mode uses weight-space merging — no hook restriction — so we skip this there.
   useEffect(() => {
-    if (loraLoaded) {
+    if (loraLoaded && !advancedAdapters) {
       if (guidanceMode !== 'apg') {
         setGuidanceMode('apg');
         setUseAdg(false);
         setUsePag(false);
       }
     }
-  }, [loraLoaded]);
+  }, [loraLoaded, advancedAdapters]);
 
   // LoRA API handlers
   const handleLoraToggle = async () => {
