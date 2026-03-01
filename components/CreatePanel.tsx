@@ -733,20 +733,41 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
-  const handleSlotLayerScaleChange = async (slot: number, layer: number, scale: number) => {
+  // Debounce layer scale API calls — state updates immediately (visual),
+  // but the expensive backend merge only fires after 500ms of no changes.
+  const layerScaleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingLayerScalesRef = useRef<Record<string, { slot: number; layer: number; scale: number }>>({});
+
+  const handleSlotLayerScaleChange = (slot: number, layer: number, scale: number) => {
     if (!token) return;
+    // Immediate state update for visual feedback
     setAdapterSlots(prev => prev.map(s => {
       if (s.slot !== slot) return s;
       const newLayerScales = { ...(s.layer_scales || {}), [layer]: scale };
-      // Remove entries that are at default (1.0) to keep it clean
       if (Math.abs(scale - 1.0) < 0.01) delete newLayerScales[layer];
       return { ...s, layer_scales: newLayerScales };
     }));
-    try {
-      await generateApi.setSlotLayerScale({ slot, layer, scale }, token);
-    } catch (err) {
-      console.error('Failed to set slot layer scale:', err);
-    }
+    // Accumulate pending changes and debounce API call
+    const key = `${slot}:${layer}`;
+    pendingLayerScalesRef.current[key] = { slot, layer, scale };
+    if (layerScaleTimerRef.current) clearTimeout(layerScaleTimerRef.current);
+    layerScaleTimerRef.current = setTimeout(async () => {
+      const pending = { ...pendingLayerScalesRef.current };
+      pendingLayerScalesRef.current = {};
+      // Group by slot and send as batch
+      const bySlot: Record<number, Record<number, number>> = {};
+      for (const entry of Object.values(pending) as Array<{ slot: number; layer: number; scale: number }>) {
+        if (!bySlot[entry.slot]) bySlot[entry.slot] = {};
+        bySlot[entry.slot][entry.layer] = entry.scale;
+      }
+      for (const [s, scales] of Object.entries(bySlot)) {
+        try {
+          await generateApi.setSlotLayerScales({ slot: Number(s), layer_scales: scales }, token);
+        } catch (err) {
+          console.error('Failed to set slot layer scales:', err);
+        }
+      }
+    }, 500);
   };
 
   const handleBulkLayerScalesChange = async (slot: number, layerScales: Record<number, number>) => {
