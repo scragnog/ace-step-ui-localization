@@ -661,9 +661,11 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                         return gradients[type] || gradients.settings;
                                     };
 
-                                    // Helper to get model short name (remove 'acestep-' prefix)
+                                    // Helper to get model short name — handles both bare IDs and full filesystem paths
                                     const getModelShortName = (modelId: string): string => {
-                                        return modelId.replace(/^acestep-/, '');
+                                        // Extract just the basename (last path segment), handling / and \ separators
+                                        const base = modelId.split(/[\\/]/).filter(Boolean).pop() || modelId;
+                                        return base.replace(/^acestep-/, '');
                                     };
 
                                     if (gp.ditModel || song.ditModel) {
