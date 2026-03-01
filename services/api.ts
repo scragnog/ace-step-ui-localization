@@ -510,6 +510,42 @@ export const generateApi = {
     group_scales: { self_attn: number; cross_attn: number; mlp: number };
   }> => api('/api/lora/slot-group-scales', { method: 'POST', body: params, token }),
 
+  // Advanced adapter: per-slot layer scales (batch)
+  setSlotLayerScales: (params: {
+    slot: number;
+    layer_scales: Record<number, number>;
+  }, token: string): Promise<{
+    message: string;
+    slot: number;
+    layer_scales: Record<number, number>;
+  }> => api('/api/lora/slot-layer-scales', { method: 'POST', body: params, token }),
+
+  // Advanced adapter: single layer scale
+  setSlotLayerScale: (params: {
+    slot: number;
+    layer: number;
+    scale: number;
+  }, token: string): Promise<{
+    message: string;
+    slot: number;
+    layer: number;
+    scale: number;
+  }> => api('/api/lora/slot-layer-scale', { method: 'POST', body: params, token }),
+
+  // Advanced adapter: temporal schedule for multi-singer switching
+  setTemporalSchedule: (params: {
+    clear?: boolean;
+    slot_segments?: Record<number, Array<{
+      start: number;
+      end: number;
+      scale?: number;
+      fade_in?: number;
+      fade_out?: number;
+    }>>;
+  }, token: string): Promise<{
+    message: string;
+  }> => api('/api/lora/temporal-schedule', { method: 'POST', body: params, token }),
+
   // Model Management
   getModels: (token: string): Promise<{
     models: Array<{

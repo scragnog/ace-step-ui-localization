@@ -202,6 +202,36 @@ router.post('/slot-group-scales', authMiddleware, async (req: AuthenticatedReque
   }
 });
 
+// Per-slot layer scales (batch)
+router.post('/slot-layer-scales', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/slot-layer-scales', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Per-slot single layer scale
+router.post('/slot-layer-scale', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/slot-layer-scale', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Temporal adapter schedule
+router.post('/temporal-schedule', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/temporal-schedule', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/status', authMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await proxyToAceStep('/v1/lora/status', 'GET');
