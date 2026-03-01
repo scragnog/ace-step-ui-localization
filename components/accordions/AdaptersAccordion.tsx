@@ -476,6 +476,77 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                                 </div>
                                             )}
 
+                                            {/* ─── Role Sliders ───────────────────────────────────────── */}
+                                            {onSlotLayerScaleChange && (() => {
+                                                const ROLES = [
+                                                    {
+                                                        key: 'voice',
+                                                        label: '🎤 Voice',
+                                                        layers: [0, 1, 2, 3, 4, 5, 6, 7],
+                                                        color: 'blue',
+                                                        tooltip: 'Controls layers 0–7. Affects vocal timbre and how much this adapter\'s singer character comes through. Reducing this makes the output sound more like the base model\'s default voice. Approximately ~60% of vocal identity lives here.',
+                                                    },
+                                                    {
+                                                        key: 'style',
+                                                        label: '🎸 Style',
+                                                        layers: [8, 9, 10, 11, 12, 13, 14, 15],
+                                                        color: 'pink',
+                                                        tooltip: 'Controls layers 8–15. Affects musical style, energy, tempo feel and genre character. Reducing this makes the output less aggressive/energetic while preserving the voice. These layers also help maintain long-range song structure.',
+                                                    },
+                                                    {
+                                                        key: 'coherence',
+                                                        label: '🔗 Coherence',
+                                                        layers: [16, 17, 18, 19, 20, 21, 22, 23],
+                                                        color: 'emerald',
+                                                        tooltip: 'Controls layers 16–23. Acts as the integration glue that binds voice and style into a harmonically coherent output. Without these, voice and style layers can produce discordant results. Reducing coherence too far causes audio artifacts.',
+                                                    },
+                                                ] as const;
+
+                                                return (
+                                                    <div className="space-y-1.5 pt-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Role Blend</span>
+                                                            <span className="text-[9px] text-zinc-400 dark:text-zinc-500">(approx.)</span>
+                                                        </div>
+                                                        {ROLES.map(({ key, label, layers, color, tooltip }) => {
+                                                            const avg = layers.reduce((sum, i) => sum + (slot.layer_scales?.[i] ?? 1.0), 0) / layers.length;
+                                                            const isModified = Math.abs(avg - 1.0) > 0.02;
+                                                            return (
+                                                                <div key={key} className="flex items-center gap-2 group/role">
+                                                                    <div className="relative flex items-center gap-1 w-24 flex-shrink-0">
+                                                                        <span className={`text-[10px] font-semibold w-full ${isModified ? `text-${color}-500 dark:text-${color}-400` : 'text-zinc-600 dark:text-zinc-400'}`}>
+                                                                            {label}
+                                                                        </span>
+                                                                        {/* Tooltip */}
+                                                                        <div className="absolute left-0 bottom-full mb-1.5 hidden group-hover/role:block z-50 w-56 bg-zinc-900 dark:bg-zinc-800 text-zinc-100 text-[10px] leading-relaxed rounded-lg px-2.5 py-2 shadow-xl border border-white/10 pointer-events-none">
+                                                                            {tooltip}
+                                                                        </div>
+                                                                    </div>
+                                                                    <input
+                                                                        type="range"
+                                                                        min={0}
+                                                                        max={2}
+                                                                        step={0.05}
+                                                                        value={avg}
+                                                                        onChange={(e) => {
+                                                                            const val = parseFloat(e.target.value);
+                                                                            for (const i of layers) {
+                                                                                onSlotLayerScaleChange(slot.slot, i, val);
+                                                                            }
+                                                                        }}
+                                                                        className={`flex-1 accent-${color}-500 h-1`}
+                                                                        style={{ height: '4px' }}
+                                                                    />
+                                                                    <span className={`text-[10px] font-mono w-7 text-right ${isModified ? `text-${color}-500 dark:text-${color}-400 font-semibold` : 'text-zinc-500'}`}>
+                                                                        {avg.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            })()}
+
                                             {/* Per-layer sliders (expandable) */}
                                             {expandedLayers.has(slot.slot) && (
                                                 <div className="space-y-2 pl-2 border-l-2 border-purple-500/20">
@@ -553,8 +624,8 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                         <button
                                             onClick={() => onTemporalSchedulePreset?.('switch')}
                                             className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${temporalScheduleActive
-                                                    ? 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
-                                                    : 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
+                                                ? 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
+                                                : 'bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-white/10'
                                                 }`}
                                         >
                                             🔀 A→B Switch
