@@ -232,6 +232,16 @@ router.post('/temporal-schedule', authMiddleware, async (req: AuthenticatedReque
   }
 });
 
+// Audio diff for layer ablation experiments
+router.post('/audio-diff', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/audio/diff', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/status', authMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await proxyToAceStep('/v1/lora/status', 'GET');

@@ -546,6 +546,20 @@ export const generateApi = {
     message: string;
   }> => api('/api/lora/temporal-schedule', { method: 'POST', body: params, token }),
 
+  // Audio diff for layer ablation experiments
+  computeAudioDiff: (params: {
+    reference_path: string;
+    ablated_path: string;
+    amplify?: number;
+  }, token: string): Promise<{
+    output_path: string;
+    rms_energy: number;
+    peak: number;
+    duration_match: boolean;
+    sample_rate: number;
+    duration_seconds: number;
+  }> => api('/api/lora/audio-diff', { method: 'POST', body: params, token }),
+
   // Model Management
   getModels: (token: string): Promise<{
     models: Array<{

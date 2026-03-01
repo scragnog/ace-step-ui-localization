@@ -22,6 +22,7 @@ import { AudioLibraryModal } from './sections/AudioLibraryModal';
 import { CreateButtonFooter } from './sections/CreateButtonFooter';
 
 import AdaptersAccordion from './accordions/AdaptersAccordion';
+import { LayerAblationPanel } from './accordions/LayerAblationPanel';
 import ScoreSystemAccordion from './accordions/ScoreSystemAccordion';
 import { ActivationSteeringSection } from './sections/ActivationSteeringSection';
 
@@ -2392,6 +2393,12 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onSlotLayerScaleChange={handleSlotLayerScaleChange}
           temporalScheduleActive={temporalScheduleActive}
           onTemporalSchedulePreset={handleTemporalSchedulePreset}
+        />
+
+        {/* LAYER ABLATION LAB (Developer Mode) */}
+        <LayerAblationPanel
+          customMode={customMode}
+          hasLoadedAdapters={advancedAdapters && adapterSlots.length > 0}
         />
 
         {/* ACTIVATION STEERING */}
