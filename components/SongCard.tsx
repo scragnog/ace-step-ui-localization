@@ -301,6 +301,44 @@ export const SongCard: React.FC<SongCardProps> = ({
                         </div>
                     </div>
 
+                    {/* Quality Scores */}
+                    {(() => {
+                        const gi = song.generationParams?.generationInfo;
+                        if (!gi || typeof gi !== 'string' || !gi.includes('Quality Scores')) return null;
+                        const pmiMatch = gi.match(/PMI Global:\s*([\d.]+)/);
+                        const ditLmMatch = gi.match(/DiT Alignment \(LM\):\s*([\d.]+)/);
+                        const ditDitMatch = gi.match(/DiT Alignment \(DiT\):\s*([\d.]+)/);
+                        if (!pmiMatch && !ditLmMatch && !ditDitMatch) return null;
+                        return (
+                            <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                {pmiMatch && (
+                                    <span
+                                        title="PMI (Pointwise Mutual Information): Measures how well the generated audio codes match your prompt. Higher = better prompt adherence. Only available when Thinking is ON."
+                                        className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700/50"
+                                    >
+                                        PMI {parseFloat(pmiMatch[1]).toFixed(3)}
+                                    </span>
+                                )}
+                                {ditLmMatch && (
+                                    <span
+                                        title="DiT Alignment (LM): Cross-attention alignment between lyrics and audio from the Language Model pathway. Higher = better lyric-to-music alignment."
+                                        className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-700/50"
+                                    >
+                                        LM {parseFloat(ditLmMatch[1]).toFixed(3)}
+                                    </span>
+                                )}
+                                {ditDitMatch && (
+                                    <span
+                                        title="DiT Alignment (DiT): Cross-attention alignment between lyrics and audio from the Diffusion Transformer. Higher = better lyric-to-music alignment. Available for all generations."
+                                        className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-700/50"
+                                    >
+                                        DiT {parseFloat(ditDitMatch[1]).toFixed(3)}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })()}
+
                     {/* Creator */}
                     <div
                         className="flex items-center gap-1 cursor-pointer"
