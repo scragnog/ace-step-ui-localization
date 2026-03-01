@@ -732,6 +732,22 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
+  const handleSlotLayerScaleChange = async (slot: number, layer: number, scale: number) => {
+    if (!token) return;
+    setAdapterSlots(prev => prev.map(s => {
+      if (s.slot !== slot) return s;
+      const newLayerScales = { ...(s.layer_scales || {}), [layer]: scale };
+      // Remove entries that are at default (1.0) to keep it clean
+      if (Math.abs(scale - 1.0) < 0.01) delete newLayerScales[layer];
+      return { ...s, layer_scales: newLayerScales };
+    }));
+    try {
+      await generateApi.setSlotLayerScale({ slot, layer, scale }, token);
+    } catch (err) {
+      console.error('Failed to set slot layer scale:', err);
+    }
+  };
+
   // Reuse Effect - must be after all state declarations
   useEffect(() => {
     if (initialData) {
@@ -2331,6 +2347,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onUnloadSlot={handleUnloadSlot}
           onSlotScaleChange={handleSlotScaleChange}
           onSlotGroupScaleChange={handleSlotGroupScaleChange}
+          onSlotLayerScaleChange={handleSlotLayerScaleChange}
         />
 
         {/* ACTIVATION STEERING */}

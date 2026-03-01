@@ -12,6 +12,7 @@ export interface AdapterSlot {
     path: string;
     scale: number;
     group_scales: Record<string, number>;
+    layer_scales?: Record<number, number>;
 }
 
 export interface AdapterFile {
@@ -55,6 +56,7 @@ interface AdaptersAccordionProps {
     onUnloadSlot: (slotNum: number) => void;
     onSlotScaleChange: (slotNum: number, scale: number) => void;
     onSlotGroupScaleChange: (slotNum: number, group: string, scale: number) => void;
+    onSlotLayerScaleChange?: (slotNum: number, layer: number, scale: number) => void;
 }
 
 export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
@@ -84,12 +86,14 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
     onUnloadSlot,
     onSlotScaleChange,
     onSlotGroupScaleChange,
+    onSlotLayerScaleChange,
 }) => {
     const { t } = useI18n();
     const { token } = useAuth();
     const [browsedFiles, setBrowsedFiles] = useState<AdapterFile[]>([]);
     const [showBrowse, setShowBrowse] = useState(false);
     const [isBrowsing, setIsBrowsing] = useState(false);
+    const [expandedLayers, setExpandedLayers] = useState<Set<number>>(new Set());
 
     // Open native folder picker dialog
     const handleBrowse = async () => {
@@ -420,6 +424,16 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                                         {expandedSlots.has(slot.slot) ? '▼' : '▶'} Groups
                                                     </button>
                                                     <button
+                                                        onClick={() => setExpandedLayers(prev => {
+                                                            const next = new Set(prev);
+                                                            if (next.has(slot.slot)) next.delete(slot.slot); else next.add(slot.slot);
+                                                            return next;
+                                                        })}
+                                                        className="text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                                    >
+                                                        {expandedLayers.has(slot.slot) ? '▼' : '▶'} Layers
+                                                    </button>
+                                                    <button
                                                         onClick={() => onUnloadSlot(slot.slot)}
                                                         disabled={isLoraLoading}
                                                         className="px-2 py-1 rounded text-[10px] font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 transition-colors"
@@ -455,6 +469,51 @@ export const AdaptersAccordion: React.FC<AdaptersAccordionProps> = ({
                                                             formatDisplay={(v) => v.toFixed(2)}
                                                         />
                                                     ))}
+                                                </div>
+                                            )}
+
+                                            {/* Per-layer sliders (expandable) */}
+                                            {expandedLayers.has(slot.slot) && (
+                                                <div className="space-y-2 pl-2 border-l-2 border-purple-500/20">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Layer Scales (0–23)</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (onSlotLayerScaleChange) {
+                                                                    for (let i = 0; i < 24; i++) {
+                                                                        if ((slot.layer_scales?.[i] ?? 1.0) !== 1.0) {
+                                                                            onSlotLayerScaleChange(slot.slot, i, 1.0);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }}
+                                                            className="text-[10px] text-zinc-400 hover:text-pink-500 transition-colors"
+                                                        >
+                                                            Reset All
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-6 gap-x-2 gap-y-1">
+                                                        {Array.from({ length: 24 }, (_, i) => {
+                                                            const val = slot.layer_scales?.[i] ?? 1.0;
+                                                            const isModified = Math.abs(val - 1.0) > 0.01;
+                                                            return (
+                                                                <div key={i} className="flex flex-col items-center">
+                                                                    <span className={`text-[9px] font-mono ${isModified ? 'text-purple-500 font-bold' : 'text-zinc-400'}`}>{i}</span>
+                                                                    <input
+                                                                        type="range"
+                                                                        min={0}
+                                                                        max={2}
+                                                                        step={0.05}
+                                                                        value={val}
+                                                                        onChange={(e) => onSlotLayerScaleChange?.(slot.slot, i, parseFloat(e.target.value))}
+                                                                        className="w-full h-1 accent-purple-500"
+                                                                        style={{ WebkitAppearance: 'none', height: '4px' }}
+                                                                    />
+                                                                    <span className={`text-[8px] ${isModified ? 'text-purple-400 font-semibold' : 'text-zinc-500'}`}>{val.toFixed(1)}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
