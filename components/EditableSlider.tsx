@@ -114,11 +114,11 @@ export const EditableSlider: React.FC<EditableSliderProps> = ({
         />
         <div
           className="absolute top-0 left-0 h-full bg-gradient-to-r from-pink-400 to-rose-500 dark:from-pink-500 dark:to-rose-600 rounded-full pointer-events-none transition-all duration-150"
-          style={{ width: `${((value - min) / (max - min)) * 100}%` }}
+          style={{ width: `${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%` }}
         />
         <div
           className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white dark:bg-zinc-200 rounded-full shadow-md border-2 border-pink-500 pointer-events-none transition-all duration-150"
-          style={{ left: `calc(${((value - min) / (max - min)) * 100}% - 8px)` }}
+          style={{ left: `clamp(0px, calc(${((value - min) / (max - min)) * 100}% - 8px), calc(100% - 16px))` }}
         />
       </div>
       {(disabled && disabledReason) ? (
