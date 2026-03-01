@@ -736,7 +736,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   // Debounce layer scale API calls — state updates immediately (visual),
   // but the expensive backend merge only fires after 500ms of no changes.
   const layerScaleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingLayerScalesRef = useRef<Record<string, { slot: number; layer: number; scale: number }>>({});
+  const pendingSlotRef = useRef<number | null>(null);
 
   const handleSlotLayerScaleChange = (slot: number, layer: number, scale: number) => {
     if (!token) return;
@@ -747,26 +747,22 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       if (Math.abs(scale - 1.0) < 0.01) delete newLayerScales[layer];
       return { ...s, layer_scales: newLayerScales };
     }));
-    // Accumulate pending changes and debounce API call
-    const key = `${slot}:${layer}`;
-    pendingLayerScalesRef.current[key] = { slot, layer, scale };
+    // Track which slot needs flushing
+    pendingSlotRef.current = slot;
     if (layerScaleTimerRef.current) clearTimeout(layerScaleTimerRef.current);
-    layerScaleTimerRef.current = setTimeout(async () => {
-      const pending = { ...pendingLayerScalesRef.current };
-      pendingLayerScalesRef.current = {};
-      // Group by slot and send as batch
-      const bySlot: Record<number, Record<number, number>> = {};
-      for (const entry of Object.values(pending) as Array<{ slot: number; layer: number; scale: number }>) {
-        if (!bySlot[entry.slot]) bySlot[entry.slot] = {};
-        bySlot[entry.slot][entry.layer] = entry.scale;
-      }
-      for (const [s, scales] of Object.entries(bySlot)) {
-        try {
-          await generateApi.setSlotLayerScales({ slot: Number(s), layer_scales: scales }, token);
-        } catch (err) {
-          console.error('Failed to set slot layer scales:', err);
-        }
-      }
+    layerScaleTimerRef.current = setTimeout(() => {
+      const slotId = pendingSlotRef.current;
+      pendingSlotRef.current = null;
+      if (slotId === null) return;
+      // Read ALL current layer scales from state (not just the diff)
+      // so the backend gets the complete picture
+      setAdapterSlots(current => {
+        const slotData = current.find(s => s.slot === slotId);
+        const allScales = slotData?.layer_scales || {};
+        generateApi.setSlotLayerScales({ slot: slotId, layer_scales: allScales }, token)
+          .catch(err => console.error('Failed to set slot layer scales:', err));
+        return current; // no state change, just reading
+      });
     }, 500);
   };
 
