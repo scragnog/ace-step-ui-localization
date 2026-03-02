@@ -463,14 +463,16 @@ function AppContent() {
       // Model
       ditModel: gp.ditModel,
 
-      // Key upscale changes: higher steps, no thinking, fixed seed
+      // Key upscale changes: higher steps, same seed, re-run LM with same seed for determinism
+      // Note: do NOT pass audioCodes — it triggers a 'cover' task reinterpretation in the backend.
+      // Instead, re-run thinking=true with the same seed: LM sampling is seeded so produces
+      // identical audio codes, then DiT runs at higher step count for better quality.
       inferenceSteps: hqSteps,
-      thinking: false,
+      thinking: true,
       randomSeed: false,
       seed: gp.seed,
 
-      // Preserve the LM audio codes from the original generation
-      audioCodes: gp.audioCodes,
+      // Do NOT forward audioCodes — see comment above about cover task misinterpretation
 
       // Carry over remaining generation settings
       guidanceScale: gp.guidanceScale,
