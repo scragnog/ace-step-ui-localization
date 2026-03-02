@@ -289,6 +289,10 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [savedOverallScales, setSavedOverallScales] = usePersistedState<Record<string, number>>('ace-adapterOverallScales', {});
   const [adapterLoadingMessage, setAdapterLoadingMessage] = useState<string | null>(null);
 
+  // Adapter auto-restore: persisted last-loaded state for restart recovery
+  const [lastLoraMode, setLastLoraMode] = usePersistedState<'none' | 'simple' | 'advanced'>('ace-lastLoraMode', 'none');
+  const [lastLoadedSlotPaths, setLastLoadedSlotPaths] = usePersistedState<string[]>('ace-lastLoadedSlotPaths', []);
+
   // Activation Steering State
   const [showSteeringPanel, setShowSteeringPanel] = usePersistedState('ace-showSteeringPanel', false);
   const [steeringEnabled, setSteeringEnabled] = useState(false);
@@ -587,6 +591,92 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     return () => { cancelled = true; };
   }, [token]);
 
+  // On mount: auto-restore adapters from last session (DiT + LM)
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+
+    (async () => {
+      // Small delay to let the backend warm up before hammering it with adapter loads
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (cancelled) return;
+
+      const hasAdvanced = lastLoraMode === 'advanced' && lastLoadedSlotPaths.length > 0;
+      const hasSimple = lastLoraMode === 'simple' && loraPath.trim();
+      const hasLmLora = lmLoraPath.trim();
+
+      if (!hasAdvanced && !hasSimple && !hasLmLora) return;
+
+      setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
+
+      // Restore DiT adapters
+      if (hasAdvanced) {
+        let loadedCount = 0;
+        for (const slotPath of lastLoadedSlotPaths) {
+          if (cancelled) break;
+          try {
+            setAdapterLoadingMessage(`🔄 Restoring adapter ${loadedCount + 1}/${lastLoadedSlotPaths.length}: ${slotPath.split(/[\\/]/).pop()}`);
+            await generateApi.loadLora({ lora_path: slotPath, slot: loadedCount }, token);
+            loadedCount++;
+          } catch (err) {
+            console.warn(`[AdapterRestore] Failed to restore ${slotPath}:`, err);
+          }
+        }
+        if (loadedCount > 0 && !cancelled) {
+          // Refresh status and restore scales
+          try {
+            const status = await generateApi.getLoraStatus(token);
+            if (status?.advanced?.slots) {
+              setAdapterSlots(status.advanced.slots);
+              setLoraLoaded(true);
+              setLastLoadedSlotPaths(status.advanced.slots.map((s: { path: string }) => s.path));
+              // Restore saved per-adapter scales
+              for (const slot of status.advanced.slots) {
+                const savedScale = savedOverallScales[slot.name];
+                const savedGroups = savedGroupScales[slot.name];
+                if (savedScale !== undefined && savedScale !== 1.0) {
+                  try { await generateApi.setLoraScale({ scale: savedScale, slot: slot.slot }, token); } catch { }
+                }
+                if (savedGroups !== undefined) {
+                  try { await generateApi.setSlotGroupScales({ slot: slot.slot, ...savedGroups }, token); } catch { }
+                }
+              }
+            }
+          } catch { }
+          setAdapterLoadingMessage(`✅ ${loadedCount} adapter${loadedCount > 1 ? 's' : ''} restored`);
+          setTimeout(() => setAdapterLoadingMessage(null), 3000);
+        } else if (!cancelled) {
+          setAdapterLoadingMessage(null);
+        }
+      } else if (hasSimple) {
+        try {
+          setAdapterLoadingMessage(`🔄 Restoring adapter: ${loraPath.split(/[\\/]/).pop()}`);
+          await generateApi.loadLora({ lora_path: loraPath }, token);
+          setLoraLoaded(true);
+          setAdapterLoadingMessage('✅ Adapter restored');
+          setTimeout(() => setAdapterLoadingMessage(null), 3000);
+        } catch (err) {
+          console.warn('[AdapterRestore] Failed to restore simple LoRA:', err);
+          setAdapterLoadingMessage(null);
+          setLastLoraMode('none');
+        }
+      }
+
+      // Restore LM LoRA (independent of DiT)
+      if (hasLmLora && !cancelled) {
+        try {
+          const result = await generateApi.loadLmLora({ lm_lora_path: lmLoraPath, scale: lmLoraScale }, token);
+          setLmLoraStatus(result?.message || `✅ LM adapter restored: ${lmLoraPath.split(/[\\/]/).pop()}`);
+        } catch (err) {
+          console.warn('[AdapterRestore] Failed to restore LM LoRA:', err);
+          setLmLoraStatus('⚠️ LM adapter path saved but failed to restore — check path');
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // LoRA API handlers
   const handleLoraToggle = async () => {
     if (!token) {
@@ -607,6 +697,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       } else {
         const result = await generateApi.loadLora({ lora_path: loraPath }, token);
         setLoraLoaded(true);
+        setLastLoraMode('simple');
         console.log('LoRA loaded:', result?.message);
       }
     } catch (err) {
@@ -627,6 +718,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     try {
       const result = await generateApi.unloadLora(token);
       setLoraLoaded(false);
+      setLastLoraMode('none');
       console.log('LoRA unloaded:', result?.message);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to unload LoRA';
@@ -719,6 +811,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       if (status?.advanced?.slots) {
         setAdapterSlots(status.advanced.slots);
         setLoraLoaded(true);
+        // Track loaded paths for restart recovery
+        setLastLoadedSlotPaths(status.advanced.slots.map((s: { path: string }) => s.path));
+        setLastLoraMode('advanced');
 
         // Restore saved per-adapter scales for newly loaded slot
         for (const slot of status.advanced.slots) {
@@ -767,11 +862,17 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       await generateApi.unloadLora(token, slot);
       const status = await generateApi.getLoraStatus(token);
       if (status?.advanced) {
-        setAdapterSlots(status.advanced.slots || []);
+        const remainingSlots = status.advanced.slots || [];
+        setAdapterSlots(remainingSlots);
         setLoraLoaded(status.advanced.loaded);
+        // Update persisted paths to reflect remaining slots
+        setLastLoadedSlotPaths(remainingSlots.map((s: { path: string }) => s.path));
+        if (remainingSlots.length === 0) setLastLoraMode('none');
       } else {
         setAdapterSlots([]);
         setLoraLoaded(false);
+        setLastLoadedSlotPaths([]);
+        setLastLoraMode('none');
       }
     } catch (err) {
       setLoraError(err instanceof Error ? err.message : 'Failed to unload');
