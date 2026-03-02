@@ -534,6 +534,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
             lmModel: firstResult?.lm_model,
             lrc: firstResult?.lrc,
             scores: firstResult?.scores,
+            audioCodes: firstResult?.audio_codes,
             status: 'succeeded',
           };
         }
@@ -692,6 +693,8 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
               ...(seed != null ? { seed } : {}),
               ...(inferenceSteps != null ? { inferenceSteps } : {}),
               ...(generationInfo != null ? { generationInfo } : {}),
+              // Include LM-generated audio codes for preview→HQ upscale
+              ...(aceStatus.result?.audioCodes ? { audioCodes: aceStatus.result.audioCodes } : {}),
             };
 
             const audioUrls = aceStatus.result.audioUrls.filter((url: string) =>
