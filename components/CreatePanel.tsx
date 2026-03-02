@@ -603,7 +603,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       || !!lmLoraPath.trim();
     if (willRestore) {
       setIsLoraLoading(true);
-      setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
+      setAdapterLoadingMessage('🔄 Checking adapter state...');
     }
 
     (async () => {
@@ -615,74 +615,99 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       const hasSimple = lastLoraMode === 'simple' && loraPath.trim();
       const hasLmLora = lmLoraPath.trim();
 
-      if (!hasAdvanced && !hasSimple && !hasLmLora) return;
+      if (!hasAdvanced && !hasSimple && !hasLmLora) {
+        setIsLoraLoading(false);
+        return;
+      }
 
-      setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
-
-      // Restore DiT adapters
-      if (hasAdvanced) {
-        let loadedCount = 0;
-        for (const slotPath of lastLoadedSlotPaths) {
-          if (cancelled) break;
-          try {
-            setAdapterLoadingMessage(`🔄 Restoring adapter ${loadedCount + 1}/${lastLoadedSlotPaths.length}: ${slotPath.split(/[\\/]/).pop()}`);
-            await generateApi.loadLora({ lora_path: slotPath, slot: loadedCount }, token);
-            loadedCount++;
-          } catch (err) {
-            console.warn(`[AdapterRestore] Failed to restore ${slotPath}:`, err);
+      // ── Check if DiT adapters are ALREADY loaded in the backend ──────────────
+      // If already loaded (e.g. HMR remount, page refresh without Python restart),
+      // just sync UI state and skip loading — never load over an active generation.
+      let currentStatus: Awaited<ReturnType<typeof generateApi.getLoraStatus>> | null = null;
+      if (hasAdvanced || hasSimple) {
+        try {
+          currentStatus = await generateApi.getLoraStatus(token);
+          if (cancelled) return;
+          if (currentStatus?.advanced?.loaded && (currentStatus.advanced.slots?.length ?? 0) > 0) {
+            // Backend already has adapters — sync UI, release lock, skip loading
+            console.log('[AdapterRestore] Backend already has adapters loaded — skipping re-load');
+            setAdapterSlots(currentStatus.advanced.slots);
+            setLoraLoaded(true);
+            setAdapterLoadingMessage(null);
+            setIsLoraLoading(false);
+            // Still check LM LoRA below
+          } else {
+            // Backend is clean — proceed with full restore
+            setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
           }
+        } catch {
+          // Backend not ready yet — proceed with restore attempt
+          setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
         }
-        if (loadedCount > 0 && !cancelled) {
-          // Refresh status and restore scales
-          try {
-            const status = await generateApi.getLoraStatus(token);
-            if (status?.advanced?.slots) {
-              setAdapterSlots(status.advanced.slots);
-              setLoraLoaded(true);
-              setLastLoadedSlotPaths(status.advanced.slots.map((s: { path: string }) => s.path));
-              // Restore saved per-adapter scales (same logic as handleLoadSlot)
-              for (const slot of status.advanced.slots) {
-                const savedScale = savedOverallScales[slot.name];
-                const savedGroups = savedGroupScales[slot.name];
-                const needsScaleRestore = savedScale !== undefined && savedScale !== 1.0;
-                const needsGroupRestore = savedGroups !== undefined;
-                if (needsScaleRestore) {
-                  try {
-                    await generateApi.setLoraScale({ scale: savedScale, slot: slot.slot }, token);
-                    setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, scale: savedScale } : s));
-                  } catch (err) {
-                    console.warn(`[AdapterRestore] Scale restore failed for ${slot.name}:`, err);
+      }
+
+      // Re-check after possible early return from sync path
+      if (cancelled) return;
+
+      // Track whether backend already had adapters — local var, not React state (async)
+      const alreadyLoaded = !!(currentStatus?.advanced?.loaded && (currentStatus.advanced.slots?.length ?? 0) > 0);
+
+      // Restore DiT adapters — only if backend doesn't already have them
+      if ((hasAdvanced || hasSimple) && !alreadyLoaded) {
+        if (hasAdvanced) {
+          let loadedCount = 0;
+          for (const slotPath of lastLoadedSlotPaths) {
+            if (cancelled) break;
+            try {
+              setAdapterLoadingMessage(`🔄 Restoring adapter ${loadedCount + 1}/${lastLoadedSlotPaths.length}: ${slotPath.split(/[\\/]/).pop()}`);
+              await generateApi.loadLora({ lora_path: slotPath, slot: loadedCount }, token);
+              loadedCount++;
+            } catch (err) {
+              console.warn(`[AdapterRestore] Failed to restore ${slotPath}:`, err);
+            }
+          }
+          if (loadedCount > 0 && !cancelled) {
+            try {
+              const status = await generateApi.getLoraStatus(token);
+              if (status?.advanced?.slots) {
+                setAdapterSlots(status.advanced.slots);
+                setLoraLoaded(true);
+                setLastLoadedSlotPaths(status.advanced.slots.map((s: { path: string }) => s.path));
+                for (const slot of status.advanced.slots) {
+                  const savedScale = savedOverallScales[slot.name];
+                  const savedGroups = savedGroupScales[slot.name];
+                  if (savedScale !== undefined && savedScale !== 1.0) {
+                    try {
+                      await generateApi.setLoraScale({ scale: savedScale, slot: slot.slot }, token);
+                      setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, scale: savedScale } : s));
+                    } catch (err) { console.warn(`[AdapterRestore] Scale restore failed for ${slot.name}:`, err); }
                   }
-                }
-                if (needsGroupRestore) {
-                  try {
-                    await generateApi.setSlotGroupScales({ slot: slot.slot, ...savedGroups }, token);
-                    setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, group_scales: savedGroups } : s));
-                  } catch (err) {
-                    console.warn(`[AdapterRestore] Group scale restore failed for ${slot.name}:`, err);
+                  if (savedGroups !== undefined) {
+                    try {
+                      await generateApi.setSlotGroupScales({ slot: slot.slot, ...savedGroups }, token);
+                      setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, group_scales: savedGroups } : s));
+                    } catch (err) { console.warn(`[AdapterRestore] Group scale restore failed for ${slot.name}:`, err); }
                   }
                 }
               }
-            }
-          } catch (err) {
-            console.warn('[AdapterRestore] Failed to get status after restore:', err);
+            } catch (err) { console.warn('[AdapterRestore] Failed to get status after restore:', err); }
+            setAdapterLoadingMessage(`✅ ${loadedCount} adapter${loadedCount > 1 ? 's' : ''} restored`);
+            setTimeout(() => setAdapterLoadingMessage(null), 3000);
+          } else if (!cancelled) {
+            setAdapterLoadingMessage(null);
           }
-          setAdapterLoadingMessage(`✅ ${loadedCount} adapter${loadedCount > 1 ? 's' : ''} restored`);
-          setTimeout(() => setAdapterLoadingMessage(null), 3000);
-        } else if (!cancelled) {
-          setAdapterLoadingMessage(null);
-        }
-      } else if (hasSimple) {
-        try {
-          setAdapterLoadingMessage(`🔄 Restoring adapter: ${loraPath.split(/[\\/]/).pop()}`);
-          await generateApi.loadLora({ lora_path: loraPath }, token);
-          setLoraLoaded(true);
-          setAdapterLoadingMessage('✅ Adapter restored');
-          setTimeout(() => setAdapterLoadingMessage(null), 3000);
-        } catch (err) {
-          console.warn('[AdapterRestore] Failed to restore simple LoRA:', err);
-          setAdapterLoadingMessage(null);
-          setLastLoraMode('none');
+        } else if (hasSimple) {
+          try {
+            setAdapterLoadingMessage(`🔄 Restoring adapter: ${loraPath.split(/[\\/]/).pop()}`);
+            await generateApi.loadLora({ lora_path: loraPath }, token);
+            setLoraLoaded(true);
+            setAdapterLoadingMessage('✅ Adapter restored');
+            setTimeout(() => setAdapterLoadingMessage(null), 3000);
+          } catch (err) {
+            console.warn('[AdapterRestore] Failed to restore simple LoRA:', err);
+            setAdapterLoadingMessage(null);
+            setLastLoraMode('none');
+          }
         }
       }
 
