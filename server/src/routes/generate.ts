@@ -696,7 +696,10 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
               ...(inferenceSteps != null ? { inferenceSteps } : {}),
               ...(generationInfo != null ? { generationInfo } : {}),
               // Include LM-generated audio codes for preview→HQ upscale
-              ...(aceStatus.result?.audioCodes ? { audioCodes: aceStatus.result.audioCodes } : {}),
+              // Python returns audio_codes (snake_case), direct API path returns audioCodes (camelCase)
+              ...((aceStatus.result as any)?.audio_codes || (aceStatus.result as any)?.audioCodes
+                ? { audioCodes: (aceStatus.result as any).audio_codes || (aceStatus.result as any).audioCodes }
+                : {}),
             };
 
             // DEBUG: trace audio_codes storage for upscale
