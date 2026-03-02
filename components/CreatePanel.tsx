@@ -655,15 +655,27 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
-  const handleLmLoraScaleChange = async (newScale: number) => {
+  // Debounce LM LoRA scale changes — the backend does a full weight re-merge
+  // (~2-5s) so we wait until the slider stops moving before firing the request.
+  const lmLoraScaleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleLmLoraScaleChange = (newScale: number) => {
     setLmLoraScale(newScale);
-    // Apply live only when an adapter is already loaded
+    // Only fire API when an adapter is loaded
     if (!token || !lmLoraStatus.startsWith('✅')) return;
-    try {
-      await generateApi.setLmLoraScale(newScale, token);
-    } catch (err) {
-      console.error('Failed to set LM LoRA scale:', err);
-    }
+
+    if (lmLoraScaleTimerRef.current) clearTimeout(lmLoraScaleTimerRef.current);
+    lmLoraScaleTimerRef.current = setTimeout(async () => {
+      setLmLoraStatus('⏳ Re-merging LM LoRA...');
+      try {
+        const result = await generateApi.setLmLoraScale(newScale, token);
+        setLmLoraStatus(result?.message || `✅ LM LoRA scale set to ${newScale.toFixed(2)}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to set scale';
+        setLmLoraStatus(`❌ ${msg}`);
+        console.error('Failed to set LM LoRA scale:', err);
+      }
+    }, 800);
   };
 
   // Advanced adapter handlers
