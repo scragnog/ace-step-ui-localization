@@ -607,6 +607,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
       if (!hasAdvanced && !hasSimple && !hasLmLora) return;
 
+      // Block generation while adapters are loading — prevents CPU/GPU race condition
+      setIsLoraLoading(true);
       setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
 
       // Restore DiT adapters
@@ -675,6 +677,9 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setLastLoraMode('none');
         }
       }
+
+      // DiT loading complete — release the generation lock before LM (LM doesn't affect DiT GPU ops)
+      setIsLoraLoading(false);
 
       // Restore LM LoRA (independent of DiT)
       if (hasLmLora && !cancelled) {
