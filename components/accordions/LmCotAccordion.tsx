@@ -277,7 +277,7 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
                         <EditableSlider
                             label="Bias Strength"
                             value={codeBiasStrength}
-                            min={0} max={5} step={0.1}
+                            min={0} max={100} step={0.5}
                             onChange={onBiasStrengthChange}
                             formatDisplay={(v) => v.toFixed(1)}
                             helpText="0 = off  •  1 = trained strength  •  >1 = amplified"
