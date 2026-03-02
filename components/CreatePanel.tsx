@@ -596,6 +596,16 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     if (!token) return;
     let cancelled = false;
 
+    // Pre-check whether we'll need to restore — block generation immediately if so,
+    // before the warmup delay fires (prevents CPU/GPU race in the 2s window)
+    const willRestore = (lastLoraMode === 'advanced' && lastLoadedSlotPaths.length > 0)
+      || (lastLoraMode === 'simple' && !!loraPath.trim())
+      || !!lmLoraPath.trim();
+    if (willRestore) {
+      setIsLoraLoading(true);
+      setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
+    }
+
     (async () => {
       // Small delay to let the backend warm up before hammering it with adapter loads
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -607,8 +617,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
 
       if (!hasAdvanced && !hasSimple && !hasLmLora) return;
 
-      // Block generation while adapters are loading — prevents CPU/GPU race condition
-      setIsLoraLoading(true);
       setAdapterLoadingMessage('🔄 Restoring adapters from last session...');
 
       // Restore DiT adapters
