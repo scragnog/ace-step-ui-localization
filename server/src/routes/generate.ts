@@ -265,6 +265,8 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         seed: params.seed || -1,
         batch_size: params.batchSize || 1,
         audio_code_string: params.audioCodes,
+        // DEBUG: trace audio_codes flow for upscale
+        ...(params.audioCodes ? (() => { console.log(`[Generate] 🔍 Sending audio_code_string to Python (${params.audioCodes.length} chars, first 80: ${params.audioCodes.substring(0, 80)}...)`); return {}; })() : (() => { console.log('[Generate] 🔍 No audioCodes in params'); return {}; })()),
         repainting_start: params.repaintingStart || 0.0,
         repainting_end: params.repaintingEnd,
         instruction: params.instruction,
@@ -696,6 +698,9 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
               // Include LM-generated audio codes for preview→HQ upscale
               ...(aceStatus.result?.audioCodes ? { audioCodes: aceStatus.result.audioCodes } : {}),
             };
+
+            // DEBUG: trace audio_codes storage for upscale
+            console.log(`[Generate] 🔍 Storing generationParams - audioCodes present: ${!!generationParamsToStore.audioCodes}, length: ${(generationParamsToStore.audioCodes || '').length}`);
 
             const audioUrls = aceStatus.result.audioUrls.filter((url: string) =>
               url.endsWith('.mp3') || url.endsWith('.flac')

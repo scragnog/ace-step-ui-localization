@@ -435,6 +435,11 @@ function AppContent() {
       return saved ? parseInt(saved, 10) : 160;
     })();
 
+    // DEBUG: trace audio_codes for upscale
+    console.log('[Upscale] 🔍 generationParams keys:', Object.keys(gp));
+    console.log('[Upscale] 🔍 audioCodes present:', !!gp.audioCodes, 'length:', (gp.audioCodes || '').length);
+    console.log('[Upscale] 🔍 seed:', gp.seed, 'thinking:', gp.thinking, 'steps:', gp.inferenceSteps);
+
     const upscaleParams: GenerationParams = {
       // Carry over all original params
       customMode: gp.customMode ?? true,
