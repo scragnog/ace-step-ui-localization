@@ -630,19 +630,33 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               setAdapterSlots(status.advanced.slots);
               setLoraLoaded(true);
               setLastLoadedSlotPaths(status.advanced.slots.map((s: { path: string }) => s.path));
-              // Restore saved per-adapter scales
+              // Restore saved per-adapter scales (same logic as handleLoadSlot)
               for (const slot of status.advanced.slots) {
                 const savedScale = savedOverallScales[slot.name];
                 const savedGroups = savedGroupScales[slot.name];
-                if (savedScale !== undefined && savedScale !== 1.0) {
-                  try { await generateApi.setLoraScale({ scale: savedScale, slot: slot.slot }, token); } catch { }
+                const needsScaleRestore = savedScale !== undefined && savedScale !== 1.0;
+                const needsGroupRestore = savedGroups !== undefined;
+                if (needsScaleRestore) {
+                  try {
+                    await generateApi.setLoraScale({ scale: savedScale, slot: slot.slot }, token);
+                    setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, scale: savedScale } : s));
+                  } catch (err) {
+                    console.warn(`[AdapterRestore] Scale restore failed for ${slot.name}:`, err);
+                  }
                 }
-                if (savedGroups !== undefined) {
-                  try { await generateApi.setSlotGroupScales({ slot: slot.slot, ...savedGroups }, token); } catch { }
+                if (needsGroupRestore) {
+                  try {
+                    await generateApi.setSlotGroupScales({ slot: slot.slot, ...savedGroups }, token);
+                    setAdapterSlots(prev => prev.map(s => s.slot === slot.slot ? { ...s, group_scales: savedGroups } : s));
+                  } catch (err) {
+                    console.warn(`[AdapterRestore] Group scale restore failed for ${slot.name}:`, err);
+                  }
                 }
               }
             }
-          } catch { }
+          } catch (err) {
+            console.warn('[AdapterRestore] Failed to get status after restore:', err);
+          }
           setAdapterLoadingMessage(`✅ ${loadedCount} adapter${loadedCount > 1 ? 's' : ''} restored`);
           setTimeout(() => setAdapterLoadingMessage(null), 3000);
         } else if (!cancelled) {
