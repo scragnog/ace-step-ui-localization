@@ -504,6 +504,36 @@ export const generateApi = {
     message: string;
   }> => api('/api/lora/lm-status', { token }),
 
+  // Audio Code Logit Bias
+  loadCodeBias: (params: {
+    path: string;
+    strength?: number;
+  }, token: string): Promise<{
+    message: string;
+    path: string;
+    strength: number;
+  }> => api('/api/lora/code-bias-load', { method: 'POST', body: params, token }),
+
+  unloadCodeBias: (token: string): Promise<{
+    message: string;
+  }> => api('/api/lora/code-bias-unload', { method: 'POST', body: {}, token }),
+
+  setCodeBiasStrength: (strength: number, token: string): Promise<{
+    message: string;
+    strength: number;
+  }> => api('/api/lora/code-bias-strength', { method: 'POST', body: { strength }, token }),
+
+  getCodeBiasStatus: (token: string): Promise<{
+    loaded: boolean;
+    path: string;
+    strength: number;
+    message: string;
+  }> => api('/api/lora/code-bias-status', { token }),
+
+  browseFile: (token: string, ext?: string): Promise<{
+    file: string;
+  }> => api(`/api/lora/browse-file${ext ? `?ext=${encodeURIComponent(ext)}` : ''}`, { token }),
+
   // Advanced adapter: file browser
   listLoraFiles: (folder: string, token: string): Promise<{
     files: Array<{

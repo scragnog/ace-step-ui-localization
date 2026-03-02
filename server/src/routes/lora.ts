@@ -290,5 +290,70 @@ router.get('/lm-status', authMiddleware, async (_req: AuthenticatedRequest, res:
   }
 });
 
+// ── Audio Code Logit Bias ────────────────────────────────────────────
+
+router.get('/browse-file', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const ext = (req.query.ext as string) || '.pt';
+    const psScript = `
+      Add-Type -AssemblyName System.Windows.Forms
+      $dialog = New-Object System.Windows.Forms.OpenFileDialog
+      $dialog.Filter = "Bias files (*${ext})|*${ext}|All files (*.*)|*.*"
+      $dialog.Title = "Select code bias file"
+      $topmost = New-Object System.Windows.Forms.Form
+      $topmost.TopMost = $true
+      if ($dialog.ShowDialog($topmost) -eq 'OK') {
+        Write-Output $dialog.FileName
+      }
+      $topmost.Dispose()
+    `.trim();
+
+    const result = execSync(
+      `powershell -NoProfile -Command "${psScript.replace(/"/g, '\\\\"').replace(/\n/g, '; ')}"`,
+      { encoding: 'utf-8', timeout: 60000 }
+    ).trim();
+
+    res.json({ file: result || '' });
+  } catch (error: any) {
+    res.json({ file: '' });
+  }
+});
+
+router.post('/code-bias-load', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/code-bias/load', 'POST', req.body);
+    res.json(result || { message: 'Code bias loaded' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/code-bias-unload', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/code-bias/unload', 'POST', {});
+    res.json(result || { message: 'Code bias unloaded' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/code-bias-strength', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/code-bias/strength', 'POST', req.body);
+    res.json(result || { message: 'Code bias strength updated' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/code-bias-status', authMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/code-bias/status', 'GET');
+    res.json(result || { loaded: false, path: '', strength: 1.0 });
+  } catch (error: any) {
+    res.json({ loaded: false, path: '', strength: 1.0, message: error.message });
+  }
+});
+
 export default router;
 
