@@ -84,6 +84,14 @@ interface GenerationSettingsAccordionProps {
     onConstrainedDecodingDebugToggle: () => void;
     isFormatCaption: boolean;
     onIsFormatCaptionToggle: () => void;
+    // LM LoRA
+    lmLoraPath: string;
+    lmLoraScale: number;
+    lmLoraStatus: string;
+    onLmLoraPathChange: (val: string) => void;
+    onLoadLmLora: () => void;
+    onUnloadLmLora: () => void;
+    onLmLoraScaleChange: (val: number) => void;
     // Expert Controls
     uploadError: string | null;
     audioCodes: string;
@@ -329,6 +337,13 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                         onConstrainedDecodingDebugToggle={props.onConstrainedDecodingDebugToggle}
                         isFormatCaption={props.isFormatCaption}
                         onIsFormatCaptionToggle={props.onIsFormatCaptionToggle}
+                        lmLoraPath={props.lmLoraPath}
+                        lmLoraScale={props.lmLoraScale}
+                        lmLoraStatus={props.lmLoraStatus}
+                        onLmLoraPathChange={props.onLmLoraPathChange}
+                        onLoadLmLora={props.onLoadLmLora}
+                        onUnloadLmLora={props.onUnloadLmLora}
+                        onLmLoraScaleChange={props.onLmLoraScaleChange}
                     />
 
                     {/* Expert Controls */}

@@ -251,5 +251,34 @@ router.get('/status', authMiddleware, async (_req: AuthenticatedRequest, res: Re
   }
 });
 
+// ── LM LoRA (PEFT adapter on the 5Hz language model) ────────────────
+
+router.post('/lm-load', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lm-lora/load', 'POST', req.body);
+    res.json(result || { message: 'LM LoRA loaded' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/lm-unload', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lm-lora/unload', 'POST', {});
+    res.json(result || { message: 'LM LoRA unloaded' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/lm-scale', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lm-lora/scale', 'POST', req.body);
+    res.json(result || { message: 'LM LoRA scale updated' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
 

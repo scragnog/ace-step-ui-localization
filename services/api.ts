@@ -478,6 +478,25 @@ export const generateApi = {
     };
   }> => api('/api/lora/status', { token }),
 
+  // LM LoRA (PEFT adapter on the 5Hz language model)
+  loadLmLora: (params: {
+    lm_lora_path: string;
+    scale?: number;
+  }, token: string): Promise<{
+    message: string;
+    lm_lora_path: string;
+    scale: number;
+  }> => api('/api/lora/lm-load', { method: 'POST', body: params, token }),
+
+  unloadLmLora: (token: string): Promise<{
+    message: string;
+  }> => api('/api/lora/lm-unload', { method: 'POST', body: {}, token }),
+
+  setLmLoraScale: (scale: number, token: string): Promise<{
+    message: string;
+    scale: number;
+  }> => api('/api/lora/lm-scale', { method: 'POST', body: { scale }, token }),
+
   // Advanced adapter: file browser
   listLoraFiles: (folder: string, token: string): Promise<{
     files: Array<{

@@ -269,6 +269,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [loraError, setLoraError] = useState<string | null>(null);
   const [isLoraLoading, setIsLoraLoading] = useState(false);
 
+  // LM LoRA Parameters (PEFT adapter on the 5Hz language model)
+  const [lmLoraPath, setLmLoraPath] = usePersistedState('ace-lmLoraPath', '');
+  const [lmLoraScale, setLmLoraScale] = usePersistedState('ace-lmLoraScale', 1.0);
+  const [lmLoraStatus, setLmLoraStatus] = useState('No LM LoRA loaded');
+
   // Advanced adapter state
   const [advancedAdapters, setAdvancedAdapters] = usePersistedState('ace-advancedAdapters', false);
   const [adapterFolder, setAdapterFolder] = usePersistedState('ace-adapterFolder', './lokr_output');
@@ -620,6 +625,44 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       await generateApi.setLoraScale({ scale: newScale }, token);
     } catch (err) {
       console.error('Failed to set LoRA scale:', err);
+    }
+  };
+
+  // LM LoRA API handlers
+  const handleLoadLmLora = async () => {
+    if (!token) return;
+    if (!lmLoraPath.trim()) {
+      setLmLoraStatus('❌ Please enter a path to the LM LoRA adapter');
+      return;
+    }
+    try {
+      const result = await generateApi.loadLmLora({ lm_lora_path: lmLoraPath, scale: lmLoraScale }, token);
+      setLmLoraStatus(result?.message || '✅ LM LoRA loaded');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load LM LoRA';
+      setLmLoraStatus(`❌ ${msg}`);
+    }
+  };
+
+  const handleUnloadLmLora = async () => {
+    if (!token) return;
+    try {
+      const result = await generateApi.unloadLmLora(token);
+      setLmLoraStatus(result?.message || '✅ LM LoRA unloaded');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to unload LM LoRA';
+      setLmLoraStatus(`❌ ${msg}`);
+    }
+  };
+
+  const handleLmLoraScaleChange = async (newScale: number) => {
+    setLmLoraScale(newScale);
+    // Apply live only when an adapter is already loaded
+    if (!token || !lmLoraStatus.startsWith('✅')) return;
+    try {
+      await generateApi.setLmLoraScale(newScale, token);
+    } catch (err) {
+      console.error('Failed to set LM LoRA scale:', err);
     }
   };
 
@@ -2532,6 +2575,13 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onConstrainedDecodingDebugToggle={() => setConstrainedDecodingDebug(!constrainedDecodingDebug)}
           isFormatCaption={isFormatCaption}
           onIsFormatCaptionToggle={() => setIsFormatCaption(!isFormatCaption)}
+          lmLoraPath={lmLoraPath}
+          lmLoraScale={lmLoraScale}
+          lmLoraStatus={lmLoraStatus}
+          onLmLoraPathChange={setLmLoraPath}
+          onLoadLmLora={handleLoadLmLora}
+          onUnloadLmLora={handleUnloadLmLora}
+          onLmLoraScaleChange={handleLmLoraScaleChange}
           uploadError={uploadError}
           audioCodes={audioCodes}
           onAudioCodesChange={setAudioCodes}
