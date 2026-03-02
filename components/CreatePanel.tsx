@@ -566,6 +566,27 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   }, [loraLoaded, advancedAdapters]);
 
+  // On mount: restore LM LoRA status from backend — the Python process keeps
+  // the adapter loaded across page refreshes, so the UI should reflect that.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await generateApi.getLmLoraStatus(token);
+        if (cancelled) return;
+        if (status?.loaded) {
+          setLmLoraPath(status.lm_lora_path || '');
+          setLmLoraScale(status.scale ?? 1.0);
+          setLmLoraStatus(status.message || `✅ LM LoRA loaded: ${status.lm_lora_path}`);
+        }
+      } catch {
+        // Silently ignore — backend may not be ready yet
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
+
   // LoRA API handlers
   const handleLoraToggle = async () => {
     if (!token) {

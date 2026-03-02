@@ -497,6 +497,13 @@ export const generateApi = {
     scale: number;
   }> => api('/api/lora/lm-scale', { method: 'POST', body: { scale }, token }),
 
+  getLmLoraStatus: (token: string): Promise<{
+    loaded: boolean;
+    lm_lora_path: string;
+    scale: number;
+    message: string;
+  }> => api('/api/lora/lm-status', { token }),
+
   // Advanced adapter: file browser
   listLoraFiles: (folder: string, token: string): Promise<{
     files: Array<{

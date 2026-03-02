@@ -280,5 +280,15 @@ router.post('/lm-scale', authMiddleware, async (req: AuthenticatedRequest, res: 
   }
 });
 
+router.get('/lm-status', authMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lm-lora/status', 'GET');
+    res.json(result || { loaded: false, lm_lora_path: '', scale: 1.0 });
+  } catch (error: any) {
+    // If the backend isn't ready yet / LM not initialized, return not-loaded gracefully
+    res.json({ loaded: false, lm_lora_path: '', scale: 1.0, message: error.message });
+  }
+});
+
 export default router;
 
