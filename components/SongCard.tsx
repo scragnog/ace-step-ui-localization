@@ -44,6 +44,7 @@ export interface SongCardProps {
     onSongUpdate?: (updatedSong: Song) => void;
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
+    onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
     // Ablation diff pins
     devMode?: boolean;
@@ -77,6 +78,7 @@ export const SongCard: React.FC<SongCardProps> = ({
     onSongUpdate,
     onUseAsReference,
     onCoverSong,
+    onUpscaleToHQ,
     onDownloadFormat,
     devMode,
     isDiffPinnedA,
@@ -414,6 +416,7 @@ export const SongCard: React.FC<SongCardProps> = ({
                                     onShare={() => setShareModalOpen(true)}
                                     onUseAsReference={() => onUseAsReference?.()}
                                     onCoverSong={() => onCoverSong?.()}
+                                    onUpscaleToHQ={onUpscaleToHQ}
                                     onDownloadFormat={() => onDownloadFormat?.()}
                                 />
                             </div>

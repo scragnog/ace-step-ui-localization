@@ -43,6 +43,7 @@ export interface SongItemCompactProps {
     onSongUpdate?: (updatedSong: Song) => void;
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
+    onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
     onCancel?: () => void;
 }
@@ -66,6 +67,7 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
     onDelete,
     onUseAsReference,
     onCoverSong,
+    onUpscaleToHQ,
     onDownloadFormat,
     onCancel
 }) => {
@@ -225,6 +227,7 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
                             onShare={() => setShareModalOpen(true)}
                             onUseAsReference={() => onUseAsReference?.()}
                             onCoverSong={() => onCoverSong?.()}
+                            onUpscaleToHQ={onUpscaleToHQ}
                             onDownloadFormat={() => onDownloadFormat?.()}
                         />
                     </div>

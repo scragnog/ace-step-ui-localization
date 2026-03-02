@@ -422,6 +422,96 @@ function AppContent() {
     setMobileShowList(false);
   };
 
+  // Upscale to HQ Handler — regenerate with same params, higher steps, no re-thinking
+  const handleUpscaleToHQ = (song: Song) => {
+    const gp = song.generationParams;
+    if (!gp) {
+      showToast('No generation parameters saved for this song — cannot upscale.', 'error');
+      return;
+    }
+
+    const hqSteps = (() => {
+      const saved = localStorage.getItem('hq_upscale_steps');
+      return saved ? parseInt(saved, 10) : 160;
+    })();
+
+    const upscaleParams: GenerationParams = {
+      // Carry over all original params
+      customMode: gp.customMode ?? true,
+      lyrics: gp.lyrics ?? song.lyrics ?? '',
+      style: gp.style ?? song.style ?? '',
+      title: `[HQ] ${song.title || 'Untitled'}`,
+      prompt: gp.prompt,
+      songDescription: gp.songDescription,
+      instrumental: gp.instrumental ?? false,
+      vocalLanguage: gp.vocalLanguage,
+
+      // Music parameters
+      duration: gp.duration,
+      bpm: gp.bpm,
+      keyScale: gp.keyScale,
+      timeSignature: gp.timeSignature,
+
+      // Model
+      ditModel: gp.ditModel,
+
+      // Key upscale changes: higher steps, no thinking, fixed seed
+      inferenceSteps: hqSteps,
+      thinking: false,
+      randomSeed: false,
+      seed: gp.seed,
+
+      // Preserve the LM audio codes from the original generation
+      audioCodes: gp.audioCodes,
+
+      // Carry over remaining generation settings
+      guidanceScale: gp.guidanceScale,
+      batchSize: 1, // Only one HQ version
+      audioFormat: gp.audioFormat ?? 'flac', // Default to FLAC for HQ
+      inferMethod: gp.inferMethod,
+      shift: gp.shift,
+
+      // LM params (not used since thinking=false, but kept for record)
+      lmTemperature: gp.lmTemperature,
+      lmCfgScale: gp.lmCfgScale,
+      lmTopK: gp.lmTopK,
+      lmTopP: gp.lmTopP,
+      lmNegativePrompt: gp.lmNegativePrompt,
+      lmModel: gp.lmModel,
+      lmBackend: gp.lmBackend,
+
+      // Expert params
+      latentShift: gp.latentShift,
+      latentRescale: gp.latentRescale,
+      cfgIntervalStart: gp.cfgIntervalStart,
+      cfgIntervalEnd: gp.cfgIntervalEnd,
+
+      // PAG
+      usePag: gp.usePag,
+      pagStart: gp.pagStart,
+      pagEnd: gp.pagEnd,
+      pagScale: gp.pagScale,
+
+      // Steering
+      steeringEnabled: gp.steeringEnabled,
+      steeringLoaded: gp.steeringLoaded,
+      steeringAlphas: gp.steeringAlphas,
+
+      // Adapters
+      loraPath: gp.loraPath,
+      loraScale: gp.loraScale,
+      advancedAdapters: gp.advancedAdapters,
+      adapterSlots: gp.adapterSlots,
+
+      // Quality: skip scoring for upscale
+      getScores: false,
+      getLrc: gp.getLrc,
+    };
+
+    handleGenerate(upscaleParams);
+    showToast(`Upscaling "${song.title}" to HQ (${hqSteps} steps)...`, 'success');
+  };
+
   // Song Update Handler
   const handleSongUpdate = (updatedSong: Song) => {
     setSongs(prev => prev.map(s => s.id === updatedSong.id ? updatedSong : s));
@@ -1847,6 +1937,7 @@ function AppContent() {
                 onDeleteAll={handleDeleteAll}
                 onUseAsReference={handleUseAsReference}
                 onCoverSong={handleCoverSong}
+                onUpscaleToHQ={handleUpscaleToHQ}
                 onDownloadFormat={openDownloadModal}
                 onUseUploadAsReference={handleUseUploadAsReference}
                 onCoverUpload={handleCoverUpload}

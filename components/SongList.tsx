@@ -36,6 +36,7 @@ interface SongListProps {
     onDeleteAll?: () => void;
     onUseAsReference?: (song: Song) => void;
     onCoverSong?: (song: Song) => void;
+    onUpscaleToHQ?: (song: Song) => void;
     onUseUploadAsReference?: (track: { audio_url: string; filename: string }) => void;
     onCoverUpload?: (track: { audio_url: string; filename: string }) => void;
     onDownloadFormat?: (song: Song) => void;
@@ -137,6 +138,7 @@ export const SongList: React.FC<SongListProps> = ({
     onDeleteAll,
     onUseAsReference,
     onCoverSong,
+    onUpscaleToHQ,
     onUseUploadAsReference,
     onCoverUpload,
     onDownloadFormat,
@@ -547,6 +549,7 @@ export const SongList: React.FC<SongListProps> = ({
                                     onSongUpdate: onSongUpdate,
                                     onUseAsReference: () => onUseAsReference?.(item.song),
                                     onCoverSong: () => onCoverSong?.(item.song),
+                                    onUpscaleToHQ: onUpscaleToHQ ? () => onUpscaleToHQ(item.song) : undefined,
                                     onDownloadFormat: () => onDownloadFormat?.(item.song),
                                     onSetAsTrackA: () => onSetAsTrackA?.(item.song),
                                     onSetAsTrackB: () => onSetAsTrackB?.(item.song),
@@ -720,6 +723,7 @@ interface SongItemProps {
     onSongUpdate?: (updatedSong: Song) => void;
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
+    onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
     onSetAsTrackA?: () => void;
     onSetAsTrackB?: () => void;
@@ -750,6 +754,7 @@ const SongItem: React.FC<SongItemProps> = ({
     onSongUpdate,
     onUseAsReference,
     onCoverSong,
+    onUpscaleToHQ,
     onDownloadFormat,
     onSetAsTrackA,
     onSetAsTrackB,
@@ -1103,6 +1108,7 @@ const SongItem: React.FC<SongItemProps> = ({
                                     onShare={() => setShareModalOpen(true)}
                                     onUseAsReference={() => onUseAsReference?.()}
                                     onCoverSong={() => onCoverSong?.()}
+                                    onUpscaleToHQ={onUpscaleToHQ}
                                     onDownloadFormat={() => onDownloadFormat?.()}
                                 />
                             </div>

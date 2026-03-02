@@ -10,7 +10,8 @@ import {
     Download,
     Trash2,
     Share2,
-    Sparkles
+    Sparkles,
+    ArrowUpCircle
 } from 'lucide-react';
 import { openStemSplitter } from './StemSplitterModal';
 import { openAudioEnhancer } from './AudioEnhancerModal';
@@ -32,6 +33,7 @@ interface SongDropdownMenuProps {
     onDelete?: () => void;
     onUseAsReference?: () => void;
     onCoverSong?: () => void;
+    onUpscaleToHQ?: () => void;
 }
 
 interface MenuItemProps {
@@ -78,7 +80,8 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
     onShare,
     onDelete,
     onUseAsReference,
-    onCoverSong
+    onCoverSong,
+    onUpscaleToHQ
 }) => {
     const { t } = useI18n();
     const menuRef = useRef<HTMLDivElement>(null);
@@ -183,6 +186,13 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
                 }}
                 disabled={!song.audioUrl}
             />
+            {onUpscaleToHQ && (
+                <MenuItem
+                    icon={<ArrowUpCircle size={14} />}
+                    label={t('upscaleToHQ') || 'Upscale to HQ'}
+                    onClick={() => handleAction(onUpscaleToHQ)}
+                />
+            )}
             {onReusePrompt && (
                 <MenuItem
                     icon={<Repeat size={14} />}

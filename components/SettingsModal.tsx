@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github, Save, Activity } from 'lucide-react';
+import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github, Save, Activity, Sliders } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { EditProfileModal } from './EditProfileModal';
@@ -18,6 +18,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
     const { t, language, setLanguage } = useI18n();
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [persistEnabled, setPersistEnabled] = useState(isPersistenceEnabled);
+    const [hqUpscaleSteps, setHqUpscaleSteps] = useState(() => {
+        const saved = localStorage.getItem('hq_upscale_steps');
+        return saved !== null ? parseInt(saved, 10) : 160;
+    });
     const [visualizerBg, setVisualizerBg] = useState(() => localStorage.getItem('visualizer_songlist_bg') === 'true');
     const [bounceIntensity, setBounceIntensity] = useState(() => {
         const saved = localStorage.getItem('waveform-bounce-intensity');
@@ -348,6 +352,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                     Reset to Defaults
                                 </button>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Generation Settings Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-zinc-900 dark:text-white">
+                            <Sliders size={20} />
+                            <h3 className="font-semibold">Generation</h3>
+                        </div>
+                        <div className="pl-7 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-zinc-900 dark:text-white font-medium">HQ Upscale Steps</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Inference steps when upscaling a preview to high quality</p>
+                                </div>
+                                <input
+                                    type="number"
+                                    min={8}
+                                    max={500}
+                                    step={8}
+                                    value={hqUpscaleSteps}
+                                    onChange={(e) => {
+                                        const val = Math.max(8, Math.min(500, parseInt(e.target.value, 10) || 160));
+                                        setHqUpscaleSteps(val);
+                                        localStorage.setItem('hq_upscale_steps', String(val));
+                                    }}
+                                    className="w-20 px-2 py-1.5 text-sm font-mono text-center rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
                         </div>
                     </div>
 
