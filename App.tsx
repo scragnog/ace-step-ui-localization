@@ -373,8 +373,11 @@ function AppContent() {
     audio_url: string;
   }
 
-  const showToast = (message: string, type: ToastType = 'success') => {
+  const showToast = (message: string, type: ToastType = 'success', duration?: number) => {
     setToast({ message, type, isVisible: true });
+    if (duration) {
+      setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), duration);
+    }
   };
 
   const closeToast = () => {
@@ -514,7 +517,7 @@ function AppContent() {
     };
 
     handleGenerate(upscaleParams);
-    showToast(`Upscaling "${song.title}" to HQ (${hqSteps} steps)...`, 'success');
+    showToast(`Upscaling "${song.title}" to HQ (${hqSteps} steps)...`, 'success', 5000);
   };
 
   // Song Update Handler
