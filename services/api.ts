@@ -793,6 +793,118 @@ export const contactApi = {
     api('/api/contact', { method: 'POST', body: data }),
 };
 
+// Model Management API
+export interface ModelInfo {
+  name: string;
+  is_default: boolean;
+  is_loaded: boolean;
+}
+
+export interface LmModelInfo {
+  name: string;
+  is_loaded: boolean;
+}
+
+export interface ModelInventory {
+  models: ModelInfo[];
+  default_model: string | null;
+  lm_models: LmModelInfo[];
+  loaded_lm_model: string | null;
+  llm_initialized: boolean;
+}
+
+export interface HealthStatus {
+  status: string;
+  service: string;
+  version: string;
+  models_initialized: boolean;
+  llm_initialized: boolean;
+  loaded_model: string | null;
+  loaded_lm_model: string | null;
+}
+
+export interface ServerStats {
+  jobs: Record<string, number>;
+  queue_size: number;
+  queue_maxsize: number;
+  avg_job_seconds: number;
+}
+
+export interface LoraAdapterInfo {
+  lora_loaded: boolean;
+  use_lora: boolean;
+  lora_scale: number;
+  adapter_type: string | null;
+  scales: Record<string, number>;
+  active_adapter: string | null;
+  adapters: string[];
+  synthetic_default_mode: boolean;
+}
+
+export const modelApi = {
+  getHealth: (token?: string | null): Promise<HealthStatus> =>
+    api('/api/model/health', { token: token || undefined }),
+
+  getModels: (token: string): Promise<ModelInventory> =>
+    api('/api/model/models', { token }),
+
+  initModel: (params: {
+    model?: string;
+    init_llm?: boolean;
+    lm_model_path?: string;
+  }, token: string): Promise<{
+    message: string;
+    loaded_model: string | null;
+    loaded_lm_model: string | null;
+    models: ModelInfo[];
+    lm_models: LmModelInfo[];
+    llm_initialized: boolean;
+  }> => api('/api/model/init', { method: 'POST', body: params, token }),
+
+  reinitialize: (token: string): Promise<{
+    message: string;
+    reloaded: string[];
+  }> => api('/api/model/reinitialize', { method: 'POST', token }),
+
+  getStats: (token: string): Promise<ServerStats> =>
+    api('/api/model/stats', { token }),
+};
+
+// Enhanced LoRA API (multi-adapter)
+export const loraApi = {
+  load: (params: {
+    lora_path: string;
+    adapter_name?: string;
+  }, token: string): Promise<{
+    message: string;
+    lora_path: string;
+    adapter_name?: string;
+  }> => api('/api/lora/load', { method: 'POST', body: params, token }),
+
+  unload: (token: string): Promise<{
+    message: string;
+  }> => api('/api/lora/unload', { method: 'POST', token }),
+
+  toggle: (params: {
+    use_lora: boolean;
+  }, token: string): Promise<{
+    message: string;
+    use_lora: boolean;
+  }> => api('/api/lora/toggle', { method: 'POST', body: params, token }),
+
+  setScale: (params: {
+    scale: number;
+    adapter_name?: string;
+  }, token: string): Promise<{
+    message: string;
+    scale: number;
+    adapter_name?: string;
+  }> => api('/api/lora/scale', { method: 'POST', body: params, token }),
+
+  getStatus: (token: string): Promise<LoraAdapterInfo> =>
+    api('/api/lora/status', { token }),
+};
+
 // Training API
 export interface DatasetSample {
   index: number;

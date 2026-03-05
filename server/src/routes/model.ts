@@ -56,45 +56,63 @@ async function proxyToAceStep(endpoint: string, method: string, data?: any) {
   }
 }
 
-router.post('/load', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+// Health check (no auth required for connectivity check)
+router.get('/health', async (_req, res: Response) => {
   try {
-    const result = await proxyToAceStep('/v1/lora/load', 'POST', req.body);
-    res.json(result || { message: 'LoRA loaded' });
+    const result = await proxyToAceStep('/health', 'GET');
+    res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    const isConnRefused = error?.cause?.code === 'ECONNREFUSED' ||
+      error?.code === 'ECONNREFUSED' ||
+      error?.message?.includes('ECONNREFUSED');
+    if (isConnRefused) {
+      res.status(503).json({
+        status: 'unavailable',
+        models_initialized: false,
+        llm_initialized: false,
+        loaded_model: null,
+        loaded_lm_model: null,
+      });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 
-router.post('/unload', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+// List models
+router.get('/models', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await proxyToAceStep('/v1/lora/unload', 'POST');
-    res.json(result || { message: 'LoRA unloaded' });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post('/toggle', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const result = await proxyToAceStep('/v1/lora/toggle', 'POST', req.body);
+    const result = await proxyToAceStep('/v1/model_inventory', 'GET');
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-router.post('/scale', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+// Initialize / switch model
+router.post('/init', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await proxyToAceStep('/v1/lora/scale', 'POST', req.body);
+    const result = await proxyToAceStep('/v1/init', 'POST', req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-router.get('/status', authMiddleware, async (_req: AuthenticatedRequest, res: Response) => {
+// Reinitialize after training
+router.post('/reinitialize', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await proxyToAceStep('/v1/lora/status', 'GET');
+    const result = await proxyToAceStep('/v1/reinitialize', 'POST');
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Server stats
+router.get('/stats', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/stats', 'GET');
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

@@ -33,8 +33,8 @@ function resolveAceStepPath(): string {
   if (envPath) {
     return path.isAbsolute(envPath) ? envPath : path.resolve(process.cwd(), envPath);
   }
-  // Default: sibling directory
-  return path.resolve(__dirname, '../../../../ACE-Step-1.5');
+  // Default: project root (ace-step-ui/server/src/services/ → 4 levels up)
+  return path.resolve(__dirname, '../../../..');
 }
 
 // Resolve Python path cross-platform (supports venv and portable installations)

@@ -1,9 +1,10 @@
 import { Router, Response } from 'express';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.js';
+import { config } from '../config/index.js';
 
 const router = Router();
 
-const ACESTEP_API_URL = process.env.ACESTEP_API_URL || 'http://127.0.0.1:8001';
+const ACESTEP_API_URL = config.acestep.apiUrl;
 const ACESTEP_API_KEY = process.env.ACESTEP_API_KEY || '';
 
 async function proxyToAceStep(endpoint: string, method: string, data?: any) {

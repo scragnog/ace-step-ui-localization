@@ -19,7 +19,7 @@ export const config = {
 
   // ACE-Step API (local)
   acestep: {
-    apiUrl: process.env.ACESTEP_API_URL || 'http://localhost:8001',
+    apiUrl: process.env.ACESTEP_API_URL || `http://${process.env.ACESTEP_API_HOST || '127.0.0.1'}:${process.env.ACESTEP_API_PORT || '8001'}`,
   },
 
   // Pexels (optional - for video backgrounds)
@@ -28,7 +28,7 @@ export const config = {
   },
 
   // Frontend URL
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 
   // Storage (local only)
   storage: {

@@ -30,7 +30,7 @@ const VOCAL_LANGUAGE_VALUES = [
 ];
 import { useI18n } from '../context/I18nContext';
 import { useAuth } from '../context/AuthContext';
-import { trainingApi, DatasetSample, TrainingStatus } from '../services/api';
+import { trainingApi, modelApi, DatasetSample, TrainingStatus } from '../services/api';
 
 interface DisplaySample {
   index: number;
@@ -47,9 +47,11 @@ interface DisplaySample {
 
 interface TrainingPanelProps {
   onPlaySample?: (audioPath: string, title: string) => void;
+  isReinitializing?: boolean;
+  onReinitializingChange?: (value: boolean) => void;
 }
 
-export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) => {
+export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample, isReinitializing: externalIsReinitializing, onReinitializingChange }) => {
   const { t } = useI18n();
   const { token } = useAuth();
 
@@ -127,6 +129,13 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
     is_instrumental: false,
   });
 
+  // Base Model Selection for Training
+  const [trainingBaseModel, setTrainingBaseModel] = useState<string>(() => {
+    return localStorage.getItem('ace-trainingBaseModel') || '';
+  });
+  const [availableBaseModels, setAvailableBaseModels] = useState<{ name: string; is_loaded: boolean; is_default: boolean }[]>([]);
+  const [isModelSwitching, setIsModelSwitching] = useState(false);
+
   // Adapter Type
   const [adapterType, setAdapterType] = useState<'lora' | 'lokr'>('lokr');
 
@@ -165,6 +174,10 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
   const [trainingStartTime, setTrainingStartTime] = useState<number | null>(null);
   const [currentEpoch, setCurrentEpoch] = useState(0);
   const [trainingStatus, setTrainingStatus] = useState<TrainingStatus | null>(null);
+  const [reinitMessage, setReinitMessage] = useState('');
+  // isReinitializing is lifted to parent (App) for cross-panel blocking
+  const isReinitializing = externalIsReinitializing ?? false;
+  const setIsReinitializing = (v: boolean) => onReinitializingChange?.(v);
 
   const trainingLogRef = useRef('');
   const showTensorboardRef = useRef(false);
@@ -474,6 +487,8 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
         if (!status.is_training) {
           setIsTraining(false);
           clearInterval(pollInterval);
+          // Auto-reinitialize inference components after training ends
+          void autoReinitialize();
         }
 
         // Update TensorBoard URL if available
@@ -995,19 +1010,84 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
       setIframeKey((v) => v + 1);
       setTrainingStartTime(null);
       setCurrentEpoch(0);
+      // Auto-reinitialize inference components after stop
+      void autoReinitialize();
     } catch (error: any) {
       setTrainingProgress(`${t('error')}: ${error?.message || 'Failed to stop training'}`);
     }
   };
 
+  const autoReinitialize = async () => {
+    if (!token) return;
+    setIsReinitializing(true);
+    setReinitMessage('Reinitializing inference components...');
+    try {
+      const result = await modelApi.reinitialize(token);
+      setReinitMessage(result.message || 'Service reinitialized successfully');
+    } catch (error: any) {
+      setReinitMessage(`Reinitialize failed: ${error?.message || 'unknown error'}`);
+    } finally {
+      setIsReinitializing(false);
+    }
+  };
+
+  const fetchBaseModels = async () => {
+    if (!token) return;
+    try {
+      const inventory = await modelApi.getModels(token);
+      if (inventory.models?.length > 0) {
+        setAvailableBaseModels(inventory.models);
+        // Sync to loaded model if no selection yet
+        if (!trainingBaseModel) {
+          const loaded = inventory.models.find(m => m.is_loaded && m.is_default);
+          if (loaded) {
+            setTrainingBaseModel(loaded.name);
+            localStorage.setItem('ace-trainingBaseModel', loaded.name);
+          }
+        }
+      }
+    } catch {
+      // ignore - backend may not be ready
+    }
+  };
+
+  const handleTrainingModelSwitch = async (modelName: string) => {
+    if (!token || isModelSwitching) return;
+    setTrainingBaseModel(modelName);
+    localStorage.setItem('ace-trainingBaseModel', modelName);
+    // Check if already loaded
+    const info = availableBaseModels.find(m => m.name === modelName);
+    if (info?.is_loaded) return;
+    // Switch via /v1/init
+    setIsModelSwitching(true);
+    try {
+      const result = await modelApi.initModel({ model: modelName }, token);
+      if (result.models) setAvailableBaseModels(result.models);
+    } catch (err) {
+      console.error('Training base model switch failed:', err);
+    } finally {
+      setIsModelSwitching(false);
+    }
+  };
+
+  // Fetch base models on mount
+  useEffect(() => {
+    if (!token) return;
+    fetchBaseModels();
+  }, [token]);
+
   return (
     <div className="flex flex-col h-full w-full bg-white dark:bg-zinc-900">
       {/* Header */}
       <div className="border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-800 p-6">
-        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">🎓 {t('loraTraining')}</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {t('trainingDescription')}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-shrink-0">
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">🎓 {t('adapterTraining') || 'Adapter Training'}</h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+              {t('trainingDescription')}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -1620,6 +1700,44 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
                 </div>
               </div>
 
+              {/* Base Model Selector */}
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl p-4 space-y-3 border-2 border-amber-200 dark:border-amber-800 shadow-sm">
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                  🧠 {t('baseModel') || 'Base Model'}
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('baseModelHint') || 'Select which DiT checkpoint to use as the training base. Switching will hot-swap the loaded model.'}</p>
+                <div className="flex flex-wrap gap-2">
+                  {(availableBaseModels.length > 0 ? availableBaseModels : [
+                    { name: 'acestep-v15-base', is_loaded: false, is_default: false },
+                    { name: 'acestep-v15-sft', is_loaded: false, is_default: false },
+                    { name: 'acestep-v15-turbo', is_loaded: false, is_default: false },
+                    { name: 'acestep-v15-turbo-shift1', is_loaded: false, is_default: false },
+                    { name: 'acestep-v15-turbo-shift3', is_loaded: false, is_default: false },
+                  ]).map(model => {
+                    const isSelected = trainingBaseModel === model.name;
+                    const shortName = model.name.replace('acestep-v15-', '');
+                    return (
+                      <button
+                        key={model.name}
+                        onClick={() => void handleTrainingModelSwitch(model.name)}
+                        disabled={isModelSwitching || isTraining}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          isSelected
+                            ? 'bg-amber-600 text-white shadow-md'
+                            : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-700'
+                        } ${(isModelSwitching || isTraining) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {shortName}
+                        {model.is_loaded && <span className="ml-1 text-[9px] opacity-70">●</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                {isModelSwitching && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 animate-pulse">{t('switchingModel') || 'Switching model...'}</p>
+                )}
+              </div>
+
               {/* Adapter Type Selector */}
               <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/30 dark:to-blue-950/30 rounded-xl p-4 space-y-3 border-2 border-indigo-200 dark:border-indigo-800 shadow-md">
                 <h3 className="text-base font-semibold text-zinc-900 dark:text-white">🔧 {t('adapterType')}</h3>
@@ -1925,15 +2043,15 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
               <div className="flex gap-4">
                 <button
                   onClick={handleStartTraining}
-                  disabled={isTraining}
+                  disabled={isTraining || isReinitializing}
                   className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
-                    isTraining
+                    isTraining || isReinitializing
                       ? 'bg-zinc-300 dark:bg-zinc-700 text-zinc-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
                   }`}
                 >
                   <Play size={18} />
-                  {t('startTraining')}
+                  {isReinitializing ? (t('reinitializing') || 'Reinitializing...') : t('startTraining')}
                 </button>
                 <button
                   onClick={handleStopTraining}
@@ -1948,6 +2066,31 @@ export const TrainingPanel: React.FC<TrainingPanelProps> = ({ onPlaySample }) =>
                   {t('stopTraining')}
                 </button>
               </div>
+
+              {/* Auto-Reinitialize Status Banner */}
+              {(isReinitializing || reinitMessage) && (
+                <div className={`rounded-xl p-4 border-2 ${
+                  isReinitializing
+                    ? 'bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950/30 dark:to-amber-950/30 border-yellow-300 dark:border-yellow-800 animate-pulse'
+                    : reinitMessage.includes('failed') || reinitMessage.includes('Error')
+                      ? 'bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/30 dark:to-pink-950/30 border-red-300 dark:border-red-800'
+                      : 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-300 dark:border-green-800'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{isReinitializing ? '⏳' : reinitMessage.includes('failed') || reinitMessage.includes('Error') ? '❌' : '✅'}</span>
+                    <div>
+                      <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                        {isReinitializing ? (t('reinitializing') || 'Restoring inference service...') : (t('reinitializeComplete') || 'Service Recovery')}
+                      </h4>
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
+                        {isReinitializing
+                          ? (t('reinitializingHint') || 'Reloading DiT/VAE/LLM components. Please wait before generating or training again.')
+                          : reinitMessage}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Training Progress */}
               {trainingProgress && trainingStatus && (() => {
