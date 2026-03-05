@@ -50,14 +50,6 @@ interface LmCotAccordionProps {
     // Format Caption
     isFormatCaption: boolean;
     onIsFormatCaptionToggle: () => void;
-    // LM LoRA
-    lmLoraPath: string;
-    lmLoraScale: number;
-    lmLoraStatus: string;
-    onLmLoraPathChange: (val: string) => void;
-    onLoadLmLora: () => void;
-    onUnloadLmLora: () => void;
-    onLmLoraScaleChange: (val: number) => void;
 }
 
 const Toggle: React.FC<{ on: boolean; onClick: () => void; disabled?: boolean }> = ({ on, onClick, disabled }) => (
@@ -90,11 +82,10 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
     lmBatchChunkSize, onLmBatchChunkSizeChange,
     constrainedDecodingDebug, onConstrainedDecodingDebugToggle,
     isFormatCaption, onIsFormatCaptionToggle,
-    lmLoraPath, lmLoraScale, lmLoraStatus,
-    onLmLoraPathChange, onLoadLmLora, onUnloadLmLora, onLmLoraScaleChange,
+
 }) => {
     const { t } = useI18n();
-    const lmLoraLoaded = lmLoraStatus.startsWith('✅');
+
 
     const selectClass = "w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors cursor-pointer [&>option]:bg-white [&>option]:dark:bg-zinc-800 [&>option]:text-zinc-900 [&>option]:dark:text-white";
 
@@ -147,43 +138,7 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
                         <p className="text-[10px] text-zinc-500">{t('lmModelHint')}</p>
                     </div>
 
-                    {/* LM LoRA */}
-                    <div className="space-y-2 pt-2 pb-1 border-t border-zinc-100 dark:border-white/5">
-                        <p className="text-[10px] text-zinc-500 uppercase tracking-wide font-bold">LM LoRA</p>
-                        <div className="flex gap-2 items-end">
-                            <div className="flex-1 space-y-1">
-                                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Adapter Path</label>
-                                <input
-                                    type="text"
-                                    value={lmLoraPath}
-                                    onChange={(e) => onLmLoraPathChange(e.target.value)}
-                                    placeholder="D:/ace-lm-trainer/loras/my_artist/output/final"
-                                    className="w-full bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-xl px-2 py-1.5 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-pink-500 dark:focus:border-pink-500 transition-colors"
-                                />
-                            </div>
-                            <button type="button" onClick={onLoadLmLora}
-                                className="px-3 py-1.5 rounded-xl text-xs font-medium bg-pink-600 hover:bg-pink-700 text-white transition-colors shrink-0">
-                                Load
-                            </button>
-                            <button type="button" onClick={onUnloadLmLora} disabled={!lmLoraLoaded}
-                                className="px-3 py-1.5 rounded-xl text-xs font-medium border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 disabled:opacity-40 transition-colors shrink-0">
-                                Unload
-                            </button>
-                        </div>
-                        <EditableSlider
-                            label="LM LoRA Scale"
-                            value={lmLoraScale}
-                            min={0} max={2} step={0.05}
-                            onChange={onLmLoraScaleChange}
-                            formatDisplay={(v) => v.toFixed(2)}
-                            helpText="1.0 = full strength  •  0 = disabled  •  >1 = amplified"
-                        />
-                        {lmLoraStatus && (
-                            <p className={`text-[10px] ${lmLoraLoaded ? 'text-emerald-500' : 'text-zinc-400'} truncate`}>
-                                {lmLoraStatus}
-                            </p>
-                        )}
-                    </div>
+
 
                     {/* LM Parameters sub-accordion */}
                     <button

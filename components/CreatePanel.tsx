@@ -269,10 +269,6 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [loraError, setLoraError] = useState<string | null>(null);
   const [isLoraLoading, setIsLoraLoading] = useState(false);
 
-  // LM LoRA Parameters (PEFT adapter on the 5Hz language model)
-  const [lmLoraPath, setLmLoraPath] = usePersistedState('ace-lmLoraPath', '');
-  const [lmLoraScale, setLmLoraScale] = usePersistedState('ace-lmLoraScale', 1.0);
-  const [lmLoraStatus, setLmLoraStatus] = useState('No LM LoRA loaded');
 
   // Advanced adapter state
   const [advancedAdapters, setAdvancedAdapters] = usePersistedState('ace-advancedAdapters', false);
@@ -566,26 +562,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   }, [loraLoaded, advancedAdapters]);
 
-  // On mount: restore LM LoRA status from backend — the Python process keeps
-  // the adapter loaded across page refreshes, so the UI should reflect that.
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const status = await generateApi.getLmLoraStatus(token);
-        if (cancelled) return;
-        if (status?.loaded) {
-          setLmLoraPath(status.lm_lora_path || '');
-          setLmLoraScale(status.scale ?? 1.0);
-          setLmLoraStatus(status.message || `✅ LM LoRA loaded: ${status.lm_lora_path}`);
-        }
-      } catch {
-        // Silently ignore — backend may not be ready yet
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [token]);
+
 
   // LoRA API handlers
   const handleLoraToggle = async () => {
@@ -649,46 +626,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
     }
   };
 
-  // LM LoRA API handlers
-  const handleLoadLmLora = async () => {
-    if (!token) return;
-    if (!lmLoraPath.trim()) {
-      setLmLoraStatus('❌ Please enter a path to the LM LoRA adapter');
-      return;
-    }
-    try {
-      const result = await generateApi.loadLmLora({ lm_lora_path: lmLoraPath, scale: lmLoraScale }, token);
-      setLmLoraStatus(result?.message || '✅ LM LoRA loaded');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to load LM LoRA';
-      setLmLoraStatus(`❌ ${msg}`);
-    }
-  };
 
-  const handleUnloadLmLora = async () => {
-    if (!token) return;
-    try {
-      const result = await generateApi.unloadLmLora(token);
-      setLmLoraStatus(result?.message || '✅ LM LoRA unloaded');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to unload LM LoRA';
-      setLmLoraStatus(`❌ ${msg}`);
-    }
-  };
-
-  const handleLmLoraScaleChange = async (newScale: number) => {
-    setLmLoraScale(newScale);
-    // Only fire API when an adapter is loaded
-    if (!token || !lmLoraStatus.startsWith('✅')) return;
-    try {
-      const result = await generateApi.setLmLoraScale(newScale, token);
-      setLmLoraStatus(result?.message || `✅ LM LoRA scale: ${newScale.toFixed(2)}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to set scale';
-      setLmLoraStatus(`❌ ${msg}`);
-      console.error('Failed to set LM LoRA scale:', err);
-    }
-  };
 
   // Advanced adapter handlers
   const handleScanFolder = async () => {
@@ -2599,13 +2537,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onConstrainedDecodingDebugToggle={() => setConstrainedDecodingDebug(!constrainedDecodingDebug)}
           isFormatCaption={isFormatCaption}
           onIsFormatCaptionToggle={() => setIsFormatCaption(!isFormatCaption)}
-          lmLoraPath={lmLoraPath}
-          lmLoraScale={lmLoraScale}
-          lmLoraStatus={lmLoraStatus}
-          onLmLoraPathChange={setLmLoraPath}
-          onLoadLmLora={handleLoadLmLora}
-          onUnloadLmLora={handleUnloadLmLora}
-          onLmLoraScaleChange={handleLmLoraScaleChange}
+
           uploadError={uploadError}
           audioCodes={audioCodes}
           onAudioCodesChange={setAudioCodes}
