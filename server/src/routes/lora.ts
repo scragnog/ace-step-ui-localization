@@ -101,4 +101,71 @@ router.get('/status', authMiddleware, async (_req: AuthenticatedRequest, res: Re
   }
 });
 
+// ── File browser ───────────────────────────────────────────────────
+router.get('/list-files', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const folder = req.query.folder as string || '';
+    const result = await proxyToAceStep(`/v1/lora/list-files?folder=${encodeURIComponent(folder)}`, 'GET');
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Advanced adapter endpoints ─────────────────────────────────────
+router.post('/group-scales', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/group-scales', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/slot-group-scales', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/slot-group-scales', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/slot-layer-scales', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/slot-layer-scales', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/slot-layer-scale', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/slot-layer-scale', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/temporal-schedule', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/lora/temporal-schedule', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/audio-diff', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await proxyToAceStep('/v1/audio/diff', 'POST', req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
+
