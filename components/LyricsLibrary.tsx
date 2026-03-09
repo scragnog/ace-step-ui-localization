@@ -90,7 +90,15 @@ export function LyricsLibrary({ setStyle, setLyrics, setBpm, setKeyScale, setTit
         if (track.caption) setStyle(track.caption);
         if (track.lyrics) setLyrics(track.lyrics);
         if (track.bpm > 0) setBpm(track.bpm);
-        if (track.keyscale) setKeyScale(track.keyscale);
+        if (track.keyscale) {
+            // Normalize: ACE-Step expects "C# minor" not "C# Minor"
+            const parts = track.keyscale.trim().split(/\s+/);
+            if (parts.length === 2) {
+                setKeyScale(`${parts[0]} ${parts[1].toLowerCase()}`);
+            } else {
+                setKeyScale(track.keyscale);
+            }
+        }
         if (track.title) setTitle(track.title);
         setAppliedTrack(track.filename);
         setTimeout(() => setAppliedTrack(''), 2000);
