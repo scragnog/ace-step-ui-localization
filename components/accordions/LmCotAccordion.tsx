@@ -161,8 +161,8 @@ export const LmCotAccordion: React.FC<LmCotAccordionProps> = ({
                             <EditableSlider label={t('lmTemperature')} value={lmTemperature} min={0} max={2} step={0.05} onChange={onLmTemperatureChange} formatDisplay={(val) => val.toFixed(2)} helpText={t('higherMoreRandom')} title={t('lmTemperatureTooltip')} />
                             <EditableSlider label={t('lmCfgScale')} value={lmCfgScale} min={1} max={3} step={0.1} onChange={onLmCfgScaleChange} formatDisplay={(val) => val.toFixed(1)} helpText={t('noCfgScale')} title={t('lmGuidanceScaleTooltip')} />
                             <div className="grid grid-cols-2 gap-3">
-                                <EditableSlider label={t('topK')} value={lmTopK} min={0} max={100} step={1} onChange={onLmTopKChange} title={t('lmTopKTooltip')} helpText="0 = no limit. Lower values = safer, more predictable word choices" />
-                                <EditableSlider label={t('topP')} value={lmTopP} min={0} max={1} step={0.01} onChange={onLmTopPChange} formatDisplay={(val) => val.toFixed(2)} title={t('lmTopPTooltip')} helpText="Controls vocabulary diversity. 0.92 is a good default" />
+                                <EditableSlider label={t('topK')} value={lmTopK} min={0} max={100} step={1} onChange={onLmTopKChange} title={t('lmTopKTooltip')} helpText="Limits token choices per step. 0 = unlimited, 10-30 = safe and predictable." />
+                                <EditableSlider label={t('topP')} value={lmTopP} min={0} max={1} step={0.01} onChange={onLmTopPChange} formatDisplay={(val) => val.toFixed(2)} title={t('lmTopPTooltip')} helpText="Nucleus sampling threshold. 0.92 = ignore bottom 8% of unlikely tokens. Lower = safer." />
                             </div>
                             <EditableSlider label={t('lmRepetitionPenalty')} value={lmRepetitionPenalty ?? 1.0} min={1.0} max={1.5} step={0.01} onChange={onLmRepetitionPenaltyChange} formatDisplay={(val) => val.toFixed(2)} helpText={t('lmRepetitionPenaltyHelp')} title={t('lmRepetitionPenaltyTooltip')} />
                             <div className="space-y-1.5">
