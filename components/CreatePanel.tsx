@@ -197,6 +197,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [audioFormat, setAudioFormat] = usePersistedState<'mp3' | 'flac' | 'wav' | 'opus'>('ace-audioFormat', 'mp3');
   const [inferenceSteps, setInferenceSteps] = usePersistedState('ace-inferenceSteps', 12);
   const [inferMethod, setInferMethod] = usePersistedState<'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4'>('ace-inferMethod', 'ode');
+  const [scheduler, setScheduler] = usePersistedState<'linear' | 'ddim_uniform' | 'sgm_uniform' | 'bong_tangent' | 'linear_quadratic'>('ace-scheduler', 'linear');
   const [lmBackend, setLmBackend] = usePersistedState<'pt' | 'vllm'>('ace-lmBackend', 'pt');
   const [lmModel, setLmModel] = usePersistedState('ace-lmModel', 'acestep-5Hz-lm-0.6B');
   const [shift, setShift] = usePersistedState('ace-shift', 3.0);
@@ -903,6 +904,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         thinking,
         audioFormat,
         inferMethod,
+        scheduler,
         lmBackend,
         lmModel,
         shift,
@@ -1012,6 +1014,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setRandomSeed(false);
         }
         if (gp.inferMethod) setInferMethod(gp.inferMethod);
+        if (gp.scheduler) setScheduler(gp.scheduler);
         if (gp.shift != null) setShift(gp.shift);
         if (gp.audioFormat) setAudioFormat(gp.audioFormat);
         if (gp.thinking != null) setThinking(gp.thinking);
@@ -1791,6 +1794,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           thinking,
           audioFormat,
           inferMethod,
+          scheduler,
           lmBackend,
           lmModel,
           shift,
@@ -1883,6 +1887,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       thinking,
       audioFormat,
       inferMethod,
+      scheduler,
       shift,
       lmBackend,
       lmModel,
@@ -1976,6 +1981,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         if (json.thinking !== undefined) setThinking(json.thinking);
         if (json.audioFormat !== undefined) setAudioFormat(json.audioFormat);
         if (json.inferMethod !== undefined) setInferMethod(json.inferMethod);
+        if (json.scheduler !== undefined) setScheduler(json.scheduler);
         if (json.shift !== undefined) setShift(json.shift);
         if (json.lmBackend !== undefined) setLmBackend(json.lmBackend);
         if (json.lmModel !== undefined) setLmModel(json.lmModel);
@@ -2488,6 +2494,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           onInferenceStepsChange={setInferenceSteps}
           inferMethod={inferMethod}
           onInferMethodChange={setInferMethod}
+          scheduler={scheduler}
+          onSchedulerChange={setScheduler}
           audioFormat={audioFormat}
           onAudioFormatChange={setAudioFormat}
           guidanceScale={guidanceScale}

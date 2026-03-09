@@ -350,6 +350,14 @@ export const translations = {
         solverHeunDesc: 'Higher accuracy per step, but each step costs 2× compute. Try with fewer steps.',
         solverDpm2mDesc: 'Uses velocity history for 2nd-order accuracy at no extra cost. Great quality/speed balance.',
         solverRk4Desc: 'Highest mathematical precision (4th order), but each step costs 4× compute. For critical renders.',
+        // Scheduler (timestep distribution)
+        scheduler: 'Timestep Scheduler',
+        schedulerLinearDesc: 'Uniform spacing (default). Backward-compatible with all workflows.',
+        schedulerDdimDesc: 'Uniform in σ-space. Concentrates steps where noise changes fastest.',
+        schedulerSgmDesc: 'Uniform in σ²-space (EDM convention). Similar to DDIM, different curvature.',
+        schedulerBongDesc: 'Tangent-based front-loading. More budget for structural decisions.',
+        schedulerLinQuadDesc: 'Linear start, quadratic end. More budget for fine detail refinement.',
+        schedulerTooltip: 'How diffusion timesteps are distributed. All schedulers compose with the Shift slider.',
         // Per-option descriptions for audio format
         audioFormatMp3Desc: 'Compressed, small files. Good for sharing and previews.',
         audioFormatFlacDesc: 'Lossless compression, perfect quality. Best for archiving and further editing.',
@@ -535,6 +543,7 @@ export const translations = {
         metaSeed: 'Seed',
         metaModel: 'Model',
         metaInferMethod: 'Method',
+        metaScheduler: 'Scheduler',
         metaAudioFormat: 'Format',
         metaShift: 'Shift',
         metaLmModel: 'LM Model',

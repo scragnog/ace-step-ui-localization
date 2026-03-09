@@ -106,6 +106,7 @@ interface GenerateBody {
   thinking?: boolean;
   audioFormat?: 'mp3' | 'flac';
   inferMethod?: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4';
+  scheduler?: 'linear' | 'ddim_uniform' | 'sgm_uniform' | 'bong_tangent' | 'linear_quadratic';
   shift?: number;
 
   // LM Parameters
@@ -287,6 +288,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         cfg_interval_start: params.cfgIntervalStart || 0.0,
         cfg_interval_end: params.cfgIntervalEnd || 1.0,
         infer_method: params.inferMethod || 'ode',
+        scheduler: params.scheduler || 'linear',
         shift: params.shift,
         // Audio paths — resolve to absolute paths for Python backend
         ...(params.sourceAudioUrl ? { src_audio_path: resolveAudioPath(params.sourceAudioUrl) } : {}),

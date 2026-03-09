@@ -469,6 +469,7 @@ function AppContent() {
       batchSize: 1, // Only one HQ version
       audioFormat: gp.audioFormat ?? 'flac', // Default to FLAC for HQ
       inferMethod: gp.inferMethod,
+      scheduler: gp.scheduler,
       shift: gp.shift,
 
       // LM params (not used since thinking=false, but kept for record)

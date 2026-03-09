@@ -839,6 +839,14 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({ song, onClose, onOpe
                                             gradient: getGradient('tech')
                                         });
                                     }
+                                    if (gp.scheduler && gp.scheduler !== 'linear') {
+                                        coreItems.push({
+                                            label: t('metaScheduler'),
+                                            value: gp.scheduler.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                                            icon: <Clock size={12} />,
+                                            gradient: getGradient('tech')
+                                        });
+                                    }
                                     if (gp.shift != null) {
                                         coreItems.push({
                                             label: t('metaShift'),

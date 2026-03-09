@@ -397,6 +397,7 @@ export interface GenerationParams {
   thinking?: boolean;
   audioFormat?: 'mp3' | 'flac';
   inferMethod?: 'ode' | 'sde';
+  scheduler?: 'linear' | 'ddim_uniform' | 'sgm_uniform' | 'bong_tangent' | 'linear_quadratic';
   shift?: number;
 
   // LM Parameters

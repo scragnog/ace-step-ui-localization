@@ -32,6 +32,8 @@ interface GenerationSettingsAccordionProps {
     onInferenceStepsChange: (val: number) => void;
     inferMethod: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4';
     onInferMethodChange: (val: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4') => void;
+    scheduler: 'linear' | 'ddim_uniform' | 'sgm_uniform' | 'bong_tangent' | 'linear_quadratic';
+    onSchedulerChange: (val: 'linear' | 'ddim_uniform' | 'sgm_uniform' | 'bong_tangent' | 'linear_quadratic') => void;
     // Audio Format
     audioFormat: 'mp3' | 'flac' | 'wav' | 'opus';
     onAudioFormatChange: (val: 'mp3' | 'flac' | 'wav' | 'opus') => void;
@@ -263,6 +265,21 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                                         </select>
                                         <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">
                                             {t(({ ode: 'solverEulerDesc', euler: 'solverEulerDesc', heun: 'solverHeunDesc', dpm2m: 'solverDpm2mDesc', rk4: 'solverRk4Desc' } as const)[props.inferMethod])}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="col-span-2 grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('scheduler')}</label>
+                                        <select value={props.scheduler} onChange={(e) => props.onSchedulerChange(e.target.value as any)} className={selectClass}>
+                                            <option value="linear" title={t('schedulerLinearDesc')}>Linear</option>
+                                            <option value="ddim_uniform" title={t('schedulerDdimDesc')}>DDIM Uniform</option>
+                                            <option value="sgm_uniform" title={t('schedulerSgmDesc')}>SGM Uniform</option>
+                                            <option value="bong_tangent" title={t('schedulerBongDesc')}>Bong Tangent</option>
+                                            <option value="linear_quadratic" title={t('schedulerLinQuadDesc')}>Linear-Quadratic</option>
+                                        </select>
+                                        <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">
+                                            {t(({ linear: 'schedulerLinearDesc', ddim_uniform: 'schedulerDdimDesc', sgm_uniform: 'schedulerSgmDesc', bong_tangent: 'schedulerBongDesc', linear_quadratic: 'schedulerLinQuadDesc' } as const)[props.scheduler])}
                                         </p>
                                     </div>
                                 </div>
