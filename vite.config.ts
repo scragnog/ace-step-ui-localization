@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
       host: devHost,
       allowedHosts: ['all'],
       proxy: {
+        // Lyrics Library scanner — direct to Python backend (bypasses Node.js middleware)
+        '/api/lyrics-library': {
+          target: env.ACESTEP_API_URL || `http://${env.ACESTEP_API_HOST || '127.0.0.1'}:${env.ACESTEP_API_PORT || '8001'}`,
+          changeOrigin: true,
+        },
         '/api': {
           target: backendUrl,
           changeOrigin: true,
