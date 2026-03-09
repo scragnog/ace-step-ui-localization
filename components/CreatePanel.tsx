@@ -2329,6 +2329,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
               setBpm={setBpm}
               setKeyScale={setKeyScale}
               setTitle={setTitle}
+              setDuration={setDuration}
             />
 
             {/* Audio Section - Conditionally rendered */}

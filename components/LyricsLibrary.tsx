@@ -8,6 +8,7 @@ interface Track {
     lyrics: string;
     bpm: number;
     keyscale: string;
+    duration: number;
     filename: string;
 }
 
@@ -27,9 +28,10 @@ interface Props {
     setBpm: (v: number) => void;
     setKeyScale: (v: string) => void;
     setTitle: (v: string) => void;
+    setDuration: (v: number) => void;
 }
 
-export function LyricsLibrary({ setStyle, setLyrics, setBpm, setKeyScale, setTitle }: Props) {
+export function LyricsLibrary({ setStyle, setLyrics, setBpm, setKeyScale, setTitle, setDuration }: Props) {
     const [libraryPath, setLibraryPath] = usePersistedState('ace-lyrics-library-path', '');
     const [artists, setArtists] = useState<Artist[]>([]);
     const [loading, setLoading] = useState(false);
@@ -100,6 +102,10 @@ export function LyricsLibrary({ setStyle, setLyrics, setBpm, setKeyScale, setTit
             }
         }
         if (track.title) setTitle(track.title);
+        if (track.duration > 0) {
+            // Add ~15% headroom so CoT has room to end the song naturally
+            setDuration(Math.round(track.duration * 1.15 / 5) * 5);
+        }
         setAppliedTrack(track.filename);
         setTimeout(() => setAppliedTrack(''), 2000);
     };
@@ -184,7 +190,7 @@ export function LyricsLibrary({ setStyle, setLyrics, setBpm, setKeyScale, setTit
                                                                 key={track.filename}
                                                                 onClick={() => applyTrack(track)}
                                                                 className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all ${appliedTrack === track.filename ? 'bg-green-500/20 text-green-300' : 'hover:bg-white/5'}`}
-                                                                title={`${track.caption}\n\nBPM: ${track.bpm} | Key: ${track.keyscale}`}
+                                                                title={`${track.caption}\n\nBPM: ${track.bpm} | Key: ${track.keyscale}${track.duration > 0 ? ` | ~${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, '0')}` : ''}`}
                                                             >
                                                                 <Music size={10} className={appliedTrack === track.filename ? 'text-green-400' : 'text-zinc-600'} />
                                                                 <span className={`text-xs truncate ${appliedTrack === track.filename ? 'text-green-300' : 'text-zinc-300'}`}>
