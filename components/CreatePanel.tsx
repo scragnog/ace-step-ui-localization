@@ -20,6 +20,7 @@ import { SimpleModeSettings } from './sections/SimpleModeSettings';
 import { TrackDetailsAccordion } from './accordions/TrackDetailsAccordion';
 import { AudioLibraryModal } from './sections/AudioLibraryModal';
 import { CreateButtonFooter } from './sections/CreateButtonFooter';
+import { LyricsLibrary } from './LyricsLibrary';
 
 import AdaptersAccordion from './accordions/AdaptersAccordion';
 import { LayerAblationPanel } from './accordions/LayerAblationPanel';
@@ -2321,6 +2322,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
         {/* CUSTOM MODE */}
         {customMode && taskType !== 'extract' && (
           <div className="space-y-5">
+            {/* Lyrics Library — folder scanner for imported lyrics */}
+            <LyricsLibrary
+              setStyle={setStyle}
+              setLyrics={setLyrics}
+              setBpm={setBpm}
+              setKeyScale={setKeyScale}
+              setTitle={setTitle}
+            />
+
             {/* Audio Section - Conditionally rendered */}
 
             <AudioSelectionSection
