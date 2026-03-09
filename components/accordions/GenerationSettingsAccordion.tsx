@@ -32,8 +32,8 @@ interface GenerationSettingsAccordionProps {
     onInferenceStepsChange: (val: number) => void;
     inferMethod: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4';
     onInferMethodChange: (val: 'ode' | 'euler' | 'heun' | 'dpm2m' | 'rk4') => void;
-    scheduler: 'linear' | 'ddim_uniform' | 'sgm_uniform' | 'bong_tangent' | 'linear_quadratic';
-    onSchedulerChange: (val: 'linear' | 'ddim_uniform' | 'sgm_uniform' | 'bong_tangent' | 'linear_quadratic') => void;
+    scheduler: string;
+    onSchedulerChange: (val: string) => void;
     // Audio Format
     audioFormat: 'mp3' | 'flac' | 'wav' | 'opus';
     onAudioFormatChange: (val: 'mp3' | 'flac' | 'wav' | 'opus') => void;
@@ -271,18 +271,66 @@ export const GenerationSettingsAccordion: React.FC<GenerationSettingsAccordionPr
                                 <div className="col-span-2 grid grid-cols-2 gap-3">
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{t('scheduler')}</label>
-                                        <select value={props.scheduler} onChange={(e) => props.onSchedulerChange(e.target.value as any)} className={selectClass}>
+                                        <select value={props.scheduler.startsWith('composite') ? 'composite' : props.scheduler} onChange={(e) => {
+                                            if (e.target.value === 'composite') {
+                                                props.onSchedulerChange('composite:bong_tangent+linear:0.5:0.5');
+                                            } else {
+                                                props.onSchedulerChange(e.target.value);
+                                            }
+                                        }} className={selectClass}>
                                             <option value="linear" title={t('schedulerLinearDesc')}>Linear</option>
                                             <option value="ddim_uniform" title={t('schedulerDdimDesc')}>DDIM Uniform</option>
                                             <option value="sgm_uniform" title={t('schedulerSgmDesc')}>SGM Uniform</option>
                                             <option value="bong_tangent" title={t('schedulerBongDesc')}>Bong Tangent</option>
                                             <option value="linear_quadratic" title={t('schedulerLinQuadDesc')}>Linear-Quadratic</option>
+                                            <option value="composite" title={t('schedulerCompositeDesc')}>Composite (2-Stage)</option>
                                         </select>
                                         <p className="text-[10px] leading-tight text-zinc-500 dark:text-zinc-500">
-                                            {t(({ linear: 'schedulerLinearDesc', ddim_uniform: 'schedulerDdimDesc', sgm_uniform: 'schedulerSgmDesc', bong_tangent: 'schedulerBongDesc', linear_quadratic: 'schedulerLinQuadDesc' } as const)[props.scheduler])}
+                                            {props.scheduler.startsWith('composite') ? t('schedulerCompositeDesc') : t(({ linear: 'schedulerLinearDesc', ddim_uniform: 'schedulerDdimDesc', sgm_uniform: 'schedulerSgmDesc', bong_tangent: 'schedulerBongDesc', linear_quadratic: 'schedulerLinQuadDesc' } as Record<string, string>)[props.scheduler] || 'schedulerLinearDesc')}
                                         </p>
                                     </div>
                                 </div>
+                                {/* Composite Scheduler Sub-Controls */}
+                                {props.scheduler.startsWith('composite') && (() => {
+                                    const parts = props.scheduler.split(':');
+                                    const schedulerPair = (parts[1] || 'bong_tangent+linear').split('+');
+                                    const stageA = schedulerPair[0] || 'bong_tangent';
+                                    const stageB = schedulerPair[1] || 'linear';
+                                    const crossover = parseFloat(parts[2] || '0.5');
+                                    const split = parseFloat(parts[3] || '0.5');
+                                    const updateComposite = (a: string, b: string, c: number, s: number) => {
+                                        props.onSchedulerChange(`composite:${a}+${b}:${c.toFixed(2)}:${s.toFixed(2)}`);
+                                    };
+                                    const stageSelectClass = selectClass;
+                                    return (
+                                        <div className="col-span-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-3">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-medium text-purple-400">{t('compositeStageA')}</label>
+                                                    <select value={stageA} onChange={(e) => updateComposite(e.target.value, stageB, crossover, split)} className={stageSelectClass}>
+                                                        <option value="linear">Linear</option>
+                                                        <option value="ddim_uniform">DDIM Uniform</option>
+                                                        <option value="sgm_uniform">SGM Uniform</option>
+                                                        <option value="bong_tangent">Bong Tangent</option>
+                                                        <option value="linear_quadratic">Linear-Quadratic</option>
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-medium text-purple-400">{t('compositeStageB')}</label>
+                                                    <select value={stageB} onChange={(e) => updateComposite(stageA, e.target.value, crossover, split)} className={stageSelectClass}>
+                                                        <option value="linear">Linear</option>
+                                                        <option value="ddim_uniform">DDIM Uniform</option>
+                                                        <option value="sgm_uniform">SGM Uniform</option>
+                                                        <option value="bong_tangent">Bong Tangent</option>
+                                                        <option value="linear_quadratic">Linear-Quadratic</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <EditableSlider label={t('compositeCrossover')} value={crossover} onChange={(v) => updateComposite(stageA, stageB, v, split)} min={0.1} max={0.9} step={0.05} tooltip={t('compositeCrossoverDesc')} />
+                                            <EditableSlider label={t('compositeSplit')} value={split} onChange={(v) => updateComposite(stageA, stageB, crossover, v)} min={0.1} max={0.9} step={0.05} tooltip={t('compositeSplitDesc')} />
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         )}
                     </div>
