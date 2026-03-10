@@ -104,7 +104,7 @@ export function LyricsLibrary({ setStyle, setLyrics, setBpm, setKeyScale, setTit
         if (track.title) setTitle(track.title);
         if (track.duration > 0) {
             // Add ~15% headroom so CoT has room to end the song naturally
-            setDuration(Math.round(track.duration * 1.15 / 5) * 5);
+            // Duration intentionally not set — CoT needs Auto duration
         }
         setAppliedTrack(track.filename);
         setTimeout(() => setAppliedTrack(''), 2000);
