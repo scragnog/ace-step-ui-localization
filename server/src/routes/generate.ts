@@ -283,7 +283,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         enable_normalization: params.enableNormalization !== false,
         normalization_db: params.normalizationDb ?? -1.0,
         task_type: params.taskType || 'text2music',
-        use_adg: params.loraLoaded ? false : (params.useAdg || false),
+        use_adg: params.useAdg || false,
         guidance_mode: params.guidanceMode || '',
         cfg_interval_start: params.cfgIntervalStart || 0.0,
         cfg_interval_end: params.cfgIntervalEnd || 1.0,
