@@ -162,6 +162,7 @@ async function submitToApi(params: GenerationParams): Promise<{ taskId: string }
   if (params.coverNoiseStrength !== undefined && params.coverNoiseStrength > 0) {
     body.cover_noise_strength = params.coverNoiseStrength;
   }
+  if (params.autoMaster !== undefined) body.auto_master = params.autoMaster;
   if (params.enableNormalization !== undefined) body.enable_normalization = params.enableNormalization;
   if (params.normalizationDb !== undefined) body.normalization_db = params.normalizationDb;
   if (params.latentShift !== undefined && params.latentShift !== 0) body.latent_shift = params.latentShift;
@@ -420,6 +421,7 @@ export interface GenerationParams {
   instruction?: string;
   audioCoverStrength?: number;
   coverNoiseStrength?: number;
+  autoMaster?: boolean;
   enableNormalization?: boolean;
   normalizationDb?: number;
   latentShift?: number;

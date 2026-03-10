@@ -132,6 +132,7 @@ interface GenerateBody {
   coverNoiseStrength?: number;
   tempoScale?: number;
   pitchShift?: number;
+  autoMaster?: boolean;
   enableNormalization?: boolean;
   normalizationDb?: number;
   latentShift?: number;
@@ -280,6 +281,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         // Latent and normalization controls apply to ALL task types (post-DiT, pre-VAE decode).
         latent_shift: params.latentShift ?? 0.0,
         latent_rescale: params.latentRescale ?? 1.0,
+        auto_master: params.autoMaster !== false,
         enable_normalization: params.enableNormalization !== false,
         normalization_db: params.normalizationDb ?? -1.0,
         task_type: params.taskType || 'text2music',

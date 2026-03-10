@@ -230,6 +230,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [coverNoiseStrength, setCoverNoiseStrength] = usePersistedState('ace-coverNoiseStrength', 0.15);
   const [tempoScale, setTempoScale] = usePersistedState('ace-tempoScale', 1.0);
   const [pitchShift, setPitchShift] = usePersistedState('ace-pitchShift', 0);
+  const [autoMaster, setAutoMaster] = usePersistedState('ace-autoMaster', true);
   const [enableNormalization, setEnableNormalization] = usePersistedState('ace-enableNormalization', true);
   const [normalizationDb, setNormalizationDb] = usePersistedState('ace-normalizationDb', -1.0);
   const [latentShift, setLatentShift] = usePersistedState('ace-latentShift', 0.0);
@@ -1826,6 +1827,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           coverNoiseStrength,
           tempoScale,
           pitchShift,
+          autoMaster,
           enableNormalization,
           normalizationDb,
           latentShift,
@@ -2473,6 +2475,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setPitchShift={setPitchShift}
           detectedBpm={detectedBpm}
           detectedKey={detectedKey}
+          autoMaster={autoMaster}
+          setAutoMaster={setAutoMaster}
           enableNormalization={enableNormalization}
           setEnableNormalization={setEnableNormalization}
           normalizationDb={normalizationDb}
