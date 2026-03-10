@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github, Save, Activity, Sliders } from 'lucide-react';
+import { X, User as UserIcon, Palette, Info, Edit3, ExternalLink, Globe, ChevronDown, Github, Save, Activity, Sliders, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { EditProfileModal } from './EditProfileModal';
@@ -34,6 +34,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
         } catch { }
         return ['NCS Circle', 'Linear Bars', 'Dual Mirror', 'Oscilloscope'];
     });
+    const [mp3Bitrate, setMp3Bitrate] = useState(() => localStorage.getItem('mp3_export_bitrate') || 'V0');
+    const [opusBitrate, setOpusBitrate] = useState(() => localStorage.getItem('opus_export_bitrate') || '128');
 
     if (!isOpen || !user) {
         if (isEditProfileOpen && user) {
@@ -380,6 +382,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                     }}
                                     className="w-20 px-2 py-1.5 text-sm font-mono text-center rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500"
                                 />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Audio Export Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-zinc-900 dark:text-white">
+                            <Download size={20} />
+                            <h3 className="font-semibold">Audio Export</h3>
+                        </div>
+                        <div className="pl-7 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-zinc-900 dark:text-white font-medium">MP3 Bitrate</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Quality for MP3 exports</p>
+                                </div>
+                                <div className="relative">
+                                    <select
+                                        value={mp3Bitrate}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setMp3Bitrate(val);
+                                            localStorage.setItem('mp3_export_bitrate', val);
+                                        }}
+                                        className="appearance-none py-1.5 px-3 pr-8 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-medium transition-colors hover:border-zinc-400 dark:hover:border-zinc-500 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                                    >
+                                        <option value="V0">VBR V0 (~245 kbps)</option>
+                                        <option value="128">128 kbps</option>
+                                        <option value="192">192 kbps</option>
+                                        <option value="256">256 kbps</option>
+                                        <option value="320">320 kbps</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-zinc-900 dark:text-white font-medium">Opus Bitrate</p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Quality for Opus/OGG exports</p>
+                                </div>
+                                <div className="relative">
+                                    <select
+                                        value={opusBitrate}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setOpusBitrate(val);
+                                            localStorage.setItem('opus_export_bitrate', val);
+                                        }}
+                                        className="appearance-none py-1.5 px-3 pr-8 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-medium transition-colors hover:border-zinc-400 dark:hover:border-zinc-500 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                                    >
+                                        <option value="64">64 kbps</option>
+                                        <option value="96">96 kbps</option>
+                                        <option value="128">128 kbps</option>
+                                        <option value="192">192 kbps</option>
+                                        <option value="256">256 kbps</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                                </div>
                             </div>
                         </div>
                     </div>

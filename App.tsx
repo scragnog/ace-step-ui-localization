@@ -1599,6 +1599,19 @@ function AppContent() {
       targetUrl.searchParams.set('audioUrl', songToDownload.audioUrl);
       targetUrl.searchParams.set('title', songToDownload.title || 'song');
       targetUrl.searchParams.set('format', format);
+      // Pass song ID so backend can fetch metadata for tagging
+      if (songToDownload.id) {
+        targetUrl.searchParams.set('songId', songToDownload.id);
+      }
+      // Pass bitrate settings from localStorage
+      if (format === 'mp3') {
+        const br = localStorage.getItem('mp3_export_bitrate');
+        if (br) targetUrl.searchParams.set('mp3Bitrate', br);
+      }
+      if (format === 'opus') {
+        const br = localStorage.getItem('opus_export_bitrate');
+        if (br) targetUrl.searchParams.set('opusBitrate', br);
+      }
 
       const link = document.createElement('a');
       link.href = targetUrl.toString();
