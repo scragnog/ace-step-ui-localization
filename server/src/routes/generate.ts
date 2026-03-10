@@ -311,10 +311,10 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         // Always send LM model selection (enables hot-switching regardless of thinking mode)
         lm_model_path: params.lmModel || undefined,
         lm_backend: params.lmBackend || 'pt',
-        use_cot_caption: (!params.loraLoaded && params.thinking) ? (params.useCotCaption !== false) : false,
-        use_cot_language: (!params.loraLoaded && params.thinking) ? (params.useCotLanguage !== false) : false,
+        use_cot_caption: params.thinking ? (params.useCotCaption !== false) : false,
+        use_cot_language: params.thinking ? (params.useCotLanguage !== false) : false,
         use_cot_metas: false,
-        ...(!params.loraLoaded && params.thinking ? {
+        ...(params.thinking ? {
           lm_temperature: params.lmTemperature,
           lm_cfg_scale: params.lmCfgScale,
           lm_top_k: params.lmTopK,
