@@ -502,11 +502,17 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
           const parsedResults = JSON.parse(taskData.result);
           const audioUrls: string[] = [];
           let firstResult = null;
+          const batchAudioCodes: string[] = [];
 
           // Process all results from batch
           for (let i = 0; i < parsedResults.length; i++) {
             const parsedResult = parsedResults[i];
             if (i === 0) firstResult = parsedResult;
+
+            // Collect audio codes per-audio for upscale reuse
+            if (parsedResult.audio_codes) {
+              batchAudioCodes.push(parsedResult.audio_codes);
+            }
 
             // Convert path to full URL
             let audioUrl = parsedResult.file;
@@ -536,6 +542,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
             lmModel: firstResult?.lm_model,
             lrc: firstResult?.lrc,
             scores: firstResult?.scores,
+            audio_codes: batchAudioCodes.length > 0 ? batchAudioCodes : undefined,
             status: 'succeeded',
           };
         }
