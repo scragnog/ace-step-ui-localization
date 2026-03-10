@@ -4,14 +4,15 @@ import {
     X, Sparkles, Loader2, Download, Play, Pause,
     Music, Drum, Guitar, Mic, SlidersHorizontal, Radio
 } from 'lucide-react';
+import { DownloadModal, DownloadFormat } from './DownloadModal';
 
 // ---- Global open hook ----
-type OpenFn = (audioUrl: string, songTitle: string) => void;
+type OpenFn = (audioUrl: string, songTitle: string, songId?: string) => void;
 let _globalOpen: OpenFn | null = null;
 
 /** Call from anywhere to open the audio enhancer modal. */
-export function openAudioEnhancer(audioUrl: string, songTitle?: string) {
-    _globalOpen?.(audioUrl, songTitle || 'Untitled');
+export function openAudioEnhancer(audioUrl: string, songTitle?: string, songId?: string) {
+    _globalOpen?.(audioUrl, songTitle || 'Untitled', songId);
 }
 
 // ---- Constants ----
@@ -188,6 +189,7 @@ export const AudioEnhancerModal: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [audioUrl, setAudioUrl] = useState('');
     const [songTitle, setSongTitle] = useState('');
+    const [songId, setSongId] = useState<string | undefined>();
 
     // Processing state
     const [status, setStatus] = useState<'idle' | 'running' | 'complete' | 'error'>('idle');
@@ -230,11 +232,15 @@ export const AudioEnhancerModal: React.FC = () => {
     const [previewSource, setPreviewSource] = useState<'original' | 'enhanced'>('enhanced');
     const animRef = useRef<number>(0);
 
+    // Download format modal
+    const [showDownloadModal, setShowDownloadModal] = useState(false);
+
     // Register global open function
     useEffect(() => {
-        _globalOpen = (url: string, title: string) => {
+        _globalOpen = (url: string, title: string, id?: string) => {
             setAudioUrl(url);
             setSongTitle(title);
+            setSongId(id);
             setStatus('idle');
             setProgress(0);
             setMessage('');
@@ -328,6 +334,11 @@ export const AudioEnhancerModal: React.FC = () => {
         setError('');
         setOutputPath('');
         setIsPlaying(false);
+        // Clean up old enhanced audio element so new result loads fresh
+        if (enhancedAudioRef.current) {
+            enhancedAudioRef.current.pause();
+            enhancedAudioRef.current = null;
+        }
 
         try {
             const audioPath = resolveAudioPath();
@@ -394,19 +405,59 @@ export const AudioEnhancerModal: React.FC = () => {
         }
     };
 
-    const downloadEnhanced = async () => {
-        if (!jobId) return;
+    const handleEnhancedDownload = (format: DownloadFormat) => {
+        if (!outputPath) return;
         try {
-            const url = `${PYTHON_API}/v1/audio/enhance/${jobId}/download`;
-            const resp = await fetch(url);
-            const blob = await resp.blob();
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `enhanced_${songTitle.replace(/[^a-zA-Z0-9]/g, '_')}.wav`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            const targetUrl = new URL('/api/songs/download', window.location.origin);
+            // Use the local file path via /api/audio/file endpoint
+            targetUrl.searchParams.set('audioUrl', `/api/audio/file?path=${encodeURIComponent(outputPath)}`);
+            targetUrl.searchParams.set('title', `${songTitle} (Enhanced)`);
+            targetUrl.searchParams.set('format', format);
+            // Pass song ID for metadata tagging if available
+            if (songId) {
+                targetUrl.searchParams.set('songId', songId);
+            }
+            // Pass bitrate settings from localStorage
+            if (format === 'mp3') {
+                const br = localStorage.getItem('mp3_export_bitrate');
+                if (br) targetUrl.searchParams.set('mp3Bitrate', br);
+            }
+            if (format === 'opus') {
+                const br = localStorage.getItem('opus_export_bitrate');
+                if (br) targetUrl.searchParams.set('opusBitrate', br);
+            }
+
+            const link = document.createElement('a');
+            link.href = targetUrl.toString();
+            const ext = format === 'opus' ? 'ogg' : format;
+            link.download = `${songTitle} (Enhanced).${ext}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } catch (err) { console.error('Download failed:', err); }
+    };
+
+    const setupAudioElement = (audio: HTMLAudioElement, isEnhanced: boolean) => {
+        audio.crossOrigin = 'anonymous';
+        const updateDur = () => {
+            const d = audio.duration;
+            if (d && isFinite(d) && d > 0) {
+                setDuration(d);
+            }
+        };
+        audio.onloadedmetadata = updateDur;
+        audio.ondurationchange = updateDur;
+        audio.ontimeupdate = () => {
+            if (audio && !audio.paused) {
+                setCurrentTime(audio.currentTime);
+            }
+        };
+        audio.onended = () => {
+            setIsPlaying(false);
+            setCurrentTime(0);
+        };
+        // Check if duration is already available (race condition)
+        if (audio.readyState >= 1) updateDur();
     };
 
     const togglePreview = () => {
@@ -419,29 +470,13 @@ export const AudioEnhancerModal: React.FC = () => {
         // Lazy-create enhanced audio element
         if (!enhancedAudioRef.current) {
             enhancedAudioRef.current = new Audio(enhancedUrl);
-            enhancedAudioRef.current.crossOrigin = 'anonymous';
-            enhancedAudioRef.current.onloadedmetadata = () => {
-                setDuration(enhancedAudioRef.current?.duration || 0);
-            };
-            enhancedAudioRef.current.onended = () => {
-                setIsPlaying(false);
-                setCurrentTime(0);
-            };
+            setupAudioElement(enhancedAudioRef.current, true);
         }
 
         // Lazy-create original audio element
         if (!audioRef.current) {
             audioRef.current = new Audio(originalUrl);
-            audioRef.current.crossOrigin = 'anonymous';
-            audioRef.current.onloadedmetadata = () => {
-                if (!enhancedAudioRef.current?.duration) {
-                    setDuration(audioRef.current?.duration || 0);
-                }
-            };
-            audioRef.current.onended = () => {
-                setIsPlaying(false);
-                setCurrentTime(0);
-            };
+            setupAudioElement(audioRef.current, false);
         }
 
         const activeAudio = previewSource === 'enhanced' ? enhancedAudioRef.current : audioRef.current;
@@ -491,7 +526,7 @@ export const AudioEnhancerModal: React.FC = () => {
                         </div>
                     )}
 
-                    {(status === 'idle' || status === 'complete') && (
+                    {(status === 'idle' || status === 'complete' || status === 'running') && (
                         <>
                             {/* Presets */}
                             <div className="space-y-2">
@@ -671,7 +706,7 @@ export const AudioEnhancerModal: React.FC = () => {
                                             </div>
                                         </div>
                                         <button
-                                            onClick={downloadEnhanced}
+                                            onClick={() => setShowDownloadModal(true)}
                                             className="p-1.5 rounded-lg bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-500/30 transition-colors"
                                             title="Download enhanced audio"
                                         >
@@ -680,24 +715,26 @@ export const AudioEnhancerModal: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Inline progress for re-enhance */}
+                            {status === 'running' && (
+                                <div className="space-y-2 p-3 rounded-xl bg-violet-50 dark:bg-violet-900/15 border border-violet-200 dark:border-violet-500/20">
+                                    <div className="flex items-center gap-2">
+                                        <Loader2 size={14} className="text-pink-500 animate-spin" />
+                                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{message || 'Processing…'}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-pink-500 to-violet-500 rounded-full transition-all duration-500 ease-out"
+                                            style={{ width: `${Math.max(progress * 100, 2)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500 text-right font-mono">{(progress * 100).toFixed(0)}%</p>
+                                </div>
+                            )}
                         </>
                     )}
 
-                    {status === 'running' && (
-                        <div className="space-y-4 py-8">
-                            <div className="flex items-center justify-center gap-3">
-                                <Loader2 size={24} className="text-pink-500 animate-spin" />
-                                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{message}</span>
-                            </div>
-                            <div className="w-full h-3 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-pink-500 to-violet-500 rounded-full transition-all duration-500 ease-out"
-                                    style={{ width: `${Math.max(progress * 100, 2)}%` }}
-                                />
-                            </div>
-                            <p className="text-xs text-zinc-500 text-center font-mono">{(progress * 100).toFixed(0)}%</p>
-                        </div>
-                    )}
 
                     {status === 'error' && (
                         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
@@ -716,14 +753,18 @@ export const AudioEnhancerModal: React.FC = () => {
                 </div>
 
                 {/* Footer — Enhance button */}
-                {(status === 'idle' || status === 'complete') && (
+                {(status === 'idle' || status === 'complete' || status === 'running') && (
                     <div className="px-6 py-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
                         <button
                             onClick={startEnhancement}
-                            disabled={available === false}
+                            disabled={available === false || status === 'running'}
                             className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-600 to-violet-600 hover:from-pink-700 hover:to-violet-700 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            <Sparkles size={16} /> {status === 'complete' ? 'Re-enhance' : 'Enhance Audio'}
+                            {status === 'running' ? (
+                                <><Loader2 size={16} className="animate-spin" /> Enhancing…</>
+                            ) : (
+                                <><Sparkles size={16} /> {status === 'complete' ? 'Re-enhance' : 'Enhance Audio'}</>
+                            )}
                         </button>
                     </div>
                 )}
@@ -731,5 +772,23 @@ export const AudioEnhancerModal: React.FC = () => {
         </div>
     );
 
-    return ReactDOM.createPortal(modalContent, document.body);
+    return ReactDOM.createPortal(
+        <>
+            {modalContent}
+            {showDownloadModal && (
+                <div className="relative z-[10000]">
+                    <DownloadModal
+                        isOpen={showDownloadModal}
+                        onClose={() => setShowDownloadModal(false)}
+                        onDownload={(format) => {
+                            handleEnhancedDownload(format);
+                            setShowDownloadModal(false);
+                        }}
+                        songTitle={`${songTitle} (Enhanced)`}
+                    />
+                </div>
+            )}
+        </>,
+        document.body
+    );
 };

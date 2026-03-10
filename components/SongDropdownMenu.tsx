@@ -180,7 +180,7 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
                 label={t('enhanceAudio')}
                 onClick={() => {
                     if (song.audioUrl) {
-                        openAudioEnhancer(song.audioUrl, song.title);
+                        openAudioEnhancer(song.audioUrl, song.title, song.id);
                     }
                     onClose();
                 }}
