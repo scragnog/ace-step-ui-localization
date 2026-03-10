@@ -33,6 +33,8 @@ interface StyleSectionProps {
     bpm?: number;
     keyScale?: string;
     timeSignature?: string;
+    /** Trigger word auto-injected from loaded LoKR adapter */
+    triggerWord?: string;
 }
 
 export const StyleSection: React.FC<StyleSectionProps> = ({
@@ -65,6 +67,7 @@ export const StyleSection: React.FC<StyleSectionProps> = ({
     bpm,
     keyScale,
     timeSignature,
+    triggerWord,
 }) => {
     const { t } = useI18n();
 
@@ -321,8 +324,13 @@ export const StyleSection: React.FC<StyleSectionProps> = ({
                         if (!preview) return null;
                         return (
                             <div className="bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 space-y-1">
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Style prompt</p>
-                                <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed break-words">{preview}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Style prompt{triggerWord ? ' (trigger word auto-injected)' : ''}</p>
+                                <p className="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed break-words">
+                                    {triggerWord && !style.toLowerCase().includes(triggerWord.toLowerCase()) && (
+                                        <span className="text-pink-500 font-semibold">{triggerWord}, </span>
+                                    )}
+                                    {preview}
+                                </p>
                             </div>
                         );
                     })()}

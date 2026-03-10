@@ -269,6 +269,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [loraLoaded, setLoraLoaded] = useState(false);
   const [loraScale, setLoraScale] = usePersistedState('ace-loraScale', 1.0);
   const [loraError, setLoraError] = useState<string | null>(null);
+  const [adapterTriggerWord, setAdapterTriggerWord] = useState('');
   const [isLoraLoading, setIsLoraLoading] = useState(false);
 
 
@@ -659,6 +660,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       if (status?.advanced?.slots) {
         setAdapterSlots(status.advanced.slots);
         setLoraLoaded(true);
+        setAdapterTriggerWord((status as any).trigger_word || '');
 
         // Restore saved per-adapter scales for newly loaded slot
         for (const slot of status.advanced.slots) {
@@ -709,9 +711,11 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
       if (status?.advanced) {
         setAdapterSlots(status.advanced.slots || []);
         setLoraLoaded(status.advanced.loaded);
+        setAdapterTriggerWord((status as any).trigger_word || '');
       } else {
         setAdapterSlots([]);
         setLoraLoaded(false);
+        setAdapterTriggerWord('');
       }
     } catch (err) {
       setLoraError(err instanceof Error ? err.message : 'Failed to unload');
@@ -2433,6 +2437,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
             setDuration={setDuration}
             detectedBpm={detectedBpm}
             detectedKey={detectedKey}
+            triggerWord={adapterTriggerWord}
           />
         )}
 

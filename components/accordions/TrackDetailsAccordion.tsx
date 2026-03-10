@@ -67,6 +67,7 @@ interface TrackDetailsAccordionProps {
     setDuration: (val: number) => void;
     detectedBpm?: number | null;
     detectedKey?: string | null;
+    triggerWord?: string;
 }
 
 export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
@@ -78,7 +79,7 @@ export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
     showLyricsSub, setShowLyricsSub, lyrics, setLyrics, lyricsRef, lyricsHeight, startResizing, isFormattingLyrics,
     showStyleSub, setShowStyleSub, style, setStyle, refreshMusicTags, isFormattingStyle, handleFormat, styleRef, styleHeight, startResizingStyle, genreDropdownRef, showGenreDropdown, setShowGenreDropdown, selectedMainGenre, setSelectedMainGenre, selectedSubGenre, setSelectedSubGenre, getSubGenreCount, genreSearch, setGenreSearch, filteredCombinedGenres, subGenreDropdownRef, showSubGenreDropdown, setShowSubGenreDropdown, filteredSubGenres, musicTags,
     bpm, setBpm, keyScale, setKeyScale, timeSignature, setTimeSignature, duration, setDuration,
-    detectedBpm, detectedKey,
+    detectedBpm, detectedKey, triggerWord,
 }) => {
     const { t } = useI18n();
 
@@ -203,6 +204,7 @@ export const TrackDetailsAccordion: React.FC<TrackDetailsAccordionProps> = ({
                         bpm={bpm}
                         keyScale={keyScale}
                         timeSignature={timeSignature}
+                        triggerWord={triggerWord}
                     />
 
                     <MusicParametersSection
