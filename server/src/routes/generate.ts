@@ -682,6 +682,9 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
               return Number.isFinite(n) ? n : undefined;
             })();
 
+            // Extract LM-generated audio codes for upscale reuse
+            const responseAudioCodes: string[] | undefined = (aceStatus.result as any).audio_codes;
+
             const generationParamsToStore = {
               ...params,
               duration: durationVal,
@@ -708,6 +711,12 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
               const songTitle = (params.title || 'Untitled') + variationSuffix;
 
               const songId = generateUUID();
+
+              // Per-song params: inject the audio codes for this specific variation
+              const perSongParams = {
+                ...generationParamsToStore,
+                ...(responseAudioCodes?.[i] ? { audioCodes: responseAudioCodes[i] } : {}),
+              };
 
               try {
                 const { buffer } = await downloadAudioToBuffer(audioUrl);
@@ -760,7 +769,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
                     timeSignatureVal,
                     JSON.stringify([]),
                     ditModelVal,
-                    JSON.stringify(generationParamsToStore),
+                    JSON.stringify(perSongParams),
                   ]
                 );
 
@@ -787,7 +796,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
                     timeSignatureVal,
                     JSON.stringify([]),
                     ditModelVal,
-                    JSON.stringify(generationParamsToStore),
+                    JSON.stringify(perSongParams),
                   ]
                 );
                 localPaths.push(audioUrl);

@@ -436,77 +436,17 @@ function AppContent() {
     })();
 
     const upscaleParams: GenerationParams = {
-      // Carry over all original params
-      customMode: gp.customMode ?? true,
-      lyrics: gp.lyrics ?? song.lyrics ?? '',
-      style: gp.style ?? song.style ?? '',
+      // Start with ALL original params — ensures nothing is missed
+      ...gp,
+
+      // Upscale-specific overrides
       title: `[HQ] ${song.title || 'Untitled'}`,
-      prompt: gp.prompt,
-      songDescription: gp.songDescription,
-      instrumental: gp.instrumental ?? false,
-      vocalLanguage: gp.vocalLanguage,
-
-      // Music parameters
-      duration: gp.duration,
-      bpm: gp.bpm,
-      keyScale: gp.keyScale,
-      timeSignature: gp.timeSignature,
-
-      // Model
-      ditModel: gp.ditModel,
-
-      // Key upscale changes: higher steps, no thinking, fixed seed
       inferenceSteps: hqSteps,
-      thinking: false,
-      randomSeed: false,
-      seed: gp.seed,
-
-      // Preserve the LM audio codes from the original generation
-      audioCodes: gp.audioCodes,
-
-      // Carry over remaining generation settings
-      guidanceScale: gp.guidanceScale,
-      batchSize: 1, // Only one HQ version
+      thinking: false,       // Don't re-run LM — reuse stored audio codes
+      randomSeed: false,     // Use the exact same seed
+      batchSize: 1,          // Only one HQ version
+      getScores: false,      // Skip scoring for upscale
       audioFormat: gp.audioFormat ?? 'flac', // Default to FLAC for HQ
-      inferMethod: gp.inferMethod,
-      scheduler: gp.scheduler,
-      shift: gp.shift,
-
-      // LM params (not used since thinking=false, but kept for record)
-      lmTemperature: gp.lmTemperature,
-      lmCfgScale: gp.lmCfgScale,
-      lmTopK: gp.lmTopK,
-      lmTopP: gp.lmTopP,
-      lmNegativePrompt: gp.lmNegativePrompt,
-      lmModel: gp.lmModel,
-      lmBackend: gp.lmBackend,
-
-      // Expert params
-      latentShift: gp.latentShift,
-      latentRescale: gp.latentRescale,
-      cfgIntervalStart: gp.cfgIntervalStart,
-      cfgIntervalEnd: gp.cfgIntervalEnd,
-
-      // PAG
-      usePag: gp.usePag,
-      pagStart: gp.pagStart,
-      pagEnd: gp.pagEnd,
-      pagScale: gp.pagScale,
-
-      // Steering
-      steeringEnabled: gp.steeringEnabled,
-      steeringLoaded: gp.steeringLoaded,
-      steeringAlphas: gp.steeringAlphas,
-
-      // Adapters
-      loraPath: gp.loraPath,
-      loraScale: gp.loraScale,
-      advancedAdapters: gp.advancedAdapters,
-      adapterSlots: gp.adapterSlots,
-
-      // Quality: skip scoring for upscale
-      getScores: false,
-      getLrc: gp.getLrc,
     };
 
     handleGenerate(upscaleParams);
