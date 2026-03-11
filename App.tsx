@@ -2177,7 +2177,7 @@ function AppContent() {
       <MasteringConsoleModal
         isOpen={showRemasterConsole}
         onClose={() => { setShowRemasterConsole(false); setRemasterSong(null); }}
-        currentParams={null}
+        currentParams={remasterSong?.generationParams?.masteringParams || null}
         onParamsChange={async (params) => {
           if (!remasterSong) return;
           const originalUrl = remasterSong.generationParams?.originalAudioUrl;
