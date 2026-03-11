@@ -1012,18 +1012,17 @@ function AppContent() {
               style: s.style,
               coverUrl: `https://picsum.photos/seed/${s.id}/400/400`,
               duration: s.duration && s.duration > 0 ? `${Math.floor(s.duration / 60)}:${String(Math.floor(s.duration % 60)).padStart(2, '0')}` : '0:00',
-              createdAt: new Date(s.created_at),
+              createdAt: new Date(s.created_at || s.createdAt),
               tags: s.tags || [],
-              audioUrl: getAudioUrl(s.audio_url, s.id),
-              isPublic: s.is_public,
-              likeCount: s.like_count || 0,
-              viewCount: s.view_count || 0,
-              userId: s.user_id,
+              audioUrl: s.audioUrl || getAudioUrl(s.audio_url, s.id),
+              isPublic: s.is_public !== undefined ? s.is_public : s.isPublic,
+              likeCount: s.like_count || s.likeCount || 0,
+              viewCount: s.view_count || s.viewCount || 0,
+              userId: s.user_id || s.userId,
               creator: s.creator,
               ditModel: s.ditModel,
-              generationParams: normalizeGenerationParams(s),
+              generationParams: s.generationParams ?? normalizeGenerationParams(s),
             }));
-
             setSongs(prev => {
               const generatingSongs = prev.filter(s => s.isGenerating);
               const loadedById = new Map(loadedSongs.map(s => [s.id, s]));
