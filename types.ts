@@ -128,6 +128,8 @@ export interface GenerationParams {
   trackName?: string;
   completeTrackClasses?: string[];
   isFormatCaption?: boolean;
+  autoMaster?: boolean;
+  masteringParams?: Record<string, any>;
   loraLoaded?: boolean;
 
   // PAG (Perturbed-Attention Guidance)

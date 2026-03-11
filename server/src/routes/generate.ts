@@ -133,6 +133,7 @@ interface GenerateBody {
   tempoScale?: number;
   pitchShift?: number;
   autoMaster?: boolean;
+  masteringParams?: Record<string, any>;
   enableNormalization?: boolean;
   normalizationDb?: number;
   latentShift?: number;
@@ -282,6 +283,7 @@ router.post('/', authMiddleware, async (req: AuthenticatedRequest, res: Response
         latent_shift: params.latentShift ?? 0.0,
         latent_rescale: params.latentRescale ?? 1.0,
         auto_master: params.autoMaster !== false,
+        ...(params.masteringParams ? { mastering_params: params.masteringParams } : {}),
         enable_normalization: params.enableNormalization !== false,
         normalization_db: params.normalizationDb ?? -1.0,
         task_type: params.taskType || 'text2music',
@@ -545,6 +547,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
             lrc: firstResult?.lrc,
             scores: firstResult?.scores,
             audio_codes: batchAudioCodes.length > 0 ? batchAudioCodes : undefined,
+            original_audio_paths: firstResult?.original_audio_paths,
             status: 'succeeded',
           };
         }
@@ -722,10 +725,29 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
               const songId = generateUUID();
 
               // Per-song params: inject the audio codes for this specific variation
-              const perSongParams = {
+              const perSongParams: Record<string, any> = {
                 ...generationParamsToStore,
                 ...(responseAudioCodes?.[i] ? { audioCodes: responseAudioCodes[i] } : {}),
               };
+
+              // Download and store original (unmastered) audio for A/B comparison
+              const originalAudioPaths: string[] | undefined = (aceStatus.result as any).original_audio_paths;
+              if (originalAudioPaths && originalAudioPaths[i]) {
+                try {
+                  let origUrl = originalAudioPaths[i];
+                  if (origUrl && !origUrl.startsWith('http')) {
+                    origUrl = `${config.acestep.apiUrl}/v1/audio?path=${encodeURIComponent(origUrl)}`;
+                  }
+                  const { buffer: origBuffer } = await downloadAudioToBuffer(origUrl);
+                  const origExt = origUrl.includes('.flac') ? '.flac' : '.mp3';
+                  const origKey = `${req.user!.id}/${songId}_original${origExt}`;
+                  await storage.upload(origKey, origBuffer, `audio/${origExt.slice(1)}`);
+                  perSongParams.originalAudioUrl = storage.getPublicUrl(origKey);
+                  console.log(`[Generate] Original audio stored: ${origKey}`);
+                } catch (origErr) {
+                  console.warn(`[Generate] Failed to store original audio:`, (origErr as Error).message);
+                }
+              }
 
               try {
                 const { buffer } = await downloadAudioToBuffer(audioUrl);

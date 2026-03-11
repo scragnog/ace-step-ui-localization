@@ -163,6 +163,7 @@ async function submitToApi(params: GenerationParams): Promise<{ taskId: string }
     body.cover_noise_strength = params.coverNoiseStrength;
   }
   if (params.autoMaster !== undefined) body.auto_master = params.autoMaster;
+  if ((params as any).masteringParams) body.mastering_params = (params as any).masteringParams;
   if (params.enableNormalization !== undefined) body.enable_normalization = params.enableNormalization;
   if (params.normalizationDb !== undefined) body.normalization_db = params.normalizationDb;
   if (params.latentShift !== undefined && params.latentShift !== 0) body.latent_shift = params.latentShift;
@@ -247,6 +248,7 @@ async function submitToApi(params: GenerationParams): Promise<{ taskId: string }
 interface ApiTaskResult {
   status: number; // 0 = processing, 1 = done, 2 = failed
   audioPaths: string[];
+  originalAudioPaths?: string[];
   lrc?: string[];
   scores?: Record<string, any>;
   metas?: {
@@ -297,7 +299,8 @@ async function pollApiResult(taskId: string, maxWaitMs = 600000): Promise<ApiTas
       const metas = resultData[0]?.metas;
       const lrc = resultData[0]?.lrc ?? resultData.lrc;
 
-      return { status: 1, audioPaths, lrc: Array.isArray(lrc) ? lrc : undefined, metas, scores: resultData[0]?.scores ?? undefined };
+      const originalAudioPaths = resultData[0]?.original_audio_paths ?? resultData.original_audio_paths;
+      return { status: 1, audioPaths, originalAudioPaths, lrc: Array.isArray(lrc) ? lrc : undefined, metas, scores: resultData[0]?.scores ?? undefined };
     } else if (taskData.status === 2) {
       const details = taskData.error
         || taskData.message
@@ -422,6 +425,7 @@ export interface GenerationParams {
   audioCoverStrength?: number;
   coverNoiseStrength?: number;
   autoMaster?: boolean;
+  masteringParams?: Record<string, any>;
   enableNormalization?: boolean;
   normalizationDb?: number;
   latentShift?: number;
@@ -448,6 +452,7 @@ export interface GenerationParams {
 
 interface GenerationResult {
   audioUrls: string[];
+  originalAudioUrls?: string[];
   duration: number;
   bpm?: number;
   keyScale?: string;
@@ -599,6 +604,7 @@ async function processGeneration(
 
       // Download audio files from API to local storage
       const audioUrls: string[] = [];
+      const originalAudioUrls: string[] = [];
       let actualDuration = 0;
       const audioFormat = params.audioFormat ?? 'mp3';
 
@@ -616,6 +622,22 @@ async function processGeneration(
         audioUrls.push(`/audio/${filename}`);
       }
 
+      // Download original (unmastered) audio files for A/B comparison
+      if (apiResult.originalAudioPaths) {
+        for (let i = 0; i < apiResult.originalAudioPaths.length; i++) {
+          const origPath = apiResult.originalAudioPaths[i];
+          const ext = origPath.includes('.flac') ? '.flac' : `.${audioFormat}`;
+          const filename = `${jobId}_${i}_original${ext}`;
+          const destPath = path.join(AUDIO_DIR, filename);
+          try {
+            await downloadAudioFromApi(origPath, destPath);
+            originalAudioUrls.push(`/audio/${filename}`);
+          } catch (e) {
+            console.warn(`Failed to download original audio ${i}:`, e);
+          }
+        }
+      }
+
       const finalDuration = actualDuration > 0
         ? actualDuration
         : (apiResult.metas?.duration || params.duration || 60);
@@ -623,6 +645,7 @@ async function processGeneration(
       job.status = 'succeeded';
       job.result = {
         audioUrls,
+        originalAudioUrls: originalAudioUrls.length > 0 ? originalAudioUrls : undefined,
         duration: finalDuration,
         bpm: apiResult.metas?.bpm || params.bpm,
         keyScale: apiResult.metas?.keyscale || params.keyScale,

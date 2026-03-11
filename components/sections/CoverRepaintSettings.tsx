@@ -17,6 +17,7 @@ interface CoverRepaintSettingsProps {
     detectedKey: string | null;
     autoMaster: boolean;
     setAutoMaster: (val: boolean) => void;
+    onOpenMasteringConsole?: () => void;
     enableNormalization: boolean;
     setEnableNormalization: (val: boolean) => void;
     normalizationDb: number;
@@ -49,6 +50,7 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
     detectedKey,
     autoMaster,
     setAutoMaster,
+    onOpenMasteringConsole,
     enableNormalization,
     setEnableNormalization,
     normalizationDb,
@@ -230,16 +232,27 @@ export const CoverRepaintSettings: React.FC<CoverRepaintSettingsProps> = ({
                     <div className="bg-white dark:bg-suno-card rounded-b-xl rounded-t-none border border-t-0 border-zinc-200 dark:border-white/5 p-4 space-y-4">
                         {/* Auto-Master toggle */}
                         <div className="flex items-center justify-between py-1">
-                            <div>
+                            <div className="flex-1">
                                 <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400" title={t('autoMasterTooltip')}>{t('autoMaster')}</span>
                                 <p className="text-[10px] text-zinc-500">{t('autoMasterHelp')}</p>
                             </div>
-                            <button
-                                onClick={() => setAutoMaster(!autoMaster)}
-                                className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${autoMaster ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'}`}
-                            >
-                                <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${autoMaster ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {autoMaster && onOpenMasteringConsole && (
+                                    <button
+                                        onClick={onOpenMasteringConsole}
+                                        className="px-2 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-md transition-colors"
+                                        title="Open mastering console"
+                                    >
+                                        🎛️ Settings
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setAutoMaster(!autoMaster)}
+                                    className={`w-10 h-5 rounded-full flex items-center transition-colors duration-200 px-0.5 border border-zinc-200 dark:border-white/5 ${autoMaster ? 'bg-pink-600' : 'bg-zinc-300 dark:bg-black/40'}`}
+                                >
+                                    <div className={`w-4 h-4 rounded-full bg-white transform transition-transform duration-200 shadow-sm ${autoMaster ? 'translate-x-5' : 'translate-x-0'}`} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Normalization toggle */}

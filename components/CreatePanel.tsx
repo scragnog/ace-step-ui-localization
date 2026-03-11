@@ -21,6 +21,7 @@ import { TrackDetailsAccordion } from './accordions/TrackDetailsAccordion';
 import { AudioLibraryModal } from './sections/AudioLibraryModal';
 import { CreateButtonFooter } from './sections/CreateButtonFooter';
 import { LyricsLibrary } from './LyricsLibrary';
+import { MasteringConsoleModal, MasteringParams as MasteringParamsType } from './MasteringConsoleModal';
 
 import AdaptersAccordion from './accordions/AdaptersAccordion';
 import { LayerAblationPanel } from './accordions/LayerAblationPanel';
@@ -231,6 +232,8 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
   const [tempoScale, setTempoScale] = usePersistedState('ace-tempoScale', 1.0);
   const [pitchShift, setPitchShift] = usePersistedState('ace-pitchShift', 0);
   const [autoMaster, setAutoMaster] = usePersistedState('ace-autoMaster', true);
+  const [masteringParams, setMasteringParams] = useState<MasteringParamsType | null>(null);
+  const [showMasteringConsole, setShowMasteringConsole] = useState(false);
   const [enableNormalization, setEnableNormalization] = usePersistedState('ace-enableNormalization', true);
   const [normalizationDb, setNormalizationDb] = usePersistedState('ace-normalizationDb', -1.0);
   const [latentShift, setLatentShift] = usePersistedState('ace-latentShift', 0.0);
@@ -1828,6 +1831,7 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           tempoScale,
           pitchShift,
           autoMaster,
+          masteringParams: autoMaster && masteringParams ? masteringParams : undefined,
           enableNormalization,
           normalizationDb,
           latentShift,
@@ -2493,6 +2497,15 @@ export const CreatePanel: React.FC<CreatePanelProps> = ({
           setShowCoverSettings={setShowCoverSettings}
           showOutputProcessing={showOutputProcessing}
           setShowOutputProcessing={setShowOutputProcessing}
+          onOpenMasteringConsole={() => setShowMasteringConsole(true)}
+        />
+
+        {/* Mastering Console Modal */}
+        <MasteringConsoleModal
+          isOpen={showMasteringConsole}
+          onClose={() => setShowMasteringConsole(false)}
+          onParamsChange={setMasteringParams}
+          currentParams={masteringParams}
         />
 
         {/* GENERATION SETTINGS */}
