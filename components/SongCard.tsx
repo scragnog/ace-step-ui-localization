@@ -7,6 +7,7 @@ import { SongDropdownMenu } from './SongDropdownMenu';
 import { ShareModal } from './ShareModal';
 import { AlbumCover } from './AlbumCover';
 import { songsApi } from '../services/api';
+import { MasteringToggle } from './MasteringToggle';
 
 // Map model ID to short display name
 const getModelDisplayName = (modelId?: string): string => {
@@ -47,6 +48,8 @@ export interface SongCardProps {
     onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
     onOpenRemaster?: () => void;
+    onToggleMastering?: () => void;
+    playingOriginal?: boolean;
     // Ablation diff pins
     devMode?: boolean;
     isDiffPinnedA?: boolean;
@@ -82,6 +85,8 @@ export const SongCard: React.FC<SongCardProps> = ({
     onUpscaleToHQ,
     onDownloadFormat,
     onOpenRemaster,
+    onToggleMastering,
+    playingOriginal,
     devMode,
     isDiffPinnedA,
     isDiffPinnedB,
@@ -400,14 +405,13 @@ export const SongCard: React.FC<SongCardProps> = ({
                             </div>
 
                             <div className="flex items-center gap-1">
-                                {/* Mastering badge */}
-                                {song.generationParams?.originalAudioUrl && (
-                                    <span
-                                        className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
-                                        title="Mastered track"
-                                    >
-                                        M
-                                    </span>
+                                {/* Mastering toggle */}
+                                {song.generationParams?.originalAudioUrl && onToggleMastering && (
+                                    <MasteringToggle
+                                        isOriginal={!!playingOriginal}
+                                        onToggle={onToggleMastering}
+                                        size="sm"
+                                    />
                                 )}
                                 {/* Re-master button */}
                                 {song.generationParams?.originalAudioUrl && onOpenRemaster && (
@@ -418,6 +422,15 @@ export const SongCard: React.FC<SongCardProps> = ({
                                     >
                                         <span className="text-xs">🎛️</span>
                                     </button>
+                                )}
+                                {/* Static M badge when no toggle callback */}
+                                {song.generationParams?.originalAudioUrl && !onToggleMastering && (
+                                    <span
+                                        className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
+                                        title="Mastered track"
+                                    >
+                                        M
+                                    </span>
                                 )}
                                 <button
                                     className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors opacity-0 group-hover:opacity-100"

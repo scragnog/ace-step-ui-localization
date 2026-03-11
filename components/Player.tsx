@@ -40,6 +40,8 @@ interface PlayerProps {
     onDelete?: () => void;
     onDownloadFormat?: () => void;
     onOpenRemaster?: (song: Song) => void;
+    playingOriginal?: boolean;
+    onToggleMastering?: () => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -68,7 +70,9 @@ export const Player: React.FC<PlayerProps> = ({
     onAddToPlaylist,
     onDelete,
     onDownloadFormat,
-    onOpenRemaster
+    onOpenRemaster,
+    playingOriginal,
+    onToggleMastering
 }) => {
     const { user } = useAuth();
     const { isMobile } = useResponsive();
@@ -83,17 +87,11 @@ export const Player: React.FC<PlayerProps> = ({
     const speedMenuRef = useRef<HTMLDivElement>(null);
     const { analyserNode } = useAudioAnalysis();
 
-    // M/O (Mastered/Original) toggle state
-    const [playingOriginal, setPlayingOriginal] = useState(false);
+    // M/O (Mastered/Original) toggle — state lifted to parent
     const originalAudioUrl = currentSong?.generationParams?.originalAudioUrl || null;
 
-    // Reset M/O state when song changes
-    useEffect(() => {
-        setPlayingOriginal(false);
-    }, [currentSong?.id]);
-
     const handleSourceToggle = () => {
-        if (!audioRef.current || !originalAudioUrl || !currentSong?.audioUrl) return;
+        if (!audioRef.current || !originalAudioUrl || !currentSong?.audioUrl || !onToggleMastering) return;
         const wasPlaying = !audioRef.current.paused;
         const savedTime = audioRef.current.currentTime;
         const newSrc = playingOriginal ? currentSong.audioUrl : originalAudioUrl;
@@ -110,7 +108,7 @@ export const Player: React.FC<PlayerProps> = ({
             audioRef.current!.removeEventListener('canplay', onReady);
         };
         audioRef.current.addEventListener('canplay', onReady);
-        setPlayingOriginal(!playingOriginal);
+        onToggleMastering();
     };
     const [bounceIntensity, setBounceIntensity] = useState(() => {
         const saved = localStorage.getItem('waveform-bounce-intensity');

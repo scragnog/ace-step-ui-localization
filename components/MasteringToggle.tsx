@@ -9,7 +9,7 @@ interface MasteringToggleProps {
 
 /**
  * Slider toggle for switching between Mastered and Original audio.
- * Amber/orange when Mastered, muted when Original.
+ * Shows full text labels: "Mastered" or "Original".
  */
 export const MasteringToggle: React.FC<MasteringToggleProps> = ({
     isOriginal,
@@ -23,7 +23,7 @@ export const MasteringToggle: React.FC<MasteringToggleProps> = ({
         <button
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             className={`relative inline-flex items-center rounded-full transition-all duration-200 cursor-pointer flex-shrink-0 ${
-                isSm ? 'w-[52px] h-[20px]' : 'w-[64px] h-[24px]'
+                isSm ? 'h-[22px]' : 'h-[26px]'
             } ${
                 isOriginal
                     ? 'bg-zinc-300 dark:bg-zinc-600'
@@ -31,26 +31,28 @@ export const MasteringToggle: React.FC<MasteringToggleProps> = ({
             } ${className}`}
             title={isOriginal ? 'Playing original — click for mastered' : 'Playing mastered — click for original'}
         >
-            {/* Track labels */}
-            <span className={`absolute left-1 font-bold text-white/80 select-none ${
-                isSm ? 'text-[7px]' : 'text-[8px]'
-            } ${isOriginal ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
-                M
+            {/* Mastered label */}
+            <span className={`px-2.5 z-10 font-bold select-none transition-colors duration-200 ${
+                isSm ? 'text-[9px]' : 'text-[10px]'
+            } ${!isOriginal ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                Mastered
             </span>
-            <span className={`absolute right-1.5 font-bold select-none ${
-                isSm ? 'text-[7px]' : 'text-[8px]'
-            } ${isOriginal ? 'opacity-100 text-zinc-500 dark:text-zinc-400' : 'opacity-0 text-white/80'} transition-opacity`}>
-                O
+            {/* Original label */}
+            <span className={`px-2.5 z-10 font-bold select-none transition-colors duration-200 ${
+                isSm ? 'text-[9px]' : 'text-[10px]'
+            } ${isOriginal ? 'text-white' : 'text-white/50'}`}>
+                Original
             </span>
 
-            {/* Thumb */}
-            <span className={`inline-block rounded-full bg-white shadow-md transform transition-transform duration-200 ${
-                isSm ? 'w-[16px] h-[16px]' : 'w-[20px] h-[20px]'
-            } ${
+            {/* Sliding pill highlight */}
+            <span className={`absolute top-[2px] bottom-[2px] rounded-full transition-all duration-200 ${
                 isOriginal
-                    ? (isSm ? 'translate-x-[34px]' : 'translate-x-[42px]')
-                    : 'translate-x-[2px]'
-            }`} />
+                    ? 'bg-zinc-500 dark:bg-zinc-400'
+                    : 'bg-white/25'
+            }`} style={{
+                left: isOriginal ? '50%' : '2px',
+                right: isOriginal ? '2px' : '50%',
+            }} />
         </button>
     );
 };

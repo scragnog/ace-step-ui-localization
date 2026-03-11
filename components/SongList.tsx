@@ -11,6 +11,7 @@ import { LiveVisualizer } from './LiveVisualizer';
 import { LyricsBar } from './LyricsBar';
 import { SongCard } from './SongCard';
 import { SongItemCompact } from './SongItemCompact';
+import { MasteringToggle } from './MasteringToggle';
 import { usePersistedState } from '../hooks/usePersistedState';
 
 type ViewMode = 'list' | 'grid' | 'compact';
@@ -41,6 +42,8 @@ interface SongListProps {
     onCoverUpload?: (track: { audio_url: string; filename: string }) => void;
     onDownloadFormat?: (song: Song) => void;
     onOpenRemaster?: (song: Song) => void;
+    onToggleMastering?: () => void;
+    playingOriginal?: boolean;
     onDeleteUpload?: (trackId: string) => void;
     showVisualizerBg?: boolean;
     currentTime?: number;
@@ -144,6 +147,8 @@ export const SongList: React.FC<SongListProps> = ({
     onCoverUpload,
     onDownloadFormat,
     onOpenRemaster,
+    onToggleMastering,
+    playingOriginal,
     onDeleteUpload,
     showVisualizerBg,
     currentTime,
@@ -554,6 +559,8 @@ export const SongList: React.FC<SongListProps> = ({
                                     onUpscaleToHQ: onUpscaleToHQ ? () => onUpscaleToHQ(item.song) : undefined,
                                     onDownloadFormat: () => onDownloadFormat?.(item.song),
                                     onOpenRemaster: () => onOpenRemaster?.(item.song),
+                                    onToggleMastering: currentSong?.id === item.song.id && item.song.generationParams?.originalAudioUrl ? onToggleMastering : undefined,
+                                    playingOriginal: currentSong?.id === item.song.id ? playingOriginal : false,
                                     onSetAsTrackA: () => onSetAsTrackA?.(item.song),
                                     onSetAsTrackB: () => onSetAsTrackB?.(item.song),
                                     isTrackA: abTrackA?.id === item.song.id,
@@ -729,6 +736,8 @@ interface SongItemProps {
     onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
     onOpenRemaster?: () => void;
+    onToggleMastering?: () => void;
+    playingOriginal?: boolean;
     onSetAsTrackA?: () => void;
     onSetAsTrackB?: () => void;
     isTrackA?: boolean;
@@ -761,6 +770,8 @@ const SongItem: React.FC<SongItemProps> = ({
     onUpscaleToHQ,
     onDownloadFormat,
     onOpenRemaster,
+    onToggleMastering,
+    playingOriginal,
     onSetAsTrackA,
     onSetAsTrackB,
     isTrackA,
@@ -1082,14 +1093,22 @@ const SongItem: React.FC<SongItemProps> = ({
                                 )}
                             </button>
 
-                            {/* Mastering badge + remaster */}
+                            {/* Mastering toggle + remaster */}
                             {song.generationParams?.originalAudioUrl && (
-                                <span
-                                    className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
-                                    title="Mastered track"
-                                >
-                                    M
-                                </span>
+                                onToggleMastering ? (
+                                    <MasteringToggle
+                                        isOriginal={!!playingOriginal}
+                                        onToggle={onToggleMastering}
+                                        size="sm"
+                                    />
+                                ) : (
+                                    <span
+                                        className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
+                                        title="Mastered track"
+                                    >
+                                        M
+                                    </span>
+                                )
                             )}
                             {song.generationParams?.originalAudioUrl && onOpenRemaster && (
                                 <button

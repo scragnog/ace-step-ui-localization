@@ -176,6 +176,9 @@ function AppContent() {
   const [showRemasterConsole, setShowRemasterConsole] = useState(false);
   const [remasterSong, setRemasterSong] = useState<Song | null>(null);
 
+  // M/O (Mastered/Original) toggle — shared between Player and SongList
+  const [playingOriginal, setPlayingOriginal] = useState(false);
+
   // Settings Modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
@@ -1243,6 +1246,7 @@ function AppContent() {
       setCurrentSong(updatedSong);
       setSelectedSong(updatedSong);
       setIsPlaying(true);
+      setPlayingOriginal(false); // Reset M/O toggle for new song
       setSongs(prev => prev.map(s => s.id === updatedSong.id ? { ...s, ...updatedSong } : s));
       songsApi.trackPlay(updatedSong.id, token).catch(err => console.error('Failed to track play:', err));
     } else {
@@ -1901,6 +1905,8 @@ function AppContent() {
                     setRemasterSong(song);
                     setShowRemasterConsole(true);
                 }}
+                onToggleMastering={() => setPlayingOriginal(prev => !prev)}
+                playingOriginal={playingOriginal}
                 onUseUploadAsReference={handleUseUploadAsReference}
                 onCoverUpload={handleCoverUpload}
                 onSongUpdate={handleSongUpdate}
@@ -2102,6 +2108,8 @@ function AppContent() {
           setRemasterSong(song);
           setShowRemasterConsole(true);
         }}
+        playingOriginal={playingOriginal}
+        onToggleMastering={() => setPlayingOriginal(prev => !prev)}
       />
 
       <CreatePlaylistModal
@@ -2168,9 +2176,34 @@ function AppContent() {
             });
             if (!resp.ok) throw new Error(`Re-master failed: ${resp.status}`);
             const data = await resp.json();
-            showToast(`Re-mastered! Output: ${data.output_path}`, 'success');
-            // Refresh song list to pick up new version
+
+            // Create a new song entry from the re-mastered file
+            const outputPath = data.output_path as string;
+            // Build audio URL for the node server
+            const audioUrl = `/audio/${outputPath.split('/audio/').pop() || outputPath.split('\\audio\\').pop() || ''}`;
+            if (token) {
+              const newSong = await songsApi.createSong({
+                title: `${remasterSong.title} (Remastered)`,
+                lyrics: remasterSong.lyrics,
+                style: remasterSong.style,
+                tags: remasterSong.tags,
+                audioUrl,
+                coverUrl: remasterSong.coverUrl,
+                duration: remasterSong.duration,
+                isPublic: false,
+                generationParams: {
+                  ...remasterSong.generationParams,
+                  originalAudioUrl: originalUrl,
+                  masteringParams: params,
+                },
+              } as any, token);
+              showToast(`Re-mastered! New track: ${newSong.song.title}`, 'success');
+            } else {
+              showToast(`Re-mastered! Output: ${outputPath}`, 'success');
+            }
             refreshSongsList();
+            setShowRemasterConsole(false);
+            setRemasterSong(null);
           } catch (err) {
             console.error('[Remaster] Failed:', err);
             showToast(`Re-master failed: ${(err as Error).message}`, 'error');

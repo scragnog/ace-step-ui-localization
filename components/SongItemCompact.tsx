@@ -6,6 +6,7 @@ import { useI18n } from '../context/I18nContext';
 import { SongDropdownMenu } from './SongDropdownMenu';
 import { ShareModal } from './ShareModal';
 import { AlbumCover } from './AlbumCover';
+import { MasteringToggle } from './MasteringToggle';
 
 // Map model ID to short display name
 const getModelDisplayName = (modelId?: string): string => {
@@ -46,6 +47,8 @@ export interface SongItemCompactProps {
     onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
     onOpenRemaster?: () => void;
+    onToggleMastering?: () => void;
+    playingOriginal?: boolean;
     onCancel?: () => void;
 }
 
@@ -71,6 +74,8 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
     onUpscaleToHQ,
     onDownloadFormat,
     onOpenRemaster,
+    onToggleMastering,
+    playingOriginal,
     onCancel
 }) => {
     const { t } = useI18n();
@@ -208,15 +213,23 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
                     </button>
                 )}
 
-                {/* Mastering badge + remaster */}
+                {/* Mastering toggle + remaster */}
                 {!song.isGenerating && song.generationParams?.originalAudioUrl && (
                     <>
-                        <span
-                            className="inline-flex items-center text-[8px] font-bold px-1 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white flex-shrink-0"
-                            title="Mastered track"
-                        >
-                            M
-                        </span>
+                        {onToggleMastering ? (
+                            <MasteringToggle
+                                isOriginal={!!playingOriginal}
+                                onToggle={onToggleMastering}
+                                size="sm"
+                            />
+                        ) : (
+                            <span
+                                className="inline-flex items-center text-[8px] font-bold px-1 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white flex-shrink-0"
+                                title="Mastered track"
+                            >
+                                M
+                            </span>
+                        )}
                         {onOpenRemaster && (
                             <button
                                 className="flex-shrink-0 p-1 rounded text-zinc-400 hover:text-amber-500 transition-colors opacity-0 group-hover:opacity-100"
