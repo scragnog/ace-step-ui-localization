@@ -40,6 +40,7 @@ interface SongListProps {
     onUseUploadAsReference?: (track: { audio_url: string; filename: string }) => void;
     onCoverUpload?: (track: { audio_url: string; filename: string }) => void;
     onDownloadFormat?: (song: Song) => void;
+    onOpenRemaster?: (song: Song) => void;
     onDeleteUpload?: (trackId: string) => void;
     showVisualizerBg?: boolean;
     currentTime?: number;
@@ -142,6 +143,7 @@ export const SongList: React.FC<SongListProps> = ({
     onUseUploadAsReference,
     onCoverUpload,
     onDownloadFormat,
+    onOpenRemaster,
     onDeleteUpload,
     showVisualizerBg,
     currentTime,
@@ -551,6 +553,7 @@ export const SongList: React.FC<SongListProps> = ({
                                     onCoverSong: () => onCoverSong?.(item.song),
                                     onUpscaleToHQ: onUpscaleToHQ ? () => onUpscaleToHQ(item.song) : undefined,
                                     onDownloadFormat: () => onDownloadFormat?.(item.song),
+                                    onOpenRemaster: () => onOpenRemaster?.(item.song),
                                     onSetAsTrackA: () => onSetAsTrackA?.(item.song),
                                     onSetAsTrackB: () => onSetAsTrackB?.(item.song),
                                     isTrackA: abTrackA?.id === item.song.id,
@@ -725,6 +728,7 @@ interface SongItemProps {
     onCoverSong?: () => void;
     onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
+    onOpenRemaster?: () => void;
     onSetAsTrackA?: () => void;
     onSetAsTrackB?: () => void;
     isTrackA?: boolean;
@@ -756,6 +760,7 @@ const SongItem: React.FC<SongItemProps> = ({
     onCoverSong,
     onUpscaleToHQ,
     onDownloadFormat,
+    onOpenRemaster,
     onSetAsTrackA,
     onSetAsTrackB,
     isTrackA,
@@ -1076,6 +1081,25 @@ const SongItem: React.FC<SongItemProps> = ({
                                     </span>
                                 )}
                             </button>
+
+                            {/* Mastering badge + remaster */}
+                            {song.generationParams?.originalAudioUrl && (
+                                <span
+                                    className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
+                                    title="Mastered track"
+                                >
+                                    M
+                                </span>
+                            )}
+                            {song.generationParams?.originalAudioUrl && onOpenRemaster && (
+                                <button
+                                    className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-white/5 text-zinc-400 hover:text-amber-500 transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); onOpenRemaster(); }}
+                                    title="Re-master this track"
+                                >
+                                    <span className="text-sm">🎛️</span>
+                                </button>
+                            )}
 
                             {/* Info Button - Visible only on small/medium screens where sidebar is hidden */}
                             <button

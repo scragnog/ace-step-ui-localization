@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Song } from '../types';
+import { MasteringToggle } from './MasteringToggle';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Download, Heart, MoreVertical, Volume2, VolumeX, Video, Maximize2, Repeat1, ChevronDown, ChevronUp, Edit3, AudioLines } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useResponsive } from '../context/ResponsiveContext';
@@ -85,10 +86,6 @@ export const Player: React.FC<PlayerProps> = ({
     // M/O (Mastered/Original) toggle state
     const [playingOriginal, setPlayingOriginal] = useState(false);
     const originalAudioUrl = currentSong?.generationParams?.originalAudioUrl || null;
-    // Debug: log to verify data flow (remove after confirming)
-    if (currentSong && !originalAudioUrl) {
-        console.log('[Player M/O Debug] currentSong.generationParams:', JSON.stringify(currentSong?.generationParams, null, 2)?.slice(0, 500));
-    }
 
     // Reset M/O state when song changes
     useEffect(() => {
@@ -829,19 +826,13 @@ export const Player: React.FC<PlayerProps> = ({
                         {formatTime(currentTime)} / {formatTime(duration || 0)}
                     </span>
 
-                    {/* M/O Toggle — Mastered/Original A/B switch */}
+                    {/* M/O Toggle — Mastered/Original A/B slider */}
                     {originalAudioUrl && (
-                        <button
-                            onClick={handleSourceToggle}
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all flex items-center gap-1 ${
-                                playingOriginal
-                                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
-                                    : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm'
-                            }`}
-                            title={playingOriginal ? 'Playing original — click for mastered' : 'Playing mastered — click for original'}
-                        >
-                            {playingOriginal ? 'O' : 'M'}
-                        </button>
+                        <MasteringToggle
+                            isOriginal={playingOriginal}
+                            onToggle={handleSourceToggle}
+                            size="md"
+                        />
                     )}
 
                     {/* Re-master button */}

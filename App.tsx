@@ -23,6 +23,7 @@ import { PlaylistDetail } from './components/PlaylistDetail';
 import { Toast, ToastType } from './components/Toast';
 import { StemSplitterModal } from './components/StemSplitterModal';
 import { AudioEnhancerModal, openAudioEnhancer } from './components/AudioEnhancerModal';
+import { MasteringConsoleModal, MasteringParams as MasteringParamsType } from './components/MasteringConsoleModal';
 import { SearchPage } from './components/SearchPage';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import DebugPanel from './components/DebugPanel';
@@ -170,6 +171,10 @@ function AppContent() {
   // Download Modal
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [songToDownload, setSongToDownload] = useState<Song | null>(null);
+
+  // Re-master Modal
+  const [showRemasterConsole, setShowRemasterConsole] = useState(false);
+  const [remasterSong, setRemasterSong] = useState<Song | null>(null);
 
   // Settings Modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -1892,6 +1897,10 @@ function AppContent() {
                 onCoverSong={handleCoverSong}
                 onUpscaleToHQ={handleUpscaleToHQ}
                 onDownloadFormat={openDownloadModal}
+                onOpenRemaster={(song) => {
+                    setRemasterSong(song);
+                    setShowRemasterConsole(true);
+                }}
                 onUseUploadAsReference={handleUseUploadAsReference}
                 onCoverUpload={handleCoverUpload}
                 onSongUpdate={handleSongUpdate}
@@ -2090,7 +2099,8 @@ function AppContent() {
         onAddToPlaylist={() => currentSong && openAddToPlaylistModal(currentSong)}
         onDelete={() => currentSong && handleDeleteSong(currentSong)}
         onOpenRemaster={(song) => {
-          if (song.audioUrl) openAudioEnhancer(song.audioUrl, song.title, song.id);
+          setRemasterSong(song);
+          setShowRemasterConsole(true);
         }}
       />
 
@@ -2139,6 +2149,34 @@ function AppContent() {
       />
       <StemSplitterModal />
       <AudioEnhancerModal />
+      {/* Re-master via Mastering Console */}
+      <MasteringConsoleModal
+        isOpen={showRemasterConsole}
+        onClose={() => { setShowRemasterConsole(false); setRemasterSong(null); }}
+        currentParams={null}
+        onParamsChange={async (params) => {
+          if (!remasterSong) return;
+          const originalUrl = remasterSong.generationParams?.originalAudioUrl;
+          if (!originalUrl) { showToast('No original audio available for re-mastering', 'error'); return; }
+          try {
+            showToast('Re-mastering...', 'info');
+            const PYTHON_API = `http://${window.location.hostname}:8001`;
+            const resp = await fetch(`${PYTHON_API}/v1/mastering/apply`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audio_path: originalUrl, mastering_params: params }),
+            });
+            if (!resp.ok) throw new Error(`Re-master failed: ${resp.status}`);
+            const data = await resp.json();
+            showToast(`Re-mastered! Output: ${data.output_path}`, 'success');
+            // Refresh song list to pick up new version
+            refreshSongsList();
+          } catch (err) {
+            console.error('[Remaster] Failed:', err);
+            showToast(`Re-master failed: ${(err as Error).message}`, 'error');
+          }
+        }}
+      />
       <FullscreenVisualizer
         isOpen={showFullscreenVisualizer}
         onClose={() => setShowFullscreenVisualizer(false)}

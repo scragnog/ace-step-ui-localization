@@ -45,6 +45,7 @@ export interface SongItemCompactProps {
     onCoverSong?: () => void;
     onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
+    onOpenRemaster?: () => void;
     onCancel?: () => void;
 }
 
@@ -69,6 +70,7 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
     onCoverSong,
     onUpscaleToHQ,
     onDownloadFormat,
+    onOpenRemaster,
     onCancel
 }) => {
     const { t } = useI18n();
@@ -204,6 +206,27 @@ export const SongItemCompact: React.FC<SongItemCompactProps> = ({
                     >
                         <X size={14} />
                     </button>
+                )}
+
+                {/* Mastering badge + remaster */}
+                {!song.isGenerating && song.generationParams?.originalAudioUrl && (
+                    <>
+                        <span
+                            className="inline-flex items-center text-[8px] font-bold px-1 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white flex-shrink-0"
+                            title="Mastered track"
+                        >
+                            M
+                        </span>
+                        {onOpenRemaster && (
+                            <button
+                                className="flex-shrink-0 p-1 rounded text-zinc-400 hover:text-amber-500 transition-colors opacity-0 group-hover:opacity-100"
+                                onClick={(e) => { e.stopPropagation(); onOpenRemaster(); }}
+                                title="Re-master this track"
+                            >
+                                <span className="text-[10px]">🎛️</span>
+                            </button>
+                        )}
+                    </>
                 )}
 
                 {/* Dropdown menu */}

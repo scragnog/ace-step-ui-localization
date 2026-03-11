@@ -46,6 +46,7 @@ export interface SongCardProps {
     onCoverSong?: () => void;
     onUpscaleToHQ?: () => void;
     onDownloadFormat?: () => void;
+    onOpenRemaster?: () => void;
     // Ablation diff pins
     devMode?: boolean;
     isDiffPinnedA?: boolean;
@@ -80,6 +81,7 @@ export const SongCard: React.FC<SongCardProps> = ({
     onCoverSong,
     onUpscaleToHQ,
     onDownloadFormat,
+    onOpenRemaster,
     devMode,
     isDiffPinnedA,
     isDiffPinnedB,
@@ -397,7 +399,26 @@ export const SongCard: React.FC<SongCardProps> = ({
                                 </span>
                             </div>
 
-                            <div className="relative">
+                            <div className="flex items-center gap-1">
+                                {/* Mastering badge */}
+                                {song.generationParams?.originalAudioUrl && (
+                                    <span
+                                        className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm"
+                                        title="Mastered track"
+                                    >
+                                        M
+                                    </span>
+                                )}
+                                {/* Re-master button */}
+                                {song.generationParams?.originalAudioUrl && onOpenRemaster && (
+                                    <button
+                                        className="p-1 rounded-md text-zinc-400 hover:text-amber-500 transition-colors opacity-0 group-hover:opacity-100"
+                                        onClick={(e) => { e.stopPropagation(); onOpenRemaster(); }}
+                                        title="Re-master this track"
+                                    >
+                                        <span className="text-xs">🎛️</span>
+                                    </button>
+                                )}
                                 <button
                                     className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors opacity-0 group-hover:opacity-100"
                                     onClick={(e) => { e.stopPropagation(); setShowDropdown(!showDropdown); }}
