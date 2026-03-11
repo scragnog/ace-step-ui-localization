@@ -503,14 +503,34 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
         // Parse result data
         let resultData = null;
         if (taskData.status === 1 && taskData.result) {
-          const parsedResults = JSON.parse(taskData.result);
+          const parsedResults = typeof taskData.result === 'string' ? JSON.parse(taskData.result) : taskData.result;
           const audioUrls: string[] = [];
           let firstResult = null;
           const batchAudioCodes: string[] = [];
 
-          // Process all results from batch
-          for (let i = 0; i < parsedResults.length; i++) {
-            const parsedResult = parsedResults[i];
+          // The result can be either:
+          // 1. A flat dict with audio_paths[], original_audio_paths[], etc. (from build_generation_success_response)
+          // 2. An array of per-audio items, each with {file, metas, ...}
+          const isArray = Array.isArray(parsedResults);
+          const resultItems = isArray ? parsedResults : [];
+
+          // For flat dict format, extract audio URLs from audio_paths
+          if (!isArray && parsedResults.audio_paths) {
+            for (const ap of parsedResults.audio_paths) {
+              let audioUrl = ap;
+              if (audioUrl && audioUrl.startsWith('/v1/audio')) {
+                audioUrl = `${config.acestep.apiUrl}${audioUrl}`;
+              } else if (audioUrl && !audioUrl.startsWith('http')) {
+                audioUrl = `${config.acestep.apiUrl}/v1/audio?path=${encodeURIComponent(audioUrl)}`;
+              }
+              if (audioUrl) audioUrls.push(audioUrl);
+            }
+            firstResult = parsedResults;  // The flat dict IS the first result
+          }
+
+          // Process all results from batch (array format)
+          for (let i = 0; i < resultItems.length; i++) {
+            const parsedResult = resultItems[i];
             if (i === 0) firstResult = parsedResult;
 
             // Collect audio codes per-audio for upscale reuse
@@ -520,7 +540,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
 
             // Convert path to full URL
             let audioUrl = parsedResult.file;
-            console.log(`[Batch ${i + 1}/${parsedResults.length}] Original file path:`, audioUrl);
+            console.log(`[Batch ${i + 1}/${resultItems.length}] Original file path:`, audioUrl);
 
             if (audioUrl) {
               if (audioUrl.startsWith('/v1/audio')) {
@@ -534,20 +554,26 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
             }
           }
 
+          // Extract original_audio_paths from either the flat dict or firstResult
+          const originalAudioPathsFromResult = parsedResults.original_audio_paths
+            ?? firstResult?.original_audio_paths;
+          console.log('[Generate] parsedResults format:', isArray ? 'array' : 'flat dict',
+            'original_audio_paths:', originalAudioPathsFromResult);
+
           resultData = {
             audioUrls,
-            duration: firstResult?.metas?.duration,
-            bpm: firstResult?.metas?.bpm,
-            keyScale: firstResult?.metas?.keyscale,
-            timeSignature: firstResult?.metas?.timesignature,
-            ditModel: firstResult?.dit_model,
-            seedValue: firstResult?.seed_value,
-            generationInfo: firstResult?.generation_info,
-            lmModel: firstResult?.lm_model,
+            duration: firstResult?.metas?.duration ?? firstResult?.duration,
+            bpm: firstResult?.metas?.bpm ?? firstResult?.bpm,
+            keyScale: firstResult?.metas?.keyscale ?? firstResult?.keyScale,
+            timeSignature: firstResult?.metas?.timesignature ?? firstResult?.timeSignature,
+            ditModel: firstResult?.dit_model ?? firstResult?.ditModel,
+            seedValue: firstResult?.seed_value ?? firstResult?.seedValue,
+            generationInfo: firstResult?.generation_info ?? firstResult?.generationInfo,
+            lmModel: firstResult?.lm_model ?? firstResult?.lmModel,
             lrc: firstResult?.lrc,
             scores: firstResult?.scores,
-            audio_codes: batchAudioCodes.length > 0 ? batchAudioCodes : undefined,
-            original_audio_paths: firstResult?.original_audio_paths,
+            audio_codes: batchAudioCodes.length > 0 ? batchAudioCodes : (firstResult?.audio_codes ?? undefined),
+            original_audio_paths: originalAudioPathsFromResult,
             status: 'succeeded',
           };
         }
