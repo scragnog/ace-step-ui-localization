@@ -85,6 +85,10 @@ export const Player: React.FC<PlayerProps> = ({
     // M/O (Mastered/Original) toggle state
     const [playingOriginal, setPlayingOriginal] = useState(false);
     const originalAudioUrl = currentSong?.generationParams?.originalAudioUrl || null;
+    // Debug: log to verify data flow (remove after confirming)
+    if (currentSong && !originalAudioUrl) {
+        console.log('[Player M/O Debug] currentSong.generationParams:', JSON.stringify(currentSong?.generationParams, null, 2)?.slice(0, 500));
+    }
 
     // Reset M/O state when song changes
     useEffect(() => {
@@ -829,7 +833,7 @@ export const Player: React.FC<PlayerProps> = ({
                     {originalAudioUrl && (
                         <button
                             onClick={handleSourceToggle}
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all hidden lg:flex items-center gap-1 ${
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all flex items-center gap-1 ${
                                 playingOriginal
                                     ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
                                     : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm'
@@ -844,7 +848,7 @@ export const Player: React.FC<PlayerProps> = ({
                     {onOpenRemaster && originalAudioUrl && (
                         <button
                             onClick={() => onOpenRemaster(currentSong)}
-                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors hidden lg:block"
+                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors"
                             title="Re-master this track"
                         >
                             <span className="text-sm">🎛️</span>

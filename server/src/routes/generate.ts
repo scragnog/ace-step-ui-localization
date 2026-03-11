@@ -732,6 +732,7 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
 
               // Download and store original (unmastered) audio for A/B comparison
               const originalAudioPaths: string[] | undefined = (aceStatus.result as any).original_audio_paths;
+              console.log(`[Generate] originalAudioPaths for song ${i}:`, originalAudioPaths);
               if (originalAudioPaths && originalAudioPaths[i]) {
                 try {
                   let origUrl = originalAudioPaths[i];
