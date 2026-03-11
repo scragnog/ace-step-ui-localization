@@ -175,7 +175,6 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
                 label={t('extractStems')}
                 onClick={onExtractStems ? () => handleAction(onExtractStems) : handleExtractStems}
             />
-            {/* Enhance Audio hidden — superseded by auto-mastering pipeline
             <MenuItem
                 icon={<Sparkles size={14} />}
                 label={t('enhanceAudio')}
@@ -187,7 +186,6 @@ export const SongDropdownMenu: React.FC<SongDropdownMenuProps> = ({
                 }}
                 disabled={!song.audioUrl}
             />
-            */}
             {onUpscaleToHQ && (
                 <MenuItem
                     icon={<ArrowUpCircle size={14} />}
