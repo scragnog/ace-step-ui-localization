@@ -153,18 +153,33 @@ const Section: React.FC<{
 
 function getEqGain(params: MasteringParams, targetFreq: number): number {
     const bands = params.eq_bands || [];
+    if (bands.length === 0) return 0;
     const closest = bands.reduce((best, band) =>
-        Math.abs(band.freq_hz - targetFreq) < Math.abs(best.freq_hz - targetFreq) ? band : best,
-        bands[0] || { freq_hz: targetFreq, gain_db: 0 }
+        Math.abs(band.freq_hz - targetFreq) < Math.abs(best.freq_hz - targetFreq) ? band : best
     );
-    return Math.abs(closest.freq_hz - targetFreq) < targetFreq * 0.5 ? closest.gain_db : 0;
+    return Math.abs(closest.freq_hz - targetFreq) < targetFreq * 0.6 ? closest.gain_db : 0;
 }
 
 function setEqGain(params: MasteringParams, targetFreq: number, gain: number): MasteringParams {
     const bands = [...(params.eq_bands || [])];
-    const idx = bands.findIndex(b => Math.abs(b.freq_hz - targetFreq) < targetFreq * 0.5);
-    if (idx >= 0) {
-        bands[idx] = { ...bands[idx], gain_db: gain };
+    if (bands.length === 0) {
+        bands.push({ type: 'peak', freq_hz: targetFreq, gain_db: gain, q: 1.0 });
+        return { ...params, eq_bands: bands };
+    }
+    
+    // Find closest band
+    let closestIdx = 0;
+    let minDiff = Math.abs(bands[0].freq_hz - targetFreq);
+    for (let i = 1; i < bands.length; i++) {
+        const diff = Math.abs(bands[i].freq_hz - targetFreq);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+        }
+    }
+
+    if (minDiff < targetFreq * 0.6) {
+        bands[closestIdx] = { ...bands[closestIdx], gain_db: gain };
     } else {
         bands.push({ type: 'peak', freq_hz: targetFreq, gain_db: gain, q: 1.0 });
     }

@@ -888,18 +888,34 @@ function AppContent() {
       }
     };
 
-    if (currentSongIdRef.current !== currentSong.id) {
+    const activeUrl = playingOriginal && currentSong.generationParams?.originalAudioUrl
+      ? currentSong.generationParams.originalAudioUrl
+      : currentSong.audioUrl;
+    
+    // Convert to absolute URL for accurate comparison
+    const targetUrl = new URL(activeUrl, window.location.href).href;
+
+    if (currentSongIdRef.current !== currentSong.id || audio.src !== targetUrl) {
       currentSongIdRef.current = currentSong.id;
-      audio.src = currentSong.audioUrl;
+      const wasPlaying = !audio.paused;
+      const savedTime = audio.currentTime;
+
+      audio.src = activeUrl;
       // Connect audio analysis on first play
       connectAudioAnalysis(audio);
       audio.load();
-      if (isPlaying) playAudio();
+
+      const onCanPlay = () => {
+         audio.currentTime = savedTime;
+         if (isPlaying || wasPlaying) playAudio();
+         audio.removeEventListener('canplay', onCanPlay);
+      };
+      audio.addEventListener('canplay', onCanPlay);
     } else {
       if (isPlaying) playAudio();
       else audio.pause();
     }
-  }, [currentSong, isPlaying]);
+  }, [currentSong, isPlaying, playingOriginal]);
 
   // Handle Volume
   useEffect(() => {

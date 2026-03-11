@@ -90,34 +90,6 @@ export const Player: React.FC<PlayerProps> = ({
     // M/O (Mastered/Original) toggle — state lifted to parent
     const originalAudioUrl = currentSong?.generationParams?.originalAudioUrl || null;
 
-    // Effect to sync audio source with external playingOriginal state changes
-    useEffect(() => {
-        if (!audioRef.current || !currentSong) return;
-        const currentSrcUrl = new URL(audioRef.current.src, window.location.origin).pathname;
-        const targetUrl = new URL((playingOriginal ? originalAudioUrl : currentSong.audioUrl) || currentSong.audioUrl || '', window.location.origin).pathname;
-
-        // Only switch if the source actually needs to change to avoid interrupting playback
-        if (currentSrcUrl !== targetUrl && targetUrl && targetUrl !== '/') {
-            const wasPlaying = !audioRef.current.paused;
-            const savedTime = audioRef.current.currentTime;
-            
-            audioRef.current.pause();
-            audioRef.current.src = (playingOriginal ? originalAudioUrl : currentSong.audioUrl)!;
-            audioRef.current.load();
-
-            const onReady = () => {
-                if (audioRef.current) {
-                    audioRef.current.currentTime = savedTime;
-                    if (wasPlaying) {
-                        audioRef.current.play().catch(e => console.warn("Failed to resume play after source switch", e));
-                    }
-                    audioRef.current.removeEventListener('canplay', onReady);
-                }
-            };
-            audioRef.current.addEventListener('canplay', onReady);
-        }
-    }, [playingOriginal, currentSong?.id]); // Only run when toggle changes or song changes
-
     const handleSourceToggle = () => {
         if (!currentSong || (!originalAudioUrl && !currentSong.audioUrl) || !onToggleMastering) return;
         onToggleMastering();
