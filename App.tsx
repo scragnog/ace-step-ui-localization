@@ -1110,11 +1110,14 @@ function AppContent() {
     setMobileShowList(false);
 
     try {
+      const storedGlobalParams = localStorage.getItem('globalMasteringParams');
+      const globalMasteringParams = storedGlobalParams ? JSON.parse(storedGlobalParams) : undefined;
+
       const job = await generateApi.startGeneration({
         ...params,
         // Normalize duration: treat 0 or negative as undefined
         duration: params.duration && params.duration > 0 ? params.duration : undefined,
-
+        ...(globalMasteringParams ? { masteringParams: globalMasteringParams } : {})
       }, token);
 
       const tempId = `job_${job.jobId}`;

@@ -224,10 +224,10 @@ export const MasteringConsoleModal: React.FC<MasteringConsoleModalProps> = ({
                     setParams(currentParams);
                     setDirty(false);
                 } else {
-                    const defaultPreset = (data.presets || []).find((p: MasteringPreset) => p.id === 'default');
+                    const defaultPreset = (data.presets || []).find((p: MasteringPreset) => p.id === 'preset_1');
                     if (defaultPreset) {
                         setParams(defaultPreset.params);
-                        setSelectedPresetId('default');
+                        setSelectedPresetId('preset_1');
                     }
                 }
             })
@@ -252,6 +252,7 @@ export const MasteringConsoleModal: React.FC<MasteringConsoleModalProps> = ({
 
     const handleApply = useCallback(() => {
         onParamsChange(params);
+        localStorage.setItem('globalMasteringParams', JSON.stringify(params));
         onClose();
     }, [params, onParamsChange, onClose]);
 
