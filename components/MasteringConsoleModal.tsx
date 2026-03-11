@@ -53,16 +53,17 @@ export interface MasteringParams {
 
 // ---- EQ band definitions for simplified UI ----
 const EQ_BAND_DEFS = [
-    { label: 'Sub', freq: 150, color: 'from-red-500 to-orange-500', min: -6, max: 6 },
-    { label: 'Low', freq: 500, color: 'from-orange-500 to-amber-500', min: -6, max: 6 },
-    { label: 'Mid', freq: 6000, color: 'from-amber-500 to-yellow-500', min: -6, max: 6 },
-    { label: 'Presence', freq: 10000, color: 'from-yellow-500 to-emerald-500', min: -6, max: 10 },
-    { label: 'Air', freq: 16000, color: 'from-emerald-500 to-cyan-500', min: -6, max: 12 },
+    { label: 'Sub', freq: 150, color: 'from-red-500 to-orange-500', min: -6, max: 6, desc: 'Controls deep bass frequencies (<150Hz). Too much causes muddiness and eats headroom, leading to clipping.' },
+    { label: 'Low', freq: 500, color: 'from-orange-500 to-amber-500', min: -6, max: 6, desc: 'Adds warmth or removes boxiness (150-500Hz). High values can clutter the mix.' },
+    { label: 'Mid', freq: 6000, color: 'from-amber-500 to-yellow-500', min: -6, max: 6, desc: 'Controls presence of instruments and vocals (500-6kHz). Aggressive cuts hollow out the track.' },
+    { label: 'Presence', freq: 10000, color: 'from-yellow-500 to-emerald-500', min: -6, max: 10, desc: 'Adds edge and clarity to upper mids (6kHz-10kHz). Excessive boost sounds harsh and fatiguing.' },
+    { label: 'Air', freq: 16000, color: 'from-emerald-500 to-cyan-500', min: -6, max: 12, desc: 'Enhances high-end shimmer and openness (>10kHz). Too much makes the track thin and brittle.' },
 ];
 
 // ---- Slider Component ----
 const MasterSlider: React.FC<{
     label: string;
+    description?: string;
     value: number;
     onChange: (v: number) => void;
     min: number;
@@ -70,15 +71,15 @@ const MasterSlider: React.FC<{
     step?: number;
     unit?: string;
     color?: string;
-}> = ({ label, value, onChange, min, max, step = 0.1, unit = 'dB', color = 'from-violet-500 to-purple-500' }) => {
+}> = ({ label, description, value, onChange, min, max, step = 0.1, unit = 'dB', color = 'from-violet-500 to-purple-500' }) => {
     const pct = ((value - min) / (max - min)) * 100;
     const centerPct = min < 0 ? ((0 - min) / (max - min)) * 100 : 0;
     const isBipolar = min < 0;
 
     return (
         <div className="flex items-center gap-3 group">
-            <div className="flex items-center gap-1 w-20 flex-shrink-0">
-                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 truncate">{label}</span>
+            <div className="flex items-center gap-1 w-20 flex-shrink-0" title={description}>
+                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 truncate cursor-help border-b border-dotted border-zinc-400/50">{label}</span>
             </div>
             <div className="flex-1 relative h-6 flex items-center">
                 <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden relative">
@@ -418,6 +419,7 @@ export const MasteringConsoleModal: React.FC<MasteringConsoleModalProps> = ({
                                     <MasterSlider
                                         key={band.freq}
                                         label={band.label}
+                                        description={band.desc}
                                         value={getEqGain(params, band.freq)}
                                         onChange={v => updateParam(p => setEqGain(p, band.freq, v))}
                                         min={band.min}
@@ -432,6 +434,7 @@ export const MasteringConsoleModal: React.FC<MasteringConsoleModalProps> = ({
                             <Section title="Exciter" icon="🔥">
                                 <MasterSlider
                                     label="Drive"
+                                    description="Adds harmonic distortion to make the track sound fuller and louder. High values sound crunchy/distorted."
                                     value={drive}
                                     onChange={v => updateParam(p => ({
                                         ...p,
@@ -449,52 +452,58 @@ export const MasteringConsoleModal: React.FC<MasteringConsoleModalProps> = ({
                             <Section title="Stereo Width" icon="↔️">
                                 <MasterSlider
                                     label="Width"
+                                    description="Expands the stereo image. Negative values make it more mono. Extreme positive values can cause phase issues."
                                     value={widthChange}
                                     onChange={v => updateParam(p => ({
                                         ...p,
                                         stereo: { ...(p.stereo || {}), width_change: v }
                                     }))}
-                                    min={0}
-                                    max={0.5}
-                                    step={0.01}
-                                    unit=""
-                                    color="from-emerald-500 to-teal-500"
+                                    min={-1.0}
+                                    max={1.0}
+                                    step={0.05}
+                                    unit="x"
+                                    color="from-blue-500 to-cyan-500"
                                 />
                             </Section>
 
                             {/* Dynamics */}
                             <Section title="Dynamics" icon="📈">
-                                <MasterSlider
-                                    label="Ratio"
-                                    value={ratio}
-                                    onChange={v => updateParam(p => ({
-                                        ...p,
-                                        dynamics: { ...(p.dynamics || {}), estimated_ratio: v, estimated_threshold_db: p.dynamics?.estimated_threshold_db ?? -12 }
-                                    }))}
-                                    min={1.0}
-                                    max={4.0}
-                                    step={0.1}
-                                    unit=":1"
-                                    color="from-blue-500 to-indigo-500"
-                                />
-                                <MasterSlider
-                                    label="Threshold"
-                                    value={threshold}
-                                    onChange={v => updateParam(p => ({
-                                        ...p,
-                                        dynamics: { ...(p.dynamics || {}), estimated_threshold_db: v, estimated_ratio: p.dynamics?.estimated_ratio ?? 1.0 }
-                                    }))}
-                                    min={-40}
-                                    max={0}
-                                    step={0.5}
-                                    color="from-indigo-500 to-violet-500"
-                                />
+                                <div className="space-y-4">
+                                    <MasterSlider
+                                        label="Threshold"
+                                        description="The volume level where compression kicks in. Lower threshold = more constant compression."
+                                        value={threshold}
+                                        onChange={v => updateParam(p => ({
+                                            ...p,
+                                            dynamics: { ...(p.dynamics || {}), estimated_threshold_db: v, estimated_ratio: p.dynamics?.estimated_ratio ?? 1.0 }
+                                        }))}
+                                        min={-40}
+                                        max={0}
+                                        step={0.5}
+                                        color="from-violet-500 to-fuchsia-500"
+                                    />
+                                    <MasterSlider
+                                        label="Ratio"
+                                        description="How aggressively the compressor reduces peaks. High ratio squashes dynamics."
+                                        value={ratio}
+                                        onChange={v => updateParam(p => ({
+                                            ...p,
+                                            dynamics: { ...(p.dynamics || {}), estimated_ratio: v, estimated_threshold_db: p.dynamics?.estimated_threshold_db ?? -12 }
+                                        }))}
+                                        min={1.0}
+                                        max={10.0}
+                                        step={0.1}
+                                        unit=":1"
+                                        color="from-fuchsia-500 to-pink-500"
+                                    />
+                                </div>
                             </Section>
 
                             {/* Maximizer */}
                             <Section title="Maximizer" icon="🔊">
                                 <MasterSlider
                                     label="Output Gain"
+                                    description="Overall gain applied after all other processing, before the limiter. Use to increase loudness."
                                     value={outputGain}
                                     onChange={v => updateParam(p => ({ ...p, overall_gain_db: v }))}
                                     min={0}
@@ -504,6 +513,7 @@ export const MasteringConsoleModal: React.FC<MasteringConsoleModalProps> = ({
                                 />
                                 <MasterSlider
                                     label="Ceiling"
+                                    description="The absolute maximum output level. Prevents clipping and ensures your track doesn't exceed target loudness standards."
                                     value={ceiling}
                                     onChange={v => updateParam(p => ({ ...p, limiter_ceiling_db: v }))}
                                     min={-3}

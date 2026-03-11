@@ -1618,35 +1618,46 @@ function AppContent() {
     setIsDownloadModalOpen(true);
   };
 
-  const handleDownloadFormat = async (format: DownloadFormat) => {
+  const handleDownloadFormat = async (format: DownloadFormat, version: 'mastered' | 'original' | 'both' = 'mastered') => {
     if (!songToDownload?.audioUrl) return;
-    try {
-      // Direct the browser to our new express endpoint which handles format conversion and original file piping
-      const targetUrl = new URL('/api/songs/download', window.location.origin);
-      targetUrl.searchParams.set('audioUrl', songToDownload.audioUrl);
-      targetUrl.searchParams.set('title', songToDownload.title || 'song');
-      targetUrl.searchParams.set('format', format);
-      // Pass song ID so backend can fetch metadata for tagging
-      if (songToDownload.id) {
-        targetUrl.searchParams.set('songId', songToDownload.id);
-      }
-      // Pass bitrate settings from localStorage
-      if (format === 'mp3') {
-        const br = localStorage.getItem('mp3_export_bitrate');
-        if (br) targetUrl.searchParams.set('mp3Bitrate', br);
-      }
-      if (format === 'opus') {
-        const br = localStorage.getItem('opus_export_bitrate');
-        if (br) targetUrl.searchParams.set('opusBitrate', br);
-      }
 
-      const link = document.createElement('a');
-      link.href = targetUrl.toString();
-      const ext = format === 'opus' ? 'ogg' : format;
-      link.download = `${songToDownload.title || 'song'}.${ext}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    try {
+      const downloadSingleURL = (url: string, suffix: string) => {
+        const targetUrl = new URL('/api/songs/download', window.location.origin);
+        targetUrl.searchParams.set('audioUrl', url);
+        targetUrl.searchParams.set('title', `${songToDownload.title || 'song'}${suffix}`);
+        targetUrl.searchParams.set('format', format);
+        if (songToDownload.id) {
+          targetUrl.searchParams.set('songId', songToDownload.id);
+        }
+        if (format === 'mp3') {
+          const br = localStorage.getItem('mp3_export_bitrate');
+          if (br) targetUrl.searchParams.set('mp3Bitrate', br);
+        }
+        if (format === 'opus') {
+          const br = localStorage.getItem('opus_export_bitrate');
+          if (br) targetUrl.searchParams.set('opusBitrate', br);
+        }
+
+        const link = document.createElement('a');
+        link.href = targetUrl.toString();
+        const ext = format === 'opus' ? 'ogg' : format;
+        link.download = `${songToDownload.title || 'song'}${suffix}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      if (version === 'mastered' || version === 'both') {
+        downloadSingleURL(songToDownload.audioUrl, '');
+      }
+      
+      if (version === 'original' || version === 'both') {
+        const origUrl = songToDownload.generationParams?.originalAudioUrl || (songToDownload as any).originalAudioUrl;
+        if (origUrl) {
+          setTimeout(() => downloadSingleURL(origUrl, ' (Unmastered)'), version === 'both' ? 500 : 0);
+        }
+      }
 
     } catch (error) {
       console.error('Download failed:', error);
@@ -2166,6 +2177,7 @@ function AppContent() {
         onClose={() => setIsDownloadModalOpen(false)}
         onDownload={handleDownloadFormat}
         songTitle={songToDownload?.title}
+        hasOriginal={!!(songToDownload?.generationParams?.originalAudioUrl || (songToDownload as any)?.originalAudioUrl)}
       />
       <SettingsModal
         isOpen={showSettingsModal}

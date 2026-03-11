@@ -3,27 +3,31 @@ import { useI18n } from '../context/I18nContext';
 import { Download, X } from 'lucide-react';
 
 export type DownloadFormat = 'mp3' | 'flac' | 'wav' | 'opus';
+export type DownloadVersion = 'mastered' | 'original' | 'both';
 
 interface DownloadModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onDownload: (format: DownloadFormat) => void;
+    onDownload: (format: DownloadFormat, version: DownloadVersion) => void;
     songTitle?: string;
+    hasOriginal?: boolean;
 }
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({
     isOpen,
     onClose,
     onDownload,
-    songTitle
+    songTitle,
+    hasOriginal
 }) => {
     const { t } = useI18n();
     const [selectedFormat, setSelectedFormat] = React.useState<DownloadFormat>('mp3');
+    const [selectedVersion, setSelectedVersion] = React.useState<DownloadVersion>('mastered');
 
     if (!isOpen) return null;
 
     const handleDownload = () => {
-        onDownload(selectedFormat);
+        onDownload(selectedFormat, selectedVersion);
         onClose();
     };
 
@@ -73,6 +77,26 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({
                             </button>
                         ))}
                     </div>
+
+                    {hasOriginal && (
+                        <div className="pt-2">
+                            <p className="text-xs text-zinc-400 mb-2 font-semibold tracking-wider uppercase">Version</p>
+                            <div className="flex bg-black/20 p-1 rounded-xl border border-white/5">
+                                {['mastered', 'original', 'both'].map((v) => (
+                                    <button
+                                        key={v}
+                                        onClick={() => setSelectedVersion(v as DownloadVersion)}
+                                        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize ${selectedVersion === v
+                                            ? 'bg-zinc-800 text-white shadow'
+                                            : 'text-zinc-500 hover:text-zinc-300'
+                                        }`}
+                                    >
+                                        {v}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
