@@ -2180,7 +2180,7 @@ function AppContent() {
             // Create a new song entry from the re-mastered file
             const outputPath = data.output_path as string;
             // Build audio URL for the node server
-            const audioUrl = `/audio/${outputPath.split('/audio/').pop() || outputPath.split('\\audio\\').pop() || ''}`;
+            const audioUrl = `/audio/${outputPath.split(/\/audio\/|\\audio\\|\\audio\//).pop() || ''}`;
             if (token) {
               const newSong = await songsApi.createSong({
                 title: `${remasterSong.title} (Remastered)`,
