@@ -116,10 +116,22 @@ function transformSongs(songs: Song[]): Song[] {
   return songs.map(song => {
     const rawUrl = song.audio_url || song.audioUrl;
     const resolvedUrl = getAudioUrl(rawUrl, song.id);
+
+    // Parse generation_params JSON from DB into camelCase generationParams
+    let generationParams: any = undefined;
+    if (song.generation_params) {
+      try {
+        generationParams = typeof song.generation_params === 'string'
+          ? JSON.parse(song.generation_params)
+          : song.generation_params;
+      } catch { /* ignore parse errors */ }
+    }
+
     return {
       ...song,
       audio_url: resolvedUrl,
       audioUrl: resolvedUrl,
+      generationParams,
     };
   });
 }
