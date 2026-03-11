@@ -762,7 +762,9 @@ router.get('/status/:jobId', authMiddleware, async (req: AuthenticatedRequest, r
               if (originalAudioPaths && originalAudioPaths[i]) {
                 try {
                   let origUrl = originalAudioPaths[i];
-                  if (origUrl && !origUrl.startsWith('http')) {
+                  if (origUrl && origUrl.startsWith('/v1/audio')) {
+                    origUrl = `${config.acestep.apiUrl}${origUrl}`;
+                  } else if (origUrl && !origUrl.startsWith('http')) {
                     origUrl = `${config.acestep.apiUrl}/v1/audio?path=${encodeURIComponent(origUrl)}`;
                   }
                   const { buffer: origBuffer } = await downloadAudioToBuffer(origUrl);
