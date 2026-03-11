@@ -38,6 +38,7 @@ interface PlayerProps {
     onAddToPlaylist?: () => void;
     onDelete?: () => void;
     onDownloadFormat?: () => void;
+    onOpenRemaster?: (song: Song) => void;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -65,7 +66,8 @@ export const Player: React.FC<PlayerProps> = ({
     onReusePrompt,
     onAddToPlaylist,
     onDelete,
-    onDownloadFormat
+    onDownloadFormat,
+    onOpenRemaster
 }) => {
     const { user } = useAuth();
     const { isMobile } = useResponsive();
@@ -79,6 +81,36 @@ export const Player: React.FC<PlayerProps> = ({
     const [showSpeedMenu, setShowSpeedMenu] = useState(false);
     const speedMenuRef = useRef<HTMLDivElement>(null);
     const { analyserNode } = useAudioAnalysis();
+
+    // M/O (Mastered/Original) toggle state
+    const [playingOriginal, setPlayingOriginal] = useState(false);
+    const originalAudioUrl = currentSong?.generationParams?.originalAudioUrl || null;
+
+    // Reset M/O state when song changes
+    useEffect(() => {
+        setPlayingOriginal(false);
+    }, [currentSong?.id]);
+
+    const handleSourceToggle = () => {
+        if (!audioRef.current || !originalAudioUrl || !currentSong?.audioUrl) return;
+        const wasPlaying = !audioRef.current.paused;
+        const savedTime = audioRef.current.currentTime;
+        const newSrc = playingOriginal ? currentSong.audioUrl : originalAudioUrl;
+
+        audioRef.current.pause();
+        audioRef.current.src = newSrc;
+        audioRef.current.load();
+
+        const onReady = () => {
+            audioRef.current!.currentTime = savedTime;
+            if (wasPlaying) {
+                audioRef.current!.play().catch(() => {});
+            }
+            audioRef.current!.removeEventListener('canplay', onReady);
+        };
+        audioRef.current.addEventListener('canplay', onReady);
+        setPlayingOriginal(!playingOriginal);
+    };
     const [bounceIntensity, setBounceIntensity] = useState(() => {
         const saved = localStorage.getItem('waveform-bounce-intensity');
         return saved !== null ? parseFloat(saved) : 0.5;
@@ -792,6 +824,32 @@ export const Player: React.FC<PlayerProps> = ({
                     <span className="text-[10px] sm:text-xs font-mono text-right text-zinc-600 dark:text-zinc-400 hidden md:block">
                         {formatTime(currentTime)} / {formatTime(duration || 0)}
                     </span>
+
+                    {/* M/O Toggle — Mastered/Original A/B switch */}
+                    {originalAudioUrl && (
+                        <button
+                            onClick={handleSourceToggle}
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all hidden lg:flex items-center gap-1 ${
+                                playingOriginal
+                                    ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
+                                    : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm'
+                            }`}
+                            title={playingOriginal ? 'Playing original — click for mastered' : 'Playing mastered — click for original'}
+                        >
+                            {playingOriginal ? 'O' : 'M'}
+                        </button>
+                    )}
+
+                    {/* Re-master button */}
+                    {onOpenRemaster && originalAudioUrl && (
+                        <button
+                            onClick={() => onOpenRemaster(currentSong)}
+                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-full transition-colors hidden lg:block"
+                            title="Re-master this track"
+                        >
+                            <span className="text-sm">🎛️</span>
+                        </button>
+                    )}
 
                     {/* Playback Speed */}
                     <div className="relative group hidden lg:block" ref={speedMenuRef}>
